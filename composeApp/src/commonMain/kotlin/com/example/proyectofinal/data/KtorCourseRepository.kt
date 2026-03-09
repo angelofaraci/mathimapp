@@ -2,7 +2,6 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.domain.Course
 import com.example.proyectofinal.domain.CourseRepository
-import com.example.proyectofinal.domain.UserProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -21,13 +20,5 @@ class KtorCourseRepository(
         } catch (e: Exception) {
             null
         }
-    }
-
-    override suspend fun getUserProgress(userId: String): UserProgress = withContext(Dispatchers.IO) {
-        api.fetchUserProgress(userId)
-    }
-
-    override suspend fun saveProgress(progress: UserProgress) = withContext(Dispatchers.IO) {
-        api.saveUserProgress(progress)
     }
 }
