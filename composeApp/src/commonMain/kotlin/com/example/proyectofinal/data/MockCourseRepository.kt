@@ -54,17 +54,9 @@ class MockCourseRepository : CourseRepository {
         )
     )
 
-    private var userProgress = UserProgress(userId = "default-user")
-
     override suspend fun getCourses(): List<Course> = mockCourses
 
     override suspend fun getCourseById(id: String): Course? {
         return mockCourses.find { it.id == id }
-    }
-
-    override suspend fun getUserProgress(userId: String): UserProgress = userProgress
-
-    override suspend fun saveProgress(progress: UserProgress) {
-        userProgress = progress
     }
 }
