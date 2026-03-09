@@ -1,31 +1,52 @@
 package com.example.proyectofinal.data
 
 import com.example.proyectofinal.domain.Course
-import com.example.proyectofinal.domain.UserProgress
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 
 class CourseApi(private val client: HttpClient) {
-    private val baseUrl = "https://api.yourbackend.com" // TODO: replace with actual URL
+    private val baseUrl = "https://api.yourbackend.com" // TODO: replace with actual URL and setup server with PostgreSQL
 
-    suspend fun fetchCourses(): List<Course> {
-        return client.get("$baseUrl/courses").body()
+    suspend fun fetchOfficialCourses(): List<Course> {
+        return client.get("$baseUrl/courses/official").body()
     }
 
     suspend fun fetchCourseById(id: String): Course {
         return client.get("$baseUrl/courses/$id").body()
     }
 
-    suspend fun fetchUserProgress(userId: String): UserProgress {
-        return client.get("$baseUrl/progress/$userId").body()
+    suspend fun fetchMyCourses(creatorId: String): List<Course> {
+        return client.get("$baseUrl/courses/creator/$creatorId").body()
     }
 
-    suspend fun saveUserProgress(progress: UserProgress) {
-        client.post("$baseUrl/progress") {
+    suspend fun fetchEnrolledCourses(userId: String): List<Course> {
+        return client.get("$baseUrl/courses/enrolled/$userId").body()
+    }
+
+    suspend fun createCourse(course: Course): Course {
+        return client.post("$baseUrl/courses") {
             contentType(ContentType.Application.Json)
-            setBody(progress)
-        }
+            setBody(course)
+        }.body()
+    }
+
+    suspend fun updateCourse(course: Course): Course {
+        return client.put("$baseUrl/courses/${course.id}") {
+            contentType(ContentType.Application.Json)
+            setBody(course)
+        }.body()
+    }
+
+    suspend fun deleteCourse(id: String) {
+        client.delete("$baseUrl/courses/$id")
+    }
+
+    suspend fun joinCourse(userId: String, code: String): Course {
+        return client.post("$baseUrl/courses/join") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("userId" to userId, "code" to code))
+        }.body()
     }
 }

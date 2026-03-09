@@ -1,0 +1,28 @@
+package com.example.proyectofinal.domain
+
+interface LessonRepository {
+    /**
+     * Gets all lessons for a specific course.
+     */
+    suspend fun getLessonsByCourse(courseId: String): List<Lesson>
+
+    /**
+     * Gets a specific lesson by its ID.
+     */
+    suspend fun getLessonById(id: String): Lesson?
+
+    /**
+     * Adds a new lesson to a course.
+     */
+    suspend fun createLesson(lesson: Lesson): Lesson
+
+    /**
+     * Updates an existing lesson's theory or title.
+     */
+    suspend fun updateLesson(lesson: Lesson): Lesson
+
+    /**
+     * Deletes a lesson.
+     */
+    suspend fun deleteLesson(id: String)
+}

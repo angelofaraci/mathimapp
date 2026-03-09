@@ -1,62 +1,68 @@
 package com.example.proyectofinal.data
 
 import com.example.proyectofinal.domain.*
+import kotlin.random.Random
 
 class MockCourseRepository : CourseRepository {
-    private val mockCourses = listOf(
+    private val mockCourses = mutableListOf(
         Course(
             id = "math-101",
             title = "Basic Arithmetic",
             description = "Master addition, subtraction, multiplication, and division.",
+            creatorId = "admin",
+            isOfficial = true,
+            joinCode = null,
             lessons = listOf(
                 Lesson(
                     id = "lesson-1",
+                    courseId = "math-101", // FIXED: Added courseId
                     title = "Introduction to Addition",
-                    theoryContent = "# Addition\n\nAddition is the process of calculating the total of two or more numbers.",
-                    exercises = listOf(
-                        Exercise(
-                            id = "ex-1",
-                            question = "What is 2 + 2?",
-                            options = listOf("3", "4", "5"),
-                            correctAnswer = "4",
-                            type = ExerciseType.MULTIPLE_CHOICE
-                        ),
-                        Exercise(
-                            id = "ex-2",
-                            question = "What is 5 + 7?",
-                            options = listOf("10", "12", "14"),
-                            correctAnswer = "12",
-                            type = ExerciseType.MULTIPLE_CHOICE
-                        )
-                    )
-                ),
-                Lesson(
-                    id = "lesson-2",
-                    title = "Basic Subtraction",
-                    theoryContent = "# Subtraction\n\nSubtraction is taking one number away from another.",
-                    exercises = listOf(
-                        Exercise(
-                            id = "ex-3",
-                            question = "What is 10 - 4?",
-                            options = listOf("5", "6", "7"),
-                            correctAnswer = "6",
-                            type = ExerciseType.MULTIPLE_CHOICE
-                        )
-                    )
+                    theoryContent = "# Addition",
+                    exercises = emptyList()
                 )
             )
-        ),
-        Course(
-            id = "algebra-1",
-            title = "Introduction to Algebra",
-            description = "Learn about variables and simple equations.",
-            lessons = emptyList()
         )
     )
 
-    override suspend fun getCourses(): List<Course> = mockCourses
+    override suspend fun getOfficialCourses(): List<Course> = mockCourses.filter { it.isOfficial }
 
-    override suspend fun getCourseById(id: String): Course? {
-        return mockCourses.find { it.id == id }
+    override suspend fun getCourseById(id: String): Course? = mockCourses.find { it.id == id }
+
+    override suspend fun getMyCreatedCourses(creatorId: String): List<Course> = 
+        mockCourses.filter { it.creatorId == creatorId && !it.isOfficial }
+
+    override suspend fun getEnrolledCourses(userId: String): List<Course> = 
+        mockCourses.filter { it.creatorId != "admin" && it.creatorId != userId }
+
+    override suspend fun createCourse(course: Course): Course {
+        val newCourse = course.copy(
+            id = Random.nextInt(1000, 9999).toString(),
+            isOfficial = false,
+            joinCode = generateJoinCode()
+        )
+        mockCourses.add(newCourse)
+        return newCourse
+    }
+
+    override suspend fun updateCourse(course: Course): Course {
+        val index = mockCourses.indexOfFirst { it.id == course.id }
+        if (index != -1) {
+            mockCourses[index] = course
+            return course
+        }
+        throw Exception("Course not found")
+    }
+
+    override suspend fun deleteCourse(id: String) {
+        mockCourses.removeAll { it.id == id && !it.isOfficial }
+    }
+
+    override suspend fun joinCourseByCode(userId: String, code: String): Course? {
+        return mockCourses.find { it.joinCode == code }
+    }
+
+    private fun generateJoinCode(): String {
+        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        return (1..6).map { chars.random() }.joinToString("")
     }
 }

@@ -3,16 +3,33 @@ package com.example.proyectofinal.domain
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class User(
+    val id: String,
+    val name: String,
+    val email: String,
+    val role: UserRole = UserRole.LEARNER
+)
+
+@Serializable
+enum class UserRole {
+    ADMIN, TEACHER, LEARNER
+}
+
+@Serializable
 data class Course(
     val id: String,
     val title: String,
     val description: String,
+    val creatorId: String,
+    val isOfficial: Boolean = false,
+    val joinCode: String? = null,
     val lessons: List<Lesson> = emptyList()
 )
 
 @Serializable
 data class Lesson(
     val id: String,
+    val courseId: String, // Reference to the parent course
     val title: String,
     val theoryContent: String,
     val exercises: List<Exercise> = emptyList()
@@ -21,6 +38,7 @@ data class Lesson(
 @Serializable
 data class Exercise(
     val id: String,
+    val lessonId: String, // Reference to the parent lesson
     val question: String,
     val options: List<String>,
     val correctAnswer: String,
@@ -34,13 +52,10 @@ enum class ExerciseType {
     INPUT_VALUE
 }
 
-/**
- * Tracks the user's journey. 
- * This is the part your app will "Update" as the user learns.
- */
 @Serializable
 data class UserProgress(
     val userId: String,
     val completedLessonIds: Set<String> = emptySet(),
-    val totalScore: Int = 0
+    val totalScore: Int = 0,
+    val enrolledCourseIds: Set<String> = emptySet()
 )
