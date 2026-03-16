@@ -1,0 +1,34 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Kotlin Multiplatform + Compose Multiplatform + Gradle, Android/iOS targets.
+  Architecture: Shared `composeApp` module with commonMain/androidMain/iosMain source sets.
+  Domain: Gamified math learning for Argentina primary/secondary levels with teacher-managed classes.
+  Testing: `kotlin.test` in `composeApp/src/commonTest`; no CI config detected.
+  Style: Kotlin official code style, JVM 11, AndroidX/Material3, Gradle config cache enabled.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    instructions:
+      - Follow existing code patterns and conventions
+    tdd: false
+    test_command: "./gradlew :composeApp:allTests"
+  verify:
+    test_command: "./gradlew :composeApp:allTests"
+    build_command: "./gradlew :composeApp:assembleDebug"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas (large removals)
