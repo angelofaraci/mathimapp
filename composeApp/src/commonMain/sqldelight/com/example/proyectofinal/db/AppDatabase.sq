@@ -1,0 +1,125 @@
+import com.example.proyectofinal.domain.UserRole;
+import com.example.proyectofinal.domain.ExerciseType;
+import kotlin.Boolean;
+import kotlin.Int;
+
+-- User table
+CREATE TABLE UserEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT AS UserRole NOT NULL DEFAULT 'LEARNER'
+);
+
+-- Course table
+CREATE TABLE CourseEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    creatorId TEXT NOT NULL,
+    isOfficial INTEGER AS Boolean NOT NULL DEFAULT 0,
+    joinCode TEXT
+);
+
+-- Lesson table
+CREATE TABLE LessonEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    courseId TEXT NOT NULL,
+    title TEXT NOT NULL,
+    theoryContent TEXT NOT NULL,
+    FOREIGN KEY(courseId) REFERENCES CourseEntity(id) ON DELETE CASCADE
+);
+
+-- Exercise table
+CREATE TABLE ExerciseEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    lessonId TEXT NOT NULL,
+    question TEXT NOT NULL,
+    correctAnswer TEXT NOT NULL,
+    type TEXT AS ExerciseType NOT NULL DEFAULT 'MULTIPLE_CHOICE',
+    options TEXT NOT NULL, -- Stored as comma-separated
+    FOREIGN KEY(lessonId) REFERENCES LessonEntity(id) ON DELETE CASCADE
+);
+
+-- UserProgress table
+CREATE TABLE UserProgressEntity (
+    userId TEXT NOT NULL PRIMARY KEY,
+    totalScore INTEGER AS Int NOT NULL DEFAULT 0,
+    FOREIGN KEY(userId) REFERENCES UserEntity(id) ON DELETE CASCADE
+);
+
+-- Many-to-Many: Completed Lessons
+CREATE TABLE CompletedLesson (
+    userId TEXT NOT NULL,
+    lessonId TEXT NOT NULL,
+    PRIMARY KEY(userId, lessonId),
+    FOREIGN KEY(userId) REFERENCES UserEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY(lessonId) REFERENCES LessonEntity(id) ON DELETE CASCADE
+);
+
+-- Many-to-Many: Enrolled Courses
+CREATE TABLE EnrolledCourse (
+    userId TEXT NOT NULL,
+    courseId TEXT NOT NULL,
+    PRIMARY KEY(userId, courseId),
+    FOREIGN KEY(userId) REFERENCES UserEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY(courseId) REFERENCES CourseEntity(id) ON DELETE CASCADE
+);
+
+-- Queries for Courses
+selectAllCourses:
+SELECT * FROM CourseEntity;
+
+selectCourseById:
+SELECT * FROM CourseEntity WHERE id = ?;
+
+insertCourse:
+INSERT OR REPLACE INTO CourseEntity(id, title, description, creatorId, isOfficial, joinCode)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteCourse:
+DELETE FROM CourseEntity WHERE id = ?;
+
+-- Queries for Lessons
+selectLessonsByCourseId:
+SELECT * FROM LessonEntity WHERE courseId = ?;
+
+insertLesson:
+INSERT OR REPLACE INTO LessonEntity(id, courseId, title, theoryContent)
+VALUES (?, ?, ?, ?);
+
+deleteLesson:
+DELETE FROM LessonEntity WHERE id = ?;
+
+-- Queries for Exercises
+selectExercisesByLessonId:
+SELECT * FROM ExerciseEntity WHERE lessonId = ?;
+
+insertExercise:
+INSERT OR REPLACE INTO ExerciseEntity(id, lessonId, question, correctAnswer, type, options)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteExercise:
+DELETE FROM ExerciseEntity WHERE id = ?;
+
+-- Queries for Progress
+selectProgressByUserId:
+SELECT * FROM UserProgressEntity WHERE userId = ?;
+
+insertProgress:
+INSERT OR REPLACE INTO UserProgressEntity(userId, totalScore)
+VALUES (?, ?);
+
+selectCompletedLessonsByUserId:
+SELECT lessonId FROM CompletedLesson WHERE userId = ?;
+
+insertCompletedLesson:
+INSERT OR REPLACE INTO CompletedLesson(userId, lessonId)
+VALUES (?, ?);
+
+selectEnrolledCoursesByUserId:
+SELECT courseId FROM EnrolledCourse WHERE userId = ?;
+
+insertEnrolledCourse:
+INSERT OR REPLACE INTO EnrolledCourse(userId, courseId)
+VALUES (?, ?);

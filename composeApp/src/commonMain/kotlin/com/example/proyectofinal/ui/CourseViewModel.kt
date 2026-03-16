@@ -24,7 +24,9 @@ class CourseViewModel(
         viewModelScope.launch {
             _uiState.value = CourseUiState.Loading
             try {
-                val courses = repository.getCourses()
+                // Updated from getCourses() to getOfficialCourses() 
+                // to match the new Repository interface
+                val courses = repository.getOfficialCourses()
                 _uiState.value = CourseUiState.Success(courses)
             } catch (e: Exception) {
                 _uiState.value = CourseUiState.Error(e.message ?: "Unknown error")
