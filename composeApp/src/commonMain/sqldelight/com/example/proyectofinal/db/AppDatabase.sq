@@ -11,6 +11,14 @@ CREATE TABLE UserEntity (
     role TEXT AS UserRole NOT NULL DEFAULT 'LEARNER'
 );
 
+-- Queries for Users
+selectUserById:
+SELECT * FROM UserEntity WHERE id = ?;
+
+insertUser:
+INSERT OR REPLACE INTO UserEntity(id, name, email, role)
+VALUES (?, ?, ?, ?);
+
 -- Course table
 CREATE TABLE CourseEntity (
     id TEXT NOT NULL PRIMARY KEY,
@@ -73,6 +81,9 @@ SELECT * FROM CourseEntity;
 selectCourseById:
 SELECT * FROM CourseEntity WHERE id = ?;
 
+selectCoursesByCreatorId:
+SELECT * FROM CourseEntity WHERE creatorId = ?;
+
 insertCourse:
 INSERT OR REPLACE INTO CourseEntity(id, title, description, creatorId, isOfficial, joinCode)
 VALUES (?, ?, ?, ?, ?, ?);
@@ -84,6 +95,9 @@ DELETE FROM CourseEntity WHERE id = ?;
 selectLessonsByCourseId:
 SELECT * FROM LessonEntity WHERE courseId = ?;
 
+selectLessonById:
+SELECT * FROM LessonEntity WHERE id = ?;
+
 insertLesson:
 INSERT OR REPLACE INTO LessonEntity(id, courseId, title, theoryContent)
 VALUES (?, ?, ?, ?);
@@ -94,6 +108,9 @@ DELETE FROM LessonEntity WHERE id = ?;
 -- Queries for Exercises
 selectExercisesByLessonId:
 SELECT * FROM ExerciseEntity WHERE lessonId = ?;
+
+selectExerciseById:
+SELECT * FROM ExerciseEntity WHERE id = ?;
 
 insertExercise:
 INSERT OR REPLACE INTO ExerciseEntity(id, lessonId, question, correctAnswer, type, options)

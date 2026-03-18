@@ -25,14 +25,33 @@ class KtorExerciseRepository(
     }
 
     override suspend fun createExercise(exercise: Exercise): Exercise {
-        return api.createExercise(exercise)
+        val created = api.createExercise(exercise)
+        database.appDatabaseQueries.insertExercise(
+            id = created.id,
+            lessonId = created.lessonId,
+            question = created.question,
+            correctAnswer = created.correctAnswer,
+            type = created.type,
+            options = created.options.joinToString(",")
+        )
+        return created
     }
 
     override suspend fun updateExercise(exercise: Exercise): Exercise {
-        return api.updateExercise(exercise)
+        val updated = api.updateExercise(exercise)
+        database.appDatabaseQueries.insertExercise(
+            id = updated.id,
+            lessonId = updated.lessonId,
+            question = updated.question,
+            correctAnswer = updated.correctAnswer,
+            type = updated.type,
+            options = updated.options.joinToString(",")
+        )
+        return updated
     }
 
     override suspend fun deleteExercise(id: String) {
         api.deleteExercise(id)
+        database.appDatabaseQueries.deleteExercise(id)
     }
 }

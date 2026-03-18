@@ -25,21 +25,46 @@ class KtorLessonRepository(
     }
 
     override suspend fun getLessonById(id: String): Lesson? {
-        val local = database.appDatabaseQueries.selectLessonsByCourseId(id).executeAsOneOrNull()
-        // In a real app, you'd map the local entity to domain model
-        return api.fetchLesson(id)
+        return try {
+            val lesson = api.fetchLesson(id)
+            lesson?.let {
+                database.appDatabaseQueries.insertLesson(
+                    id = it.id,
+                    courseId = it.courseId,
+                    title = it.title,
+                    theoryContent = it.theoryContent
+                )
+            }
+            lesson
+        } catch (e: Exception) {
+            null
+        }
     }
 
     override suspend fun createLesson(lesson: Lesson): Lesson {
-        return api.createLesson(lesson)
+        val created = api.createLesson(lesson)
+        database.appDatabaseQueries.insertLesson(
+            id = created.id,
+            courseId = created.courseId,
+            title = created.title,
+            theoryContent = created.theoryContent
+        )
+        return created
     }
 
     override suspend fun updateLesson(lesson: Lesson): Lesson {
-        return api.updateLesson(lesson)
+        val updated = api.updateLesson(lesson)
+        database.appDatabaseQueries.insertLesson(
+            id = updated.id,
+            courseId = updated.courseId,
+            title = updated.title,
+            theoryContent = updated.theoryContent
+        )
+        return updated
     }
 
     override suspend fun deleteLesson(id: String) {
         api.deleteLesson(id)
-        database.appDatabaseQueries.deleteCourse(id) // This should be deleteLesson in the .sq
+        database.appDatabaseQueries.deleteLesson(id)
     }
 }

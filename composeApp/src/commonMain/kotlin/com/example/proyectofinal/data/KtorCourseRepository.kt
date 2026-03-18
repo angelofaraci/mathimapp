@@ -29,11 +29,15 @@ class KtorCourseRepository(
     }
 
     override suspend fun getMyCreatedCourses(creatorId: String): List<Course> = withContext(Dispatchers.IO) {
-        api.fetchMyCourses(creatorId)
+        val courses = api.fetchMyCourses(creatorId)
+        courses.forEach { insertCourseToLocal(it) }
+        courses
     }
 
     override suspend fun getEnrolledCourses(userId: String): List<Course> = withContext(Dispatchers.IO) {
-        api.fetchEnrolledCourses(userId)
+        val courses = api.fetchEnrolledCourses(userId)
+        courses.forEach { insertCourseToLocal(it) }
+        courses
     }
 
     override suspend fun createCourse(course: Course): Course = withContext(Dispatchers.IO) {

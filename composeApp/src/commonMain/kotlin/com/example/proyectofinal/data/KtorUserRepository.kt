@@ -14,15 +14,11 @@ class KtorUserRepository(
 ) : UserRepository {
 
     override suspend fun getCurrentUser(): User? = withContext(Dispatchers.IO) {
-        // In a real app, you would get the current user ID from a SessionManager/Prefs
-        // For now, we simulate fetching a default user
         try {
             val remote = api.fetchUser("current-user-id")
             insertUserToLocal(remote)
             remote
         } catch (e: Exception) {
-            // Fallback to local database if offline
-            database.appDatabaseQueries.selectAllCourses().executeAsOneOrNull() // Placeholder for selectUser
             null
         }
     }
@@ -33,7 +29,7 @@ class KtorUserRepository(
             insertUserToLocal(user)
             user.role
         } catch (e: Exception) {
-            UserRole.LEARNER // Default fallback
+            UserRole.LEARNER
         }
     }
 
@@ -43,11 +39,11 @@ class KtorUserRepository(
     }
 
     private fun insertUserToLocal(user: User) {
-        database.appDatabaseQueries.insertProgress(
-            userId = user.id,
-            totalScore = 0 // Scores would be handled by ProgressRepository
+        database.appDatabaseQueries.insertUser(
+            id = user.id,
+            name = user.name,
+            email = user.email,
+            role = user.role
         )
-        // Note: You might want to add a specific insertUser query to your .sq 
-        // if you want to cache the full User object (name, email, role).
     }
 }
