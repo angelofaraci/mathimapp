@@ -1,4 +1,4 @@
-package com.example.proyectofinal.domain
+package com.example.proyectofinal.models
 
 import kotlinx.serialization.Serializable
 
@@ -29,7 +29,7 @@ data class Course(
 @Serializable
 data class Lesson(
     val id: String,
-    val courseId: String, // Reference to the parent course
+    val courseId: String,
     val title: String,
     val theoryContent: String,
     val exercises: List<Exercise> = emptyList()
@@ -38,7 +38,7 @@ data class Lesson(
 @Serializable
 data class Exercise(
     val id: String,
-    val lessonId: String, // Reference to the parent lesson
+    val lessonId: String,
     val question: String,
     val options: List<String>,
     val correctAnswer: String,
@@ -47,8 +47,8 @@ data class Exercise(
 
 @Serializable
 enum class ExerciseType {
-    MULTIPLE_CHOICE, 
-    TRUE_FALSE, 
+    MULTIPLE_CHOICE,
+    TRUE_FALSE,
     INPUT_VALUE
 }
 

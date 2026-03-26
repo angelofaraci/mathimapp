@@ -33,3 +33,21 @@ in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and r
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+### Run Backend
+
+The backend reads its database configuration from environment variables, with local defaults for development.
+
+Supported variables:
+
+- `DB_URL` default: `jdbc:postgresql://localhost:5432/MathimApp`
+- `DB_DRIVER` default: `org.postgresql.Driver`
+- `DB_USER` default: `postgres`
+
+Example on Windows PowerShell:
+
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5432/MathimApp"
+$env:DB_USER="postgres"
+$env:DB_PASSWORD="password"
+.\gradlew.bat :server:run
+```
