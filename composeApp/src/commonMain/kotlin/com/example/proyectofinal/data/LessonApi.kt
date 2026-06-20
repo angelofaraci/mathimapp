@@ -2,6 +2,7 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.TheoryUpdateRequest
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -33,6 +34,13 @@ class LessonApi(
         return client.put("$baseUrl/lessons/${lesson.id}") {
             contentType(ContentType.Application.Json)
             setBody(lesson)
+        }.body()
+    }
+
+    suspend fun updateTheory(request: TheoryUpdateRequest): Lesson {
+        return client.put("$baseUrl/lessons/${request.lessonId}/theory") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }.body()
     }
 

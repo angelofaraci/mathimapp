@@ -7,6 +7,7 @@ import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -15,9 +16,15 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
 class CourseService {
-    fun getOfficialCourses(): List<Course> = dbQuery {
+    fun getOfficialCourses(schoolYear: Int? = null): List<Course> = dbQuery {
+        val filter = if (schoolYear == null) {
+            Courses.isOfficial eq true
+        } else {
+            (Courses.isOfficial eq true) and (Courses.schoolYear eq schoolYear)
+        }
+
         Courses.selectAll()
-            .where { Courses.isOfficial eq true }
+            .where { filter }
             .map { it.toCourse() }
     }
 
@@ -62,6 +69,7 @@ class CourseService {
             it[Courses.description] = request.description
             it[Courses.creatorId] = request.creatorId
             it[Courses.isOfficial] = request.isOfficial
+            it[Courses.schoolYear] = request.schoolYear
             it[Courses.joinCode] = request.joinCode
         }
 
@@ -71,7 +79,8 @@ class CourseService {
             description = request.description,
             creatorId = request.creatorId,
             isOfficial = request.isOfficial,
-            joinCode = request.joinCode
+            joinCode = request.joinCode,
+            schoolYear = request.schoolYear
         )
     }
 
@@ -81,6 +90,7 @@ class CourseService {
                 request.title?.let { row[Courses.title] = it }
                 request.description?.let { row[Courses.description] = it }
                 request.joinCode?.let { row[Courses.joinCode] = it }
+                request.schoolYear?.let { row[Courses.schoolYear] = it }
             }
         }
 

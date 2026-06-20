@@ -11,6 +11,7 @@ import com.example.proyectofinal.data.KtorUserRepository
 import com.example.proyectofinal.data.LessonApi
 import com.example.proyectofinal.data.UserApi
 import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.db.CourseEntity
 import com.example.proyectofinal.db.ExerciseEntity
 import com.example.proyectofinal.db.UserEntity
 import com.example.proyectofinal.db.UserProgressEntity
@@ -49,6 +50,9 @@ private fun createAppDatabase(driverFactory: DatabaseDriverFactory): AppDatabase
 
     return AppDatabase(
         driver = driverFactory.createDriver(),
+        CourseEntityAdapter = CourseEntity.Adapter(
+            schoolYearAdapter = intAdapter
+        ),
         ExerciseEntityAdapter = ExerciseEntity.Adapter(
             typeAdapter = EnumColumnAdapter()
         ),

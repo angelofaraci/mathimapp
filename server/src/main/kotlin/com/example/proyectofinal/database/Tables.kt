@@ -18,6 +18,7 @@ object Courses : Table("courses") {
     val description = varchar("description", 1000)
     val creatorId = varchar("creator_id", 50)
     val isOfficial = bool("is_official").default(false)
+    val schoolYear = integer("school_year").default(0)
     val joinCode = varchar("join_code", 20).nullable()
 
     override val primaryKey = PrimaryKey(id)

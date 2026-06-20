@@ -58,6 +58,7 @@ object SeedData {
                 it[Courses.description] = "Learn the fundamentals of addition, subtraction, multiplication, and division."
                 it[Courses.creatorId] = admin.id
                 it[Courses.isOfficial] = true
+                it[Courses.schoolYear] = 3
                 it[Courses.joinCode] = "ARITH101"
             }
 

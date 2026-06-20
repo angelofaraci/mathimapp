@@ -6,7 +6,7 @@ interface CourseRepository {
     /**
      * Fetches only official courses (those provided by the app for everyone).
      */
-    suspend fun getOfficialCourses(): List<Course>
+    suspend fun getOfficialCourses(schoolYear: Int? = null): List<Course>
 
     /**
      * Fetches a specific course by its ID.

@@ -24,6 +24,11 @@ interface LessonRepository {
     suspend fun updateLesson(lesson: Lesson): Lesson
 
     /**
+     * Updates lesson theory content without changing other lesson fields.
+     */
+    suspend fun updateTheory(lessonId: String, content: String): Lesson
+
+    /**
      * Deletes a lesson.
      */
     suspend fun deleteLesson(id: String)

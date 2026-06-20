@@ -14,8 +14,10 @@ class CourseApi(
 
     private val baseUrl: String = apiConfig.baseUrl
 
-    suspend fun fetchOfficialCourses(): List<Course> {
-        return client.get("$baseUrl/courses/official").body()
+    suspend fun fetchOfficialCourses(schoolYear: Int? = null): List<Course> {
+        return client.get("$baseUrl/courses/official") {
+            schoolYear?.let { parameter("schoolYear", it) }
+        }.body()
     }
 
     suspend fun fetchCourseById(id: String): Course {

@@ -33,6 +33,9 @@ class KtorCourseRepositoryTest {
 
         database = AppDatabase(
             driver = driver,
+            CourseEntityAdapter = CourseEntity.Adapter(
+                schoolYearAdapter = intAdapter
+            ),
             ExerciseEntityAdapter = ExerciseEntity.Adapter(
                 typeAdapter = EnumColumnAdapter()
             ),
@@ -46,16 +49,18 @@ class KtorCourseRepositoryTest {
     }
 
     @Test
-    fun `getOfficialCourses fetches from API and saves to DB`() = runTest {
+    fun `getOfficialCourses sends schoolYear filter and saves it to DB`() = runTest {
         val mockCourse = Course(
             id = "test-1",
             title = "Test Course",
             description = "Description",
             creatorId = "admin",
-            isOfficial = true
+            isOfficial = true,
+            schoolYear = 3
         )
 
-        val mockEngine = MockEngine { _ ->
+        val mockEngine = MockEngine { request ->
+            assertEquals("3", request.url.parameters["schoolYear"])
             respond(
                 content = json.encodeToString(listOf(mockCourse)),
                 status = HttpStatusCode.OK,
@@ -72,17 +77,16 @@ class KtorCourseRepositoryTest {
         val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
-        // 1. Fetch courses
-        val courses = repository.getOfficialCourses()
+        val courses = repository.getOfficialCourses(3)
 
-        // 2. Verify network result
         assertEquals(1, courses.size)
         assertEquals("Test Course", courses[0].title)
+        assertEquals(3, courses[0].schoolYear)
 
-        // 3. Verify it was saved to the local database
         val dbCourse = database.appDatabaseQueries.selectCourseById("test-1").executeAsOne()
         assertEquals("Test Course", dbCourse.title)
         assertEquals(true, dbCourse.isOfficial)
+        assertEquals(3, dbCourse.schoolYear)
     }
 
     @Test
@@ -248,6 +252,7 @@ class KtorCourseRepositoryTest {
             description = existingCourse.description,
             creatorId = existingCourse.creatorId,
             isOfficial = existingCourse.isOfficial,
+            schoolYear = existingCourse.schoolYear,
             joinCode = existingCourse.joinCode
         )
 
@@ -289,6 +294,7 @@ class KtorCourseRepositoryTest {
             description = "Description",
             creatorId = "user-123",
             isOfficial = false,
+            schoolYear = 0,
             joinCode = null
         )
 

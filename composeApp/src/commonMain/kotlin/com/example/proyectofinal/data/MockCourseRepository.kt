@@ -26,7 +26,10 @@ class MockCourseRepository : CourseRepository {
         )
     )
 
-    override suspend fun getOfficialCourses(): List<Course> = mockCourses.filter { it.isOfficial }
+    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> =
+        mockCourses.filter { course ->
+            course.isOfficial && (schoolYear == null || course.schoolYear == schoolYear)
+        }
 
     override suspend fun getCourseById(id: String): Course? = mockCourses.find { it.id == id }
 

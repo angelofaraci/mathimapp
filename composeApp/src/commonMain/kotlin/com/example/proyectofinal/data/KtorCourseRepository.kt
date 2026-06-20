@@ -12,8 +12,8 @@ class KtorCourseRepository(
     private val database: AppDatabase
 ) : CourseRepository {
 
-    override suspend fun getOfficialCourses(): List<Course> = withContext(Dispatchers.IO) {
-        val courses = api.fetchOfficialCourses()
+    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> = withContext(Dispatchers.IO) {
+        val courses = api.fetchOfficialCourses(schoolYear)
         courses.forEach { insertCourseToLocal(it) }
         courses
     }
@@ -76,6 +76,7 @@ class KtorCourseRepository(
             description = course.description,
             creatorId = course.creatorId,
             isOfficial = course.isOfficial,
+            schoolYear = course.schoolYear,
             joinCode = course.joinCode
         )
     }

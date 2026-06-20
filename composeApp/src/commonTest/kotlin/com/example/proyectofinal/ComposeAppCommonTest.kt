@@ -3,6 +3,7 @@ package com.example.proyectofinal
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.db.CourseEntity
 import com.example.proyectofinal.db.ExerciseEntity
 import com.example.proyectofinal.db.UserEntity
 import com.example.proyectofinal.db.UserProgressEntity
@@ -131,7 +132,7 @@ class CourseViewModelTest {
 private class FakeCourseRepository(
     private val officialCoursesProvider: suspend () -> List<Course>
 ) : CourseRepository {
-    override suspend fun getOfficialCourses(): List<Course> = officialCoursesProvider()
+    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> = officialCoursesProvider()
 
     override suspend fun getCourseById(id: String): Course? = null
 
@@ -157,6 +158,9 @@ private fun createTestAppDatabase(): AppDatabase {
 
     return AppDatabase(
         driver = createTestDriver(),
+        CourseEntityAdapter = CourseEntity.Adapter(
+            schoolYearAdapter = intAdapter
+        ),
         ExerciseEntityAdapter = ExerciseEntity.Adapter(
             typeAdapter = EnumColumnAdapter()
         ),

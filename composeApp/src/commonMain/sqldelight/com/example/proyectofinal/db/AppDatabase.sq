@@ -26,6 +26,7 @@ CREATE TABLE CourseEntity (
     description TEXT NOT NULL,
     creatorId TEXT NOT NULL,
     isOfficial INTEGER AS Boolean NOT NULL DEFAULT 0,
+    schoolYear INTEGER AS Int NOT NULL DEFAULT 0,
     joinCode TEXT
 );
 
@@ -85,8 +86,8 @@ selectCoursesByCreatorId:
 SELECT * FROM CourseEntity WHERE creatorId = ?;
 
 insertCourse:
-INSERT OR REPLACE INTO CourseEntity(id, title, description, creatorId, isOfficial, joinCode)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO CourseEntity(id, title, description, creatorId, isOfficial, schoolYear, joinCode)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 deleteCourse:
 DELETE FROM CourseEntity WHERE id = ?;

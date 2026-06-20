@@ -33,6 +33,9 @@ class KtorExerciseRepositoryTest {
 
         database = AppDatabase(
             driver = driver,
+            CourseEntityAdapter = CourseEntity.Adapter(
+                schoolYearAdapter = intAdapter
+            ),
             ExerciseEntityAdapter = ExerciseEntity.Adapter(
                 typeAdapter = EnumColumnAdapter()
             ),
@@ -50,6 +53,7 @@ class KtorExerciseRepositoryTest {
             description = "Description",
             creatorId = "admin",
             isOfficial = true,
+            schoolYear = 0,
             joinCode = null
         )
 

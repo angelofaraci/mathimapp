@@ -23,7 +23,8 @@ data class Course(
     val creatorId: String,
     val isOfficial: Boolean = false,
     val joinCode: String? = null,
-    val lessons: List<Lesson> = emptyList()
+    val lessons: List<Lesson> = emptyList(),
+    val schoolYear: Int = 0
 )
 
 @Serializable
@@ -65,4 +66,10 @@ data class CompleteLessonRequest(
     val userId: String,
     val lessonId: String,
     val score: Int = 0
+)
+
+@Serializable
+data class TheoryUpdateRequest(
+    val lessonId: String,
+    val theoryContent: String
 )

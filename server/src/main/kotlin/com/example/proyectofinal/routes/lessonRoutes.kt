@@ -1,11 +1,14 @@
 package com.example.proyectofinal.routes
 
 import com.example.proyectofinal.models.CreateLessonRequest
+import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
+import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import com.example.proyectofinal.service.LessonService
+import com.example.proyectofinal.service.TheoryUpdateResult
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -58,6 +61,30 @@ fun Application.lessonRoutes(service: LessonService) {
 
                 val lesson = service.updateLesson(lessonId, request) ?: return@put call.respond(HttpStatusCode.NotFound)
                 call.respond(lesson)
+            }
+
+            put("/lessons/{id}/theory") {
+                val lessonId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+                val request = call.receive<TheoryUpdateRequest>()
+
+                if (lessonId != request.lessonId) {
+                    return@put call.respond(HttpStatusCode.BadRequest, "Path id must match body lessonId")
+                }
+
+                val userId = call.currentUserId()
+                    ?: return@put call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@put call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+
+                if (role != UserRole.ADMIN && role != UserRole.TEACHER) {
+                    return@put call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                }
+
+                when (val result = service.updateTheoryContent(lessonId, request.theoryContent, userId, role)) {
+                    is TheoryUpdateResult.Success -> call.respond(result.lesson)
+                    TheoryUpdateResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                    TheoryUpdateResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
             }
 
             delete("/lessons/{id}") {

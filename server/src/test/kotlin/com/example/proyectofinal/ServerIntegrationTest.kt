@@ -20,6 +20,7 @@ import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.RegisterRequest
+import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserProgress
@@ -226,7 +227,7 @@ class ServerIntegrationTest {
         }
 
         val token = registerUserAndGetToken(client, email = "courses@example.com")
-        seedOfficialCourse()
+        seedOfficialCourse(schoolYear = 3)
 
         val response = client.get("/courses/official") {
             bearerAuth(token)
@@ -238,6 +239,42 @@ class ServerIntegrationTest {
         assertEquals(1, courses.size)
         assertEquals("Official Test Course", courses.single().title)
         assertTrue(courses.single().isOfficial)
+        assertEquals(3, courses.single().schoolYear)
+    }
+
+    @Test
+    fun `official courses support school year filtering and reject invalid filters`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val token = registerUserAndGetToken(client, email = "school-year@example.com")
+        seedOfficialCourse(courseId = "official-year-3", title = "Year 3", schoolYear = 3)
+        seedOfficialCourse(courseId = "official-year-4", title = "Year 4", schoolYear = 4)
+
+        val filteredResponse = client.get("/courses/official?schoolYear=3") {
+            bearerAuth(token)
+        }
+        val emptyResponse = client.get("/courses/official?schoolYear=6") {
+            bearerAuth(token)
+        }
+        val invalidResponse = client.get("/courses/official?schoolYear=third") {
+            bearerAuth(token)
+        }
+
+        assertEquals(HttpStatusCode.OK, filteredResponse.status)
+        assertEquals(listOf("official-year-3"), filteredResponse.body<List<Course>>().map { it.id })
+        assertEquals(HttpStatusCode.OK, emptyResponse.status)
+        assertTrue(emptyResponse.body<List<Course>>().isEmpty())
+        assertEquals(HttpStatusCode.BadRequest, invalidResponse.status)
     }
 
     @Test
@@ -418,6 +455,80 @@ class ServerIntegrationTest {
     }
 
     @Test
+    fun `theory route enforces auth scope and path body validation`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        seedOfficialCourseWithLesson(
+            courseId = "official-theory-course",
+            lessonId = "official-theory-lesson",
+            schoolYear = 3
+        )
+        seedOwnedCourseWithLesson(
+            courseId = "teacher-owned-course",
+            creatorId = "teacher-owner",
+            lessonId = "teacher-owned-lesson"
+        )
+
+        val adminToken = Security.generateToken("admin-test", UserRole.ADMIN.name)
+        val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
+        val otherTeacherToken = Security.generateToken("teacher-other", UserRole.TEACHER.name)
+
+        val unauthorized = client.put("/lessons/official-theory-lesson/theory") {
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(TheoryUpdateRequest(lessonId = "official-theory-lesson", theoryContent = "Unauthorized"))
+        }
+        val adminSuccess = client.put("/lessons/official-theory-lesson/theory") {
+            bearerAuth(adminToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(TheoryUpdateRequest(lessonId = "official-theory-lesson", theoryContent = "Admin theory"))
+        }
+        val teacherSuccess = client.put("/lessons/teacher-owned-lesson/theory") {
+            bearerAuth(ownerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(TheoryUpdateRequest(lessonId = "teacher-owned-lesson", theoryContent = "Teacher theory"))
+        }
+        val forbidden = client.put("/lessons/teacher-owned-lesson/theory") {
+            bearerAuth(otherTeacherToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(TheoryUpdateRequest(lessonId = "teacher-owned-lesson", theoryContent = "Forbidden"))
+        }
+        val mismatchedIds = client.put("/lessons/teacher-owned-lesson/theory") {
+            bearerAuth(ownerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(TheoryUpdateRequest(lessonId = "different-lesson", theoryContent = "Mismatch"))
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, unauthorized.status)
+        assertEquals(HttpStatusCode.OK, adminSuccess.status)
+        assertEquals("Admin theory", adminSuccess.body<Lesson>().theoryContent)
+        assertEquals(HttpStatusCode.OK, teacherSuccess.status)
+        assertEquals("Teacher theory", teacherSuccess.body<Lesson>().theoryContent)
+        assertEquals(HttpStatusCode.Forbidden, forbidden.status)
+        assertEquals(HttpStatusCode.BadRequest, mismatchedIds.status)
+
+        transaction {
+            assertEquals(
+                "Admin theory",
+                Lessons.selectAll().where { Lessons.id eq "official-theory-lesson" }.single()[Lessons.theoryContent]
+            )
+            assertEquals(
+                "Teacher theory",
+                Lessons.selectAll().where { Lessons.id eq "teacher-owned-lesson" }.single()[Lessons.theoryContent]
+            )
+        }
+    }
+
+    @Test
     fun `exercise mutations require parent course owner or admin`() = testApplication {
         setupTestDatabase()
 
@@ -572,7 +683,11 @@ class ServerIntegrationTest {
         return response.body<AuthResponse>().token
     }
 
-    private fun seedOfficialCourse() {
+    private fun seedOfficialCourse(
+        courseId: String = "course-1",
+        title: String = "Official Test Course",
+        schoolYear: Int = 3
+    ) {
         transaction {
             if (Users.selectAll().where { Users.id eq "admin-test" }.firstOrNull() == null) {
                 Users.insert {
@@ -585,12 +700,27 @@ class ServerIntegrationTest {
             }
 
             Courses.insert {
-                it[id] = "course-1"
-                it[title] = "Official Test Course"
+                it[id] = courseId
+                it[Courses.title] = title
                 it[description] = "Basic test course"
                 it[creatorId] = "admin-test"
                 it[isOfficial] = true
+                it[Courses.schoolYear] = schoolYear
                 it[joinCode] = "JOIN123"
+            }
+        }
+    }
+
+    private fun seedOfficialCourseWithLesson(courseId: String, lessonId: String, schoolYear: Int) {
+        seedOfficialCourse(courseId = courseId, title = courseId, schoolYear = schoolYear)
+
+        transaction {
+            Lessons.insert {
+                it[id] = lessonId
+                it[Lessons.courseId] = courseId
+                it[title] = lessonId
+                it[theoryContent] = lessonId
+                it[orderIndex] = 0
             }
         }
     }
@@ -603,6 +733,7 @@ class ServerIntegrationTest {
                 it[description] = courseId
                 it[creatorId] = "teacher-owner"
                 it[isOfficial] = false
+                it[Courses.schoolYear] = 0
                 it[joinCode] = null
             }
 
@@ -624,6 +755,7 @@ class ServerIntegrationTest {
                 it[description] = courseId
                 it[Courses.creatorId] = creatorId
                 it[isOfficial] = false
+                it[Courses.schoolYear] = 0
                 it[joinCode] = null
             }
 

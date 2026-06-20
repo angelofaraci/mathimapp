@@ -20,7 +20,8 @@ internal fun ResultRow.toCourse(lessons: List<Lesson> = emptyList()): Course =
         creatorId = this[Courses.creatorId],
         isOfficial = this[Courses.isOfficial],
         joinCode = this[Courses.joinCode],
-        lessons = lessons
+        lessons = lessons,
+        schoolYear = this[Courses.schoolYear]
     )
 
 internal fun ResultRow.toLesson(exercises: List<Exercise> = emptyList()): Lesson =

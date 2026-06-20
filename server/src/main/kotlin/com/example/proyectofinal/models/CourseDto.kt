@@ -9,14 +9,16 @@ data class CreateCourseRequest(
     val description: String,
     val creatorId: String,
     val isOfficial: Boolean = false,
-    val joinCode: String? = null
+    val joinCode: String? = null,
+    val schoolYear: Int = 0
 )
 
 @Serializable
 data class UpdateCourseRequest(
     val title: String? = null,
     val description: String? = null,
-    val joinCode: String? = null
+    val joinCode: String? = null,
+    val schoolYear: Int? = null
 )
 
 @Serializable

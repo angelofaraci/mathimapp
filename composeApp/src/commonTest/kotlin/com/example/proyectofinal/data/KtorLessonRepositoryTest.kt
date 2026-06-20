@@ -4,11 +4,13 @@ import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
-import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.TheoryUpdateRequest
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.request.HttpRequestData
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
@@ -33,6 +35,9 @@ class KtorLessonRepositoryTest {
 
         database = AppDatabase(
             driver = driver,
+            CourseEntityAdapter = CourseEntity.Adapter(
+                schoolYearAdapter = intAdapter
+            ),
             ExerciseEntityAdapter = ExerciseEntity.Adapter(
                 typeAdapter = EnumColumnAdapter()
             ),
@@ -50,6 +55,7 @@ class KtorLessonRepositoryTest {
             description = "Description",
             creatorId = "admin",
             isOfficial = true,
+            schoolYear = 0,
             joinCode = null
         )
     }
@@ -268,5 +274,66 @@ class KtorLessonRepositoryTest {
 
         val dbLesson = database.appDatabaseQueries.selectLessonById(lessonId).executeAsOneOrNull()
         assertEquals(null, dbLesson)
+    }
+
+    @Test
+    fun `updateTheory sends shared request and refreshes lesson cache`() = runTest {
+        val existingLesson = Lesson(
+            id = "lesson-1",
+            courseId = "course-1",
+            title = "Original Title",
+            theoryContent = "Original Content"
+        )
+
+        database.appDatabaseQueries.insertLesson(
+            id = existingLesson.id,
+            courseId = existingLesson.courseId,
+            title = existingLesson.title,
+            theoryContent = existingLesson.theoryContent
+        )
+
+        val expectedRequest = TheoryUpdateRequest(
+            lessonId = "lesson-1",
+            theoryContent = "Updated Theory"
+        )
+        val updatedLesson = existingLesson.copy(theoryContent = expectedRequest.theoryContent)
+
+        val mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/lessons/lesson-1/theory" -> {
+                    assertEquals(HttpMethod.Put, request.method)
+                    assertEquals(expectedRequest, request.decodeBody())
+                    respond(
+                        content = json.encodeToString(updatedLesson),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/json")
+                    )
+                }
+
+                else -> error("Unexpected request: ${request.url.encodedPath}")
+            }
+        }
+
+        val httpClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(json)
+            }
+        }
+
+        val api = LessonApi(httpClient, apiConfig)
+        val repository = KtorLessonRepository(api, database)
+
+        val result = repository.updateTheory("lesson-1", "Updated Theory")
+
+        assertEquals("Updated Theory", result.theoryContent)
+
+        val dbLesson = database.appDatabaseQueries.selectLessonById("lesson-1").executeAsOneOrNull()
+        assertEquals("Updated Theory", dbLesson?.theoryContent)
+    }
+
+    private suspend fun HttpRequestData.decodeBody(): TheoryUpdateRequest {
+        val requestBody = body as? OutgoingContent.ByteArrayContent
+            ?: error("Expected ByteArrayContent but was ${body::class.simpleName}")
+        return json.decodeFromString(requestBody.bytes().decodeToString())
     }
 }

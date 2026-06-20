@@ -19,6 +19,7 @@ import com.example.proyectofinal.service.AuthService
 import com.example.proyectofinal.service.CourseService
 import com.example.proyectofinal.service.ExerciseService
 import com.example.proyectofinal.service.LessonService
+import com.example.proyectofinal.service.TheoryUpdateResult
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -27,6 +28,7 @@ import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -42,7 +44,8 @@ class CourseServiceTest {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
         insertUser(id = "student-1", role = UserRole.LEARNER)
-        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
+        insertCourse(id = "official-course-year-3", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
+        insertCourse(id = "official-course-year-4", creatorId = "admin-1", isOfficial = true, schoolYear = 4)
         insertCourse(id = "teacher-course", creatorId = "teacher-1", joinCode = "JOIN123")
         insertCourse(id = "teacher-course-2", creatorId = "teacher-1", joinCode = "JOIN456")
         insertLesson(id = "lesson-2", courseId = "teacher-course", orderIndex = 1)
@@ -51,7 +54,13 @@ class CourseServiceTest {
 
         val service = CourseService()
 
-        assertEquals(listOf("official-course"), service.getOfficialCourses().map { it.id })
+        assertEquals(
+            setOf("official-course-year-3", "official-course-year-4"),
+            service.getOfficialCourses().map { it.id }.toSet()
+        )
+        assertEquals(listOf("official-course-year-3"), service.getOfficialCourses(3).map { it.id })
+        assertEquals(3, service.getOfficialCourses(3).single().schoolYear)
+        assertTrue(service.getOfficialCourses(6).isEmpty())
         assertEquals(
             setOf("teacher-course", "teacher-course-2"),
             service.getCoursesByCreator("teacher-1").map { it.id }.toSet()
@@ -76,22 +85,26 @@ class CourseServiceTest {
                 title = "Created Course",
                 description = "Created description",
                 creatorId = "teacher-1",
-                joinCode = "JOIN123"
+                joinCode = "JOIN123",
+                schoolYear = 5
             )
         )
 
         assertEquals("created-course", created.id)
+        assertEquals(5, created.schoolYear)
 
         val updated = service.updateCourse(
             id = "created-course",
             request = UpdateCourseRequest(
                 title = "Updated Course",
                 description = "Updated description",
-                joinCode = "NEWCODE"
+                joinCode = "NEWCODE",
+                schoolYear = 6
             )
         )
         assertEquals("Updated Course", updated?.title)
         assertEquals("Updated description", updated?.description)
+        assertEquals(6, updated?.schoolYear)
 
         val joined = service.joinCourse(userId = "student-1", code = "NEWCODE")
         assertEquals("created-course", joined?.id)
@@ -190,6 +203,66 @@ class LessonExerciseServiceTest {
     }
 
     @Test
+    fun `theory updates persist only for allowed roles and scopes`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "teacher-owner", role = UserRole.TEACHER)
+        insertUser(id = "teacher-other", role = UserRole.TEACHER)
+
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
+        insertCourse(id = "teacher-course", creatorId = "teacher-owner")
+        insertCourse(id = "other-course", creatorId = "teacher-other")
+
+        insertLesson(id = "official-lesson", courseId = "official-course", theoryContent = "Official theory")
+        insertLesson(id = "teacher-lesson", courseId = "teacher-course", theoryContent = "Teacher theory")
+        insertLesson(id = "other-lesson", courseId = "other-course", theoryContent = "Other theory")
+        insertExercise(id = "exercise-1", lessonId = "official-lesson", correctAnswer = "4")
+
+        val service = LessonService()
+
+        val adminResult = service.updateTheoryContent(
+            lessonId = "official-lesson",
+            content = "Updated official theory",
+            userId = "admin-1",
+            role = UserRole.ADMIN
+        )
+        val teacherResult = service.updateTheoryContent(
+            lessonId = "teacher-lesson",
+            content = "Updated teacher theory",
+            userId = "teacher-owner",
+            role = UserRole.TEACHER
+        )
+        val forbiddenTeacherResult = service.updateTheoryContent(
+            lessonId = "other-lesson",
+            content = "Should fail",
+            userId = "teacher-owner",
+            role = UserRole.TEACHER
+        )
+        val forbiddenAdminResult = service.updateTheoryContent(
+            lessonId = "teacher-lesson",
+            content = "Should also fail",
+            userId = "admin-1",
+            role = UserRole.ADMIN
+        )
+
+        assertEquals("Updated official theory", assertIs<TheoryUpdateResult.Success>(adminResult).lesson.theoryContent)
+        assertEquals("4", assertIs<TheoryUpdateResult.Success>(adminResult).lesson.exercises.single().correctAnswer)
+        assertEquals("Updated teacher theory", assertIs<TheoryUpdateResult.Success>(teacherResult).lesson.theoryContent)
+        assertEquals(TheoryUpdateResult.Forbidden, forbiddenTeacherResult)
+        assertEquals(TheoryUpdateResult.Forbidden, forbiddenAdminResult)
+
+        transaction {
+            assertEquals(
+                "Updated official theory",
+                Lessons.selectAll().where { Lessons.id eq "official-lesson" }.single()[Lessons.theoryContent]
+            )
+            assertEquals(
+                "Updated teacher theory",
+                Lessons.selectAll().where { Lessons.id eq "teacher-lesson" }.single()[Lessons.theoryContent]
+            )
+        }
+    }
+
+    @Test
     fun `exercise service supports list create update and delete flows`() {
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
         insertCourse(id = "course-1", creatorId = "teacher-1")
@@ -261,6 +334,7 @@ private fun insertCourse(
     creatorId: String,
     isOfficial: Boolean = false,
     joinCode: String? = null,
+    schoolYear: Int = 0,
     title: String = id,
     description: String = id
 ) {
@@ -271,6 +345,7 @@ private fun insertCourse(
             it[Courses.description] = description
             it[Courses.creatorId] = creatorId
             it[Courses.isOfficial] = isOfficial
+            it[Courses.schoolYear] = schoolYear
             it[Courses.joinCode] = joinCode
         }
     }

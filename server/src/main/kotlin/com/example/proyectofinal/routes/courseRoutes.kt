@@ -11,17 +11,24 @@ import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
-import io.ktor.server.routing.delete
 import io.ktor.server.routing.routing
 
 fun Application.courseRoutes(service: CourseService) {
     routing {
         authenticate("auth-jwt") {
             get("/courses/official") {
-                call.respond(service.getOfficialCourses())
+                val schoolYearParam = call.request.queryParameters["schoolYear"]
+                val schoolYear = schoolYearParam?.toIntOrNull()
+
+                if (schoolYearParam != null && schoolYear == null) {
+                    return@get call.respond(HttpStatusCode.BadRequest, "schoolYear must be numeric")
+                }
+
+                call.respond(service.getOfficialCourses(schoolYear))
             }
 
             get("/courses/{id}") {

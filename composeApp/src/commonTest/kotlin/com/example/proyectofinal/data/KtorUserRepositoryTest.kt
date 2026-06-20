@@ -34,6 +34,9 @@ class KtorUserRepositoryTest {
 
         database = AppDatabase(
             driver = driver,
+            CourseEntityAdapter = CourseEntity.Adapter(
+                schoolYearAdapter = intAdapter
+            ),
             ExerciseEntityAdapter = ExerciseEntity.Adapter(
                 typeAdapter = EnumColumnAdapter()
             ),
