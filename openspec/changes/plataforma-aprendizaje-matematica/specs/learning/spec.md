@@ -41,3 +41,35 @@ The system MUST provide interactive exercises with rewards or streak feedback, a
 - GIVEN a learner completes a practice activity successfully
 - WHEN the result is accepted
 - THEN the learner's unit progress and reward state are updated
+
+### Requirement: Lesson theory access
+
+The system MUST expose a theory entry point from each module or lesson, and SHALL link that entry point to the theory needed for the current lesson.
+
+#### Scenario: Learner opens lesson theory
+
+- GIVEN a learner is viewing a lesson
+- WHEN the lesson screen is displayed
+- THEN a theory button is available for that lesson
+
+#### Scenario: Missing theory is handled safely
+
+- GIVEN a lesson has no theory content assigned
+- WHEN the learner opens the lesson
+- THEN the theory entry point SHALL not lead to unrelated content
+
+### Requirement: Topic-scoped learner chatbot
+
+The system MUST provide a chatbot for learner questions about the currently opened theory or topic, and SHALL keep that chatbot scoped to the active context.
+
+#### Scenario: Theory view opens chatbot
+
+- GIVEN a learner is viewing theory for a topic
+- WHEN the learner selects the chatbot button
+- THEN the chatbot opens with the same topic context
+
+#### Scenario: Chatbot answers in current topic context
+
+- GIVEN a learner asks a question in the chatbot
+- WHEN the question is submitted
+- THEN the response SHALL be based on the currently opened theory or topic
