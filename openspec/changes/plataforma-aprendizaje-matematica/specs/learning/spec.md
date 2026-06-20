@@ -6,21 +6,21 @@ Define how learners start, navigate curriculum, study theory, and advance throug
 
 ## Requirements
 
-### Requirement: Province-aware onboarding
+### Requirement: School-year-aware onboarding
 
-The system MUST collect learner type, Argentine province, and current school year during onboarding, and SHALL use that profile to recommend the initial curriculum path.
+The system MUST collect learner type and current school year during onboarding, and SHALL use that profile to recommend the initial curriculum path. The MVP SHALL NOT subdivide curriculum or theory content by province.
 
 #### Scenario: Recommended path is created
 
-- GIVEN a new learner completes onboarding with province and school year
+- GIVEN a new learner completes onboarding with learner type and school year
 - WHEN the profile is saved
-- THEN the app presents a starting path aligned to that province and year
+- THEN the app presents a starting path aligned to that school year
 
-#### Scenario: Missing province blocks completion
+#### Scenario: Missing school year blocks completion
 
-- GIVEN a new learner has not selected a province
+- GIVEN a new learner has not selected a school year
 - WHEN they try to finish onboarding
-- THEN the app SHALL require province selection before continuing
+- THEN the app SHALL require school-year selection before continuing
 
 ### Requirement: Dual progression navigation
 
