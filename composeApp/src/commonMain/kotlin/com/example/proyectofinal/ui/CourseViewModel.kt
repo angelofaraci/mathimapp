@@ -2,8 +2,8 @@ package com.example.proyectofinal.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.proyectofinal.domain.Course
 import com.example.proyectofinal.domain.CourseRepository
+import com.example.proyectofinal.models.Course
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

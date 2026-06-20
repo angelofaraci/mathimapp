@@ -1,0 +1,62 @@
+package com.example.proyectofinal.di
+
+import app.cash.sqldelight.ColumnAdapter
+import app.cash.sqldelight.EnumColumnAdapter
+import com.example.proyectofinal.data.CourseApi
+import com.example.proyectofinal.data.ExerciseApi
+import com.example.proyectofinal.data.KtorCourseRepository
+import com.example.proyectofinal.data.KtorExerciseRepository
+import com.example.proyectofinal.data.KtorLessonRepository
+import com.example.proyectofinal.data.KtorUserRepository
+import com.example.proyectofinal.data.LessonApi
+import com.example.proyectofinal.data.UserApi
+import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.db.ExerciseEntity
+import com.example.proyectofinal.db.UserEntity
+import com.example.proyectofinal.db.UserProgressEntity
+import com.example.proyectofinal.domain.CourseRepository
+import com.example.proyectofinal.domain.ExerciseRepository
+import com.example.proyectofinal.domain.LessonRepository
+import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.ui.CourseViewModel
+import org.koin.core.module.dsl.viewModelOf
+import org.koin.dsl.module
+
+val appModule = module {
+    includes(networkModule)
+
+    single { createAppDatabase(get()) }
+
+    single { CourseApi(get(), get()) }
+    single { LessonApi(get(), get()) }
+    single { ExerciseApi(get(), get()) }
+    single { UserApi(get(), get()) }
+
+    single<CourseRepository> { KtorCourseRepository(get(), get()) }
+    single<LessonRepository> { KtorLessonRepository(get(), get()) }
+    single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
+    single<UserRepository> { KtorUserRepository(get(), get()) }
+
+    viewModelOf(::CourseViewModel)
+}
+
+private fun createAppDatabase(driverFactory: DatabaseDriverFactory): AppDatabase {
+    val intAdapter = object : ColumnAdapter<Int, Long> {
+        override fun decode(databaseValue: Long): Int = databaseValue.toInt()
+
+        override fun encode(value: Int): Long = value.toLong()
+    }
+
+    return AppDatabase(
+        driver = driverFactory.createDriver(),
+        ExerciseEntityAdapter = ExerciseEntity.Adapter(
+            typeAdapter = EnumColumnAdapter()
+        ),
+        UserProgressEntityAdapter = UserProgressEntity.Adapter(
+            totalScoreAdapter = intAdapter
+        ),
+        UserEntityAdapter = UserEntity.Adapter(
+            roleAdapter = EnumColumnAdapter()
+        )
+    )
+}

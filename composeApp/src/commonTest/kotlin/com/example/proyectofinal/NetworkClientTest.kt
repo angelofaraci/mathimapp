@@ -1,5 +1,6 @@
 package com.example.proyectofinal
 
+import com.example.proyectofinal.di.InMemoryTokenStore
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.get
@@ -12,26 +13,28 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class NetworkClientTest {
+    private lateinit var tokenStore: InMemoryTokenStore
+
     @BeforeTest
     fun setUp() {
-        TokenHolder.accessToken = null
+        tokenStore = InMemoryTokenStore()
     }
 
     @AfterTest
     fun tearDown() {
-        TokenHolder.accessToken = null
+        tokenStore.accessToken = null
     }
 
     @Test
     fun `client injects authorization header only when a token exists`() = runTest {
         val headers = mutableListOf<String?>()
-        val client = createHttpClient(MockEngine { request ->
+        val client = createHttpClient(tokenStore, MockEngine { request ->
             headers += request.headers[HttpHeaders.Authorization]
             respond("{}", HttpStatusCode.OK)
         })
 
         client.get("https://example.test/ping")
-        TokenHolder.accessToken = "session-token"
+        tokenStore.accessToken = "session-token"
         client.get("https://example.test/ping")
 
         assertEquals(listOf(null, "Bearer session-token"), headers)
@@ -41,14 +44,14 @@ class NetworkClientTest {
     @Test
     fun `clearing memory token removes authorization header from later requests`() = runTest {
         val headers = mutableListOf<String?>()
-        TokenHolder.accessToken = "session-token"
-        val client = createHttpClient(MockEngine { request ->
+        tokenStore.accessToken = "session-token"
+        val client = createHttpClient(tokenStore, MockEngine { request ->
             headers += request.headers[HttpHeaders.Authorization]
             respond("{}", HttpStatusCode.OK)
         })
 
         client.get("https://example.test/ping")
-        TokenHolder.accessToken = null
+        tokenStore.accessToken = null
         client.get("https://example.test/ping")
 
         assertEquals(listOf("Bearer session-token", null), headers)

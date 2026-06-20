@@ -3,8 +3,9 @@ package com.example.proyectofinal.data
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
-import com.example.proyectofinal.domain.Course
-import com.example.proyectofinal.domain.Lesson
+import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.Lesson
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
@@ -18,6 +19,7 @@ import kotlin.test.assertEquals
 
 class KtorLessonRepositoryTest {
     private lateinit var database: AppDatabase
+    private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
 
     @BeforeTest
@@ -86,7 +88,7 @@ class KtorLessonRepositoryTest {
             }
         }
 
-        val api = LessonApi(httpClient)
+        val api = LessonApi(httpClient, apiConfig)
         val repository = KtorLessonRepository(api, database)
 
         val lessons = repository.getLessonsByCourse("course-1")
@@ -125,7 +127,7 @@ class KtorLessonRepositoryTest {
             }
         }
 
-        val api = LessonApi(httpClient)
+        val api = LessonApi(httpClient, apiConfig)
         val repository = KtorLessonRepository(api, database)
 
         val lesson = repository.getLessonById("lesson-1")
@@ -164,7 +166,7 @@ class KtorLessonRepositoryTest {
             }
         }
 
-        val api = LessonApi(httpClient)
+        val api = LessonApi(httpClient, apiConfig)
         val repository = KtorLessonRepository(api, database)
 
         val created = repository.createLesson(newLesson)
@@ -212,7 +214,7 @@ class KtorLessonRepositoryTest {
             }
         }
 
-        val api = LessonApi(httpClient)
+        val api = LessonApi(httpClient, apiConfig)
         val repository = KtorLessonRepository(api, database)
 
         val result = repository.updateLesson(updatedLesson)
@@ -257,7 +259,7 @@ class KtorLessonRepositoryTest {
             }
         }
 
-        val api = LessonApi(httpClient)
+        val api = LessonApi(httpClient, apiConfig)
         val repository = KtorLessonRepository(api, database)
 
         repository.deleteLesson(lessonId)

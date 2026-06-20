@@ -1,5 +1,7 @@
 package com.example.proyectofinal.domain
 
+import com.example.proyectofinal.models.Exercise
+
 interface ExerciseRepository {
     /**
      * Gets all exercises for a lesson.

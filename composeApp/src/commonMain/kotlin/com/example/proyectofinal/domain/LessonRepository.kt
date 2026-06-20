@@ -1,5 +1,7 @@
 package com.example.proyectofinal.domain
 
+import com.example.proyectofinal.models.Lesson
+
 interface LessonRepository {
     /**
      * Gets all lessons for a specific course.

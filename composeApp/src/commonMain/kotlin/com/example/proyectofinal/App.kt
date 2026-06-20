@@ -10,42 +10,71 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.data.MockCourseRepository
-import com.example.proyectofinal.domain.Course
+import com.example.proyectofinal.di.appModule
+import com.example.proyectofinal.di.rememberPlatformModule
+import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
+import org.koin.compose.KoinApplication
+import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
-@Preview
 fun App() {
-    MaterialTheme {
-        // For simplicity, we create the ViewModel here. 
-        // In a real app, you would use Dependency Injection (like Koin).
-        val repository = remember { MockCourseRepository() }
-        val viewModel = remember { CourseViewModel(repository) }
-        val uiState by viewModel.uiState.collectAsState()
+    val platformModule = rememberPlatformModule()
 
+    KoinApplication(application = {
+        modules(platformModule, appModule)
+    }) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+            modifier = Modifier.fillMaxSize()
         ) {
-            when (val state = uiState) {
-                is CourseUiState.Loading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is CourseUiState.Success -> {
-                    CourseList(state.courses)
-                }
-                is CourseUiState.Error -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
-                    }
-                }
+            MaterialTheme {
+                CourseScreen()
             }
         }
     }
+}
+
+@Composable
+private fun CourseScreen(viewModel: CourseViewModel = koinViewModel<CourseViewModel>()) {
+    val uiState by viewModel.uiState.collectAsState()
+    CourseContent(uiState)
+}
+
+@Composable
+private fun CourseContent(uiState: CourseUiState) {
+    when (val state = uiState) {
+        is CourseUiState.Loading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is CourseUiState.Success -> {
+            CourseList(state.courses)
+        }
+        is CourseUiState.Error -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+fun PreviewAppContent() {
+    MaterialTheme {
+        val repository = remember { MockCourseRepository() }
+        val viewModel = remember { CourseViewModel(repository) }
+        val uiState by viewModel.uiState.collectAsState()
+        CourseContent(uiState)
+    }
+}
+
+@Composable
+@Preview
+private fun AppPreview() {
+    PreviewAppContent()
 }
 
 @Composable

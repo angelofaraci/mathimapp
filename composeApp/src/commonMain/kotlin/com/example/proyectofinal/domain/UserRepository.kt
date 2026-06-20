@@ -1,5 +1,8 @@
 package com.example.proyectofinal.domain
 
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserRole
+
 interface UserRepository {
     /**
      * Returns the currently logged-in user.

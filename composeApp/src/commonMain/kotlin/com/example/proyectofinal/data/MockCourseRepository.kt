@@ -1,6 +1,8 @@
 package com.example.proyectofinal.data
 
-import com.example.proyectofinal.domain.*
+import com.example.proyectofinal.domain.CourseRepository
+import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.Lesson
 import kotlin.random.Random
 
 class MockCourseRepository : CourseRepository {

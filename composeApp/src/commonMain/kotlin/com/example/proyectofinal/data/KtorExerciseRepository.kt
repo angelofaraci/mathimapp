@@ -1,8 +1,8 @@
 package com.example.proyectofinal.data
 
-import com.example.proyectofinal.domain.Exercise
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.models.Exercise
 
 class KtorExerciseRepository(
     private val api: ExerciseApi,

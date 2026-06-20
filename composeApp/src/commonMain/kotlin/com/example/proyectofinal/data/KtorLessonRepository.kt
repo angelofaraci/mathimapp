@@ -1,8 +1,8 @@
 package com.example.proyectofinal.data
 
-import com.example.proyectofinal.domain.Lesson
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.models.Lesson
 
 class KtorLessonRepository(
     private val api: LessonApi,
@@ -27,7 +27,7 @@ class KtorLessonRepository(
     override suspend fun getLessonById(id: String): Lesson? {
         return try {
             val lesson = api.fetchLesson(id)
-            lesson?.let {
+            lesson.let {
                 database.appDatabaseQueries.insertLesson(
                     id = it.id,
                     courseId = it.courseId,

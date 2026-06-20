@@ -1,9 +1,9 @@
 package com.example.proyectofinal.data
 
 import com.example.proyectofinal.db.AppDatabase
-import com.example.proyectofinal.domain.User
-import com.example.proyectofinal.domain.UserRole
 import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext

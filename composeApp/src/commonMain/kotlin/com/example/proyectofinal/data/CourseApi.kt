@@ -1,50 +1,55 @@
 package com.example.proyectofinal.data
 
-import com.example.proyectofinal.BASE_URL
-import com.example.proyectofinal.domain.Course
+import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.models.Course
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 
-class CourseApi(private val client: HttpClient) {
+class CourseApi(
+    private val client: HttpClient,
+    private val apiConfig: ApiConfig
+) {
+
+    private val baseUrl: String = apiConfig.baseUrl
 
     suspend fun fetchOfficialCourses(): List<Course> {
-        return client.get("$BASE_URL/courses/official").body()
+        return client.get("$baseUrl/courses/official").body()
     }
 
     suspend fun fetchCourseById(id: String): Course {
-        return client.get("$BASE_URL/courses/$id").body()
+        return client.get("$baseUrl/courses/$id").body()
     }
 
     suspend fun fetchMyCourses(creatorId: String): List<Course> {
-        return client.get("$BASE_URL/courses/creator/$creatorId").body()
+        return client.get("$baseUrl/courses/creator/$creatorId").body()
     }
 
     suspend fun fetchEnrolledCourses(userId: String): List<Course> {
-        return client.get("$BASE_URL/courses/enrolled/$userId").body()
+        return client.get("$baseUrl/courses/enrolled/$userId").body()
     }
 
     suspend fun createCourse(course: Course): Course {
-        return client.post("$BASE_URL/courses") {
+        return client.post("$baseUrl/courses") {
             contentType(ContentType.Application.Json)
             setBody(course)
         }.body()
     }
 
     suspend fun updateCourse(course: Course): Course {
-        return client.put("$BASE_URL/courses/${course.id}") {
+        return client.put("$baseUrl/courses/${course.id}") {
             contentType(ContentType.Application.Json)
             setBody(course)
         }.body()
     }
 
     suspend fun deleteCourse(id: String) {
-        client.delete("$BASE_URL/courses/$id")
+        client.delete("$baseUrl/courses/$id")
     }
 
     suspend fun joinCourse(userId: String, code: String): Course {
-        return client.post("$BASE_URL/courses/join") {
+        return client.post("$baseUrl/courses/join") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("userId" to userId, "code" to code))
         }.body()

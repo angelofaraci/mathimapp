@@ -40,6 +40,7 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation(libs.ktor.client.java)
+            implementation(libs.sqldelight.sqlite.driver)
         }
         commonMain.dependencies {
             implementation(project(":shared"))
@@ -56,6 +57,10 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(project.dependencies.platform(libs.koin.bom))
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -119,4 +124,3 @@ android {
 dependencies {
     debugImplementation(libs.compose.ui.tooling)
 }
-

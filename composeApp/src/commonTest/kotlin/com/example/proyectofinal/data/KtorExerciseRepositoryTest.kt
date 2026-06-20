@@ -3,8 +3,9 @@ package com.example.proyectofinal.data
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
-import com.example.proyectofinal.domain.Exercise
-import com.example.proyectofinal.domain.ExerciseType
+import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.ExerciseType
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -18,6 +19,7 @@ import kotlin.test.assertEquals
 
 class KtorExerciseRepositoryTest {
     private lateinit var database: AppDatabase
+    private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
 
     @BeforeTest
@@ -97,7 +99,7 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val api = ExerciseApi(httpClient)
+        val api = ExerciseApi(httpClient, apiConfig)
         val repository = KtorExerciseRepository(api, database)
 
         val exercises = repository.getExercisesByLesson("lesson-1")
@@ -138,7 +140,7 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val api = ExerciseApi(httpClient)
+        val api = ExerciseApi(httpClient, apiConfig)
         val repository = KtorExerciseRepository(api, database)
 
         val created = repository.createExercise(newExercise)
@@ -190,7 +192,7 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val api = ExerciseApi(httpClient)
+        val api = ExerciseApi(httpClient, apiConfig)
         val repository = KtorExerciseRepository(api, database)
 
         val result = repository.updateExercise(updatedExercise)
@@ -237,7 +239,7 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val api = ExerciseApi(httpClient)
+        val api = ExerciseApi(httpClient, apiConfig)
         val repository = KtorExerciseRepository(api, database)
 
         repository.deleteExercise(exerciseId)

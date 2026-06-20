@@ -1,8 +1,8 @@
 package com.example.proyectofinal.data
 
-import com.example.proyectofinal.domain.Course
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.models.Course
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext

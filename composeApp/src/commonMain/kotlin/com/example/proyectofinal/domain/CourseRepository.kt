@@ -1,5 +1,7 @@
 package com.example.proyectofinal.domain
 
+import com.example.proyectofinal.models.Course
+
 interface CourseRepository {
     /**
      * Fetches only official courses (those provided by the app for everyone).

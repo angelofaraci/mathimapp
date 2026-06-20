@@ -3,7 +3,8 @@ package com.example.proyectofinal.data
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
-import com.example.proyectofinal.domain.Course
+import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.models.Course
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -17,6 +18,7 @@ import kotlin.test.assertEquals
 
 class KtorCourseRepositoryTest {
     private lateinit var database: AppDatabase
+    private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
 
     @BeforeTest
@@ -67,7 +69,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         // 1. Fetch courses
@@ -110,7 +112,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         val course = repository.getCourseById("course-1")
@@ -145,7 +147,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         val courses = repository.getMyCreatedCourses(creatorId)
@@ -182,7 +184,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         val courses = repository.getEnrolledCourses(userId)
@@ -221,7 +223,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         val created = repository.createCourse(newCourse)
@@ -268,7 +270,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         val result = repository.updateCourse(updatedCourse)
@@ -311,7 +313,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         repository.deleteCourse(courseId)
@@ -351,7 +353,7 @@ class KtorCourseRepositoryTest {
             }
         }
 
-        val api = CourseApi(httpClient)
+        val api = CourseApi(httpClient, apiConfig)
         val repository = KtorCourseRepository(api, database)
 
         val result = repository.joinCourseByCode(userId, joinCode)

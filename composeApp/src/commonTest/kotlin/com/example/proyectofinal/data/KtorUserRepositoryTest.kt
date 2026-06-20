@@ -3,9 +3,10 @@ package com.example.proyectofinal.data
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
-import com.example.proyectofinal.domain.User
-import com.example.proyectofinal.domain.UserRole
+import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.CompleteLessonRequest
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserRole
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -19,6 +20,7 @@ import kotlin.test.assertEquals
 
 class KtorUserRepositoryTest {
     private lateinit var database: AppDatabase
+    private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
 
     @BeforeTest
@@ -70,7 +72,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val api = UserApi(httpClient)
+        val api = UserApi(httpClient, apiConfig)
         val repository = KtorUserRepository(api, database)
 
         val user = repository.getCurrentUser()
@@ -111,7 +113,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val api = UserApi(httpClient)
+        val api = UserApi(httpClient, apiConfig)
         val repository = KtorUserRepository(api, database)
 
         val role = repository.getUserRole(userId)
@@ -137,7 +139,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val api = UserApi(httpClient)
+        val api = UserApi(httpClient, apiConfig)
         val repository = KtorUserRepository(api, database)
 
         val role = repository.getUserRole(userId)
@@ -184,7 +186,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val api = UserApi(httpClient)
+        val api = UserApi(httpClient, apiConfig)
         val repository = KtorUserRepository(api, database)
 
         repository.updateUser(updatedUser)
@@ -225,7 +227,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val api = UserApi(httpClient)
+        val api = UserApi(httpClient, apiConfig)
 
         api.saveUserProgress(requestBody)
 

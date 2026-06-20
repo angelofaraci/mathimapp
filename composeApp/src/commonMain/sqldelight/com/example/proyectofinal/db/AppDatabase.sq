@@ -1,5 +1,5 @@
-import com.example.proyectofinal.domain.UserRole;
-import com.example.proyectofinal.domain.ExerciseType;
+import com.example.proyectofinal.models.UserRole;
+import com.example.proyectofinal.models.ExerciseType;
 import kotlin.Boolean;
 import kotlin.Int;
 

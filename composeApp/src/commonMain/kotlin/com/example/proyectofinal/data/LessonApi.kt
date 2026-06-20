@@ -1,37 +1,42 @@
 package com.example.proyectofinal.data
 
-import com.example.proyectofinal.BASE_URL
-import com.example.proyectofinal.domain.Lesson
+import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.models.Lesson
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 
-class LessonApi(private val client: HttpClient) {
+class LessonApi(
+    private val client: HttpClient,
+    private val apiConfig: ApiConfig
+) {
+
+    private val baseUrl: String = apiConfig.baseUrl
 
     suspend fun fetchLessonsByCourse(courseId: String): List<Lesson> {
-        return client.get("$BASE_URL/courses/$courseId/lessons").body()
+        return client.get("$baseUrl/courses/$courseId/lessons").body()
     }
 
     suspend fun fetchLesson(lessonId: String): Lesson {
-        return client.get("$BASE_URL/lessons/$lessonId").body()
+        return client.get("$baseUrl/lessons/$lessonId").body()
     }
 
     suspend fun createLesson(lesson: Lesson): Lesson {
-        return client.post("$BASE_URL/lessons") {
+        return client.post("$baseUrl/lessons") {
             contentType(ContentType.Application.Json)
             setBody(lesson)
         }.body()
     }
 
     suspend fun updateLesson(lesson: Lesson): Lesson {
-        return client.put("$BASE_URL/lessons/${lesson.id}") {
+        return client.put("$baseUrl/lessons/${lesson.id}") {
             contentType(ContentType.Application.Json)
             setBody(lesson)
         }.body()
     }
 
     suspend fun deleteLesson(lessonId: String) {
-        client.delete("$BASE_URL/lessons/$lessonId")
+        client.delete("$baseUrl/lessons/$lessonId")
     }
 }
