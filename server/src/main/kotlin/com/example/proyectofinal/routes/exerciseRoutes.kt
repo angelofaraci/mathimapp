@@ -1,139 +1,65 @@
 package com.example.proyectofinal.routes
 
-import com.example.proyectofinal.database.Courses
-import com.example.proyectofinal.database.Exercises
-import com.example.proyectofinal.database.Lessons
-import com.example.proyectofinal.database.dbQuery
-import com.example.proyectofinal.models.*
+import com.example.proyectofinal.models.CreateExerciseRequest
+import com.example.proyectofinal.models.UpdateExerciseRequest
+import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.core.eq
+import com.example.proyectofinal.service.ExerciseService
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
+import io.ktor.server.application.call
+import io.ktor.server.auth.authenticate
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
+import io.ktor.server.routing.routing
 
-fun Application.exerciseRoutes() {
+fun Application.exerciseRoutes(service: ExerciseService) {
     routing {
         authenticate("auth-jwt") {
             get("/lessons/{lessonId}/exercises") {
                 val lessonId = call.parameters["lessonId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
                 val hideAnswers = call.currentRole() == UserRole.LEARNER
 
-                val exercises = dbQuery {
-                    Exercises.selectAll().where { Exercises.lessonId eq lessonId }
-                        .map { row ->
-                            Exercise(
-                                id = row[Exercises.id],
-                                lessonId = row[Exercises.lessonId],
-                                question = row[Exercises.question],
-                                options = row[Exercises.options].split(","),
-                                correctAnswer = if (hideAnswers) "" else row[Exercises.correctAnswer],
-                                type = ExerciseType.valueOf(row[Exercises.type])
-                            )
-                        }
-                }
-                call.respond(exercises)
+                call.respond(service.getExercisesByLessonId(lessonId, hideAnswers))
             }
 
             post("/exercises") {
                 val request = call.receive<CreateExerciseRequest>()
 
-                val creatorId = dbQuery {
-                    (Lessons innerJoin Courses)
-                        .select(Courses.creatorId)
-                        .where { Lessons.id eq request.lessonId }
-                        .firstOrNull()
-                        ?.get(Courses.creatorId)
-                } ?: return@post call.respond(HttpStatusCode.NotFound)
+                val creatorId = service.getLessonCreatorId(request.lessonId)
+                    ?: return@post call.respond(HttpStatusCode.NotFound)
 
                 if (!call.requireSelfOrAdmin(creatorId)) return@post
 
-                dbQuery {
-                    Exercises.insert {
-                        it[Exercises.id] = request.id
-                        it[Exercises.lessonId] = request.lessonId
-                        it[Exercises.question] = request.question
-                        it[Exercises.options] = request.options.joinToString(",")
-                        it[Exercises.correctAnswer] = request.correctAnswer
-                        it[Exercises.type] = request.type.name
-                    }
-                }
-
-                call.respond(
-                    Exercise(
-                        id = request.id,
-                        lessonId = request.lessonId,
-                        question = request.question,
-                        options = request.options,
-                        correctAnswer = request.correctAnswer,
-                        type = request.type
-                    )
-                )
+                call.respond(service.createExercise(request))
             }
 
             put("/exercises/{id}") {
                 val exerciseId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
                 val request = call.receive<UpdateExerciseRequest>()
 
-                val creatorId = dbQuery {
-                    (Exercises innerJoin Lessons innerJoin Courses)
-                        .select(Courses.creatorId)
-                        .where { Exercises.id eq exerciseId }
-                        .firstOrNull()
-                        ?.get(Courses.creatorId)
-                } ?: return@put call.respond(HttpStatusCode.NotFound)
+                val creatorId = service.getCreatorId(exerciseId) ?: return@put call.respond(HttpStatusCode.NotFound)
 
                 if (!call.requireSelfOrAdmin(creatorId)) return@put
 
-                val updated = dbQuery {
-                    Exercises.update({ Exercises.id eq exerciseId }) { row ->
-                        request.question?.let { row[Exercises.question] = it }
-                        request.options?.let { row[Exercises.options] = it.joinToString(",") }
-                        request.correctAnswer?.let { row[Exercises.correctAnswer] = it }
-                        request.type?.let { row[Exercises.type] = it.name }
-                    }
-                }
-
-                if (updated == 0) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@put
-                }
-
-                val exercise = dbQuery {
-                    val exerciseRow = Exercises.selectAll().where { Exercises.id eq exerciseId }.first()
-                    Exercise(
-                        id = exerciseRow[Exercises.id],
-                        lessonId = exerciseRow[Exercises.lessonId],
-                        question = exerciseRow[Exercises.question],
-                        options = exerciseRow[Exercises.options].split(","),
-                        correctAnswer = exerciseRow[Exercises.correctAnswer],
-                        type = ExerciseType.valueOf(exerciseRow[Exercises.type])
-                    )
-                }
+                val exercise = service.updateExercise(exerciseId, request)
+                    ?: return@put call.respond(HttpStatusCode.NotFound)
                 call.respond(exercise)
             }
 
             delete("/exercises/{id}") {
                 val exerciseId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
 
-                val creatorId = dbQuery {
-                    (Exercises innerJoin Lessons innerJoin Courses)
-                        .select(Courses.creatorId)
-                        .where { Exercises.id eq exerciseId }
-                        .firstOrNull()
-                        ?.get(Courses.creatorId)
-                } ?: return@delete call.respond(HttpStatusCode.NotFound)
+                val creatorId = service.getCreatorId(exerciseId) ?: return@delete call.respond(HttpStatusCode.NotFound)
 
                 if (!call.requireSelfOrAdmin(creatorId)) return@delete
 
-                val deleted = dbQuery {
-                    Exercises.deleteWhere { Exercises.id eq exerciseId }
-                }
-                if (deleted == 0) {
+                if (!service.deleteExercise(exerciseId)) {
                     call.respond(HttpStatusCode.NotFound)
                     return@delete
                 }

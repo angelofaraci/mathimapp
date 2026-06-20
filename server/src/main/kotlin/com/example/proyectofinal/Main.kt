@@ -9,6 +9,11 @@ import com.example.proyectofinal.routes.exerciseRoutes
 import com.example.proyectofinal.routes.lessonRoutes
 import com.example.proyectofinal.routes.userRoutes
 import com.example.proyectofinal.seed.SeedData
+import com.example.proyectofinal.service.AuthService
+import com.example.proyectofinal.service.CourseService
+import com.example.proyectofinal.service.ExerciseService
+import com.example.proyectofinal.service.LessonService
+import com.example.proyectofinal.service.UserService
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -41,11 +46,17 @@ fun Application.module(
     configureCors()
     configureSecurity()
 
-    authRoutes()
-    userRoutes()
-    courseRoutes()
-    lessonRoutes()
-    exerciseRoutes()
+    val authService = AuthService()
+    val userService = UserService()
+    val courseService = CourseService()
+    val lessonService = LessonService()
+    val exerciseService = ExerciseService()
+
+    authRoutes(authService)
+    userRoutes(userService)
+    courseRoutes(courseService)
+    lessonRoutes(lessonService)
+    exerciseRoutes(exerciseService)
 
     if (seedData) {
         SeedData.seedOfficialCourses()

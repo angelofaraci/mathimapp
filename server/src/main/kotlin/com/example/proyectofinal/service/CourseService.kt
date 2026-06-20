@@ -1,0 +1,123 @@
+package com.example.proyectofinal.service
+
+import com.example.proyectofinal.database.Courses
+import com.example.proyectofinal.database.EnrolledCourses
+import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.dbQuery
+import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CreateCourseRequest
+import com.example.proyectofinal.models.UpdateCourseRequest
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+
+class CourseService {
+    fun getOfficialCourses(): List<Course> = dbQuery {
+        Courses.selectAll()
+            .where { Courses.isOfficial eq true }
+            .map { it.toCourse() }
+    }
+
+    fun getCourseById(id: String): Course? = dbQuery {
+        val course = Courses.selectAll()
+            .where { Courses.id eq id }
+            .firstOrNull()
+            ?: return@dbQuery null
+
+        val lessons = Lessons.selectAll()
+            .where { Lessons.courseId eq id }
+            .orderBy(Lessons.orderIndex)
+            .map { it.toLesson() }
+
+        course.toCourse(lessons)
+    }
+
+    fun getCoursesByCreator(creatorId: String): List<Course> = dbQuery {
+        Courses.selectAll()
+            .where { Courses.creatorId eq creatorId }
+            .map { it.toCourse() }
+    }
+
+    fun getEnrolledCourses(userId: String): List<Course> = dbQuery {
+        val courseIds = EnrolledCourses.selectAll()
+            .where { EnrolledCourses.userId eq userId }
+            .map { it[EnrolledCourses.courseId] }
+
+        if (courseIds.isEmpty()) {
+            emptyList()
+        } else {
+            Courses.selectAll()
+                .where { Courses.id inList courseIds }
+                .map { it.toCourse() }
+        }
+    }
+
+    fun createCourse(request: CreateCourseRequest): Course = dbQuery {
+        Courses.insert {
+            it[Courses.id] = request.id
+            it[Courses.title] = request.title
+            it[Courses.description] = request.description
+            it[Courses.creatorId] = request.creatorId
+            it[Courses.isOfficial] = request.isOfficial
+            it[Courses.joinCode] = request.joinCode
+        }
+
+        Course(
+            id = request.id,
+            title = request.title,
+            description = request.description,
+            creatorId = request.creatorId,
+            isOfficial = request.isOfficial,
+            joinCode = request.joinCode
+        )
+    }
+
+    fun updateCourse(id: String, request: UpdateCourseRequest): Course? {
+        val updated = dbQuery {
+            Courses.update({ Courses.id eq id }) { row ->
+                request.title?.let { row[Courses.title] = it }
+                request.description?.let { row[Courses.description] = it }
+                request.joinCode?.let { row[Courses.joinCode] = it }
+            }
+        }
+
+        if (updated == 0) {
+            return null
+        }
+
+        return dbQuery {
+            Courses.selectAll()
+                .where { Courses.id eq id }
+                .first()
+                .toCourse()
+        }
+    }
+
+    fun deleteCourse(id: String): Boolean = dbQuery {
+        Courses.deleteWhere { Courses.id eq id } > 0
+    }
+
+    fun joinCourse(userId: String, code: String): Course? = dbQuery {
+        val course = Courses.selectAll()
+            .where { Courses.joinCode eq code }
+            .firstOrNull()
+            ?: return@dbQuery null
+
+        EnrolledCourses.insert {
+            it[EnrolledCourses.userId] = userId
+            it[EnrolledCourses.courseId] = course[Courses.id]
+        }
+
+        course.toCourse()
+    }
+
+    fun getCreatorId(id: String): String? = dbQuery {
+        Courses.selectAll()
+            .where { Courses.id eq id }
+            .firstOrNull()
+            ?.get(Courses.creatorId)
+    }
+}
