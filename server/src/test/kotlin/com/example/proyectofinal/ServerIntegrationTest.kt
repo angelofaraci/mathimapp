@@ -1,21 +1,38 @@
 package com.example.proyectofinal
 
+import at.favre.lib.crypto.bcrypt.BCrypt
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import com.example.proyectofinal.database.CompletedLessons
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.DatabaseFactory
+import com.example.proyectofinal.database.EnrolledCourses
+import com.example.proyectofinal.database.Exercises
+import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
+import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.models.AuthResponse
 import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CreateExerciseRequest
+import com.example.proyectofinal.models.CreateLessonRequest
+import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.RegisterRequest
+import com.example.proyectofinal.models.UpdateExerciseRequest
+import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.plugins.Security
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -24,9 +41,12 @@ import io.ktor.server.testing.testApplication
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,13 +56,59 @@ class ServerIntegrationTest {
     private fun testDbUrl(): String =
         "jdbc:h2:mem:${UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
 
-    private fun setupTestDatabase() {
+    private fun setupTestDatabase(jwtSecret: String = "test-jwt-secret") {
+        System.setProperty("jwt.secret", jwtSecret)
         DatabaseFactory.init(
             url = testDbUrl(),
             driver = "org.h2.Driver",
             user = "sa",
             password = ""
         )
+    }
+
+    @Test
+    fun `seed uses configured admin credentials hashes password and avoids secret output`() = testApplication {
+        val jwtSecret = "seed-jwt-secret"
+        val adminId = "seed-admin"
+        val adminName = "Seeded Admin"
+        val adminEmail = "seed-admin@example.com"
+        val adminPassword = "SeedPassword123!"
+
+        val output = withSystemProperties(
+            mapOf(
+                "seed.admin.id" to adminId,
+                "seed.admin.name" to adminName,
+                "seed.admin.email" to adminEmail,
+                "seed.admin.password" to adminPassword
+            )
+        ) {
+            setupTestDatabase(jwtSecret = jwtSecret)
+
+            captureStandardOut {
+                application {
+                    module(initDatabase = false, seedData = true)
+                }
+
+                assertEquals(HttpStatusCode.Unauthorized, client.get("/courses/official").status)
+            }
+        }
+
+        transaction {
+            val seededAdmin = Users.selectAll().where { Users.email eq adminEmail }.single()
+            val passwordHash = seededAdmin[Users.passwordHash]
+
+            assertEquals(adminId, seededAdmin[Users.id])
+            assertEquals(adminName, seededAdmin[Users.name])
+            assertEquals("ADMIN", seededAdmin[Users.role])
+            assertTrue(passwordHash != adminPassword)
+            assertTrue(passwordHash.startsWith("\$2"))
+            assertTrue(BCrypt.verifyer().verify(adminPassword.toCharArray(), passwordHash).verified)
+        }
+
+        assertTrue(output.contains("Seeding official courses..."))
+        assertTrue(output.contains("Seed data created successfully!"))
+        assertTrue(!output.contains(adminPassword))
+        assertTrue(!output.contains(jwtSecret))
     }
 
     @Test
@@ -87,6 +153,32 @@ class ServerIntegrationTest {
     }
 
     @Test
+    fun `public admin registration is rejected`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val response = client.post("/auth/register") {
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(RegisterRequest("Blocked Admin", "blocked-admin@example.com", "secret123", UserRole.ADMIN))
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+
+        transaction {
+            assertEquals(0L, Users.selectAll().where { Users.email eq "blocked-admin@example.com" }.count())
+        }
+    }
+
+    @Test
     fun `protected courses route rejects missing token`() = testApplication {
         setupTestDatabase()
 
@@ -95,6 +187,26 @@ class ServerIntegrationTest {
         }
 
         val response = client.get("/courses/official")
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `signed token without userId is rejected`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val tokenWithoutUserId = JWT.create()
+            .withIssuer(Security.ISSUER)
+            .withClaim("role", UserRole.LEARNER.name)
+            .sign(Algorithm.HMAC256("test-jwt-secret"))
+
+        val response = client.get("/courses/official") {
+            bearerAuth(tokenWithoutUserId)
+        }
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
@@ -129,7 +241,7 @@ class ServerIntegrationTest {
     }
 
     @Test
-    fun `posting progress updates score and completed lessons`() = testApplication {
+    fun `posting progress updates score and enforces progress visibility`() = testApplication {
         setupTestDatabase()
 
         application {
@@ -143,7 +255,9 @@ class ServerIntegrationTest {
         }
 
         val token = registerUserAndGetToken(client, email = "progress@example.com")
+        val otherToken = registerUserAndGetToken(client, email = "other-progress@example.com")
         val userId = transaction { Users.selectAll().where { Users.email eq "progress@example.com" }.single()[Users.id] }
+        seedCourseLesson("course-progress", "lesson-1")
 
         val updateResponse = client.post("/progress") {
             bearerAuth(token)
@@ -171,15 +285,277 @@ class ServerIntegrationTest {
         assertEquals(setOf("lesson-1"), progress.completedLessonIds)
         assertEquals(emptySet(), progress.enrolledCourseIds)
 
+        val forbidden = client.get("/progress/$userId") {
+            bearerAuth(otherToken)
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, forbidden.status)
+
+        val admin = client.get("/progress/$userId") {
+            bearerAuth(Security.generateToken("admin-1", UserRole.ADMIN.name))
+        }
+
+        assertEquals(HttpStatusCode.OK, admin.status)
+
         transaction {
             val completed = CompletedLessons.selectAll().where { CompletedLessons.userId eq userId }.single()
             assertEquals("lesson-1", completed[CompletedLessons.lessonId])
         }
     }
 
+    @Test
+    fun `learner content hides correct answers`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val learnerToken = registerUserAndGetToken(client, email = "learner-content@example.com")
+
+        transaction {
+            Courses.insert {
+                it[id] = "course-content"
+                it[title] = "Content Course"
+                it[description] = "Course for content masking"
+                it[creatorId] = "teacher-owner"
+                it[isOfficial] = false
+                it[joinCode] = "CONTENT1"
+            }
+
+            Lessons.insert {
+                it[id] = "lesson-content"
+                it[courseId] = "course-content"
+                it[title] = "Lesson Content"
+                it[theoryContent] = "Theory"
+                it[orderIndex] = 0
+            }
+
+            Exercises.insert {
+                it[id] = "exercise-content"
+                it[lessonId] = "lesson-content"
+                it[question] = "2 + 2 = ?"
+                it[options] = "3,4,5"
+                it[correctAnswer] = "4"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+        }
+
+        val lesson = client.get("/lessons/lesson-content") { bearerAuth(learnerToken) }.body<Lesson>()
+        val exercises = client.get("/lessons/lesson-content/exercises") { bearerAuth(learnerToken) }.body<List<Exercise>>()
+
+        assertEquals("", lesson.exercises.single().correctAnswer)
+        assertEquals("", exercises.single().correctAnswer)
+    }
+
+    @Test
+    fun `lesson mutations require course owner or admin`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        seedOwnedCourseWithLesson(
+            courseId = "course-owned-lesson",
+            creatorId = "teacher-owner",
+            lessonId = "lesson-owned"
+        )
+
+        val learnerToken = Security.generateToken("learner-user", UserRole.LEARNER.name)
+        val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
+        val adminToken = Security.generateToken("admin-user", UserRole.ADMIN.name)
+
+        val forbiddenCreate = client.post("/lessons") {
+            bearerAuth(learnerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(CreateLessonRequest("lesson-forbidden", "course-owned-lesson", "Forbidden", "Forbidden"))
+        }
+        assertEquals(HttpStatusCode.Forbidden, forbiddenCreate.status)
+
+        val created = client.post("/lessons") {
+            bearerAuth(ownerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(CreateLessonRequest("lesson-created", "course-owned-lesson", "Created", "Created theory"))
+        }
+        assertEquals(HttpStatusCode.OK, created.status)
+
+        val forbiddenUpdate = client.put("/lessons/lesson-owned") {
+            bearerAuth(learnerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(UpdateLessonRequest(title = "Nope"))
+        }
+        assertEquals(HttpStatusCode.Forbidden, forbiddenUpdate.status)
+
+        val updated = client.put("/lessons/lesson-owned") {
+            bearerAuth(ownerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(UpdateLessonRequest(title = "Updated Title"))
+        }
+        assertEquals(HttpStatusCode.OK, updated.status)
+
+        val forbiddenDelete = client.delete("/lessons/lesson-created") {
+            bearerAuth(learnerToken)
+        }
+        assertEquals(HttpStatusCode.Forbidden, forbiddenDelete.status)
+
+        val deleted = client.delete("/lessons/lesson-created") {
+            bearerAuth(adminToken)
+        }
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+    }
+
+    @Test
+    fun `exercise mutations require parent course owner or admin`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        seedOwnedCourseWithLessonAndExercise(
+            courseId = "course-owned-exercise",
+            creatorId = "teacher-owner",
+            lessonId = "lesson-owned-exercise",
+            exerciseId = "exercise-owned"
+        )
+
+        val learnerToken = Security.generateToken("learner-user", UserRole.LEARNER.name)
+        val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
+        val adminToken = Security.generateToken("admin-user", UserRole.ADMIN.name)
+
+        val forbiddenCreate = client.post("/exercises") {
+            bearerAuth(learnerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                CreateExerciseRequest(
+                    id = "exercise-forbidden",
+                    lessonId = "lesson-owned-exercise",
+                    question = "Forbidden?",
+                    options = listOf("a", "b"),
+                    correctAnswer = "a",
+                    type = ExerciseType.MULTIPLE_CHOICE
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.Forbidden, forbiddenCreate.status)
+
+        val created = client.post("/exercises") {
+            bearerAuth(ownerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                CreateExerciseRequest(
+                    id = "exercise-created",
+                    lessonId = "lesson-owned-exercise",
+                    question = "Created?",
+                    options = listOf("a", "b"),
+                    correctAnswer = "a",
+                    type = ExerciseType.MULTIPLE_CHOICE
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.OK, created.status)
+
+        val forbiddenUpdate = client.put("/exercises/exercise-owned") {
+            bearerAuth(learnerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(UpdateExerciseRequest(question = "Nope"))
+        }
+        assertEquals(HttpStatusCode.Forbidden, forbiddenUpdate.status)
+
+        val updated = client.put("/exercises/exercise-owned") {
+            bearerAuth(ownerToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(UpdateExerciseRequest(question = "Updated question"))
+        }
+        assertEquals(HttpStatusCode.OK, updated.status)
+
+        val forbiddenDelete = client.delete("/exercises/exercise-created") {
+            bearerAuth(learnerToken)
+        }
+        assertEquals(HttpStatusCode.Forbidden, forbiddenDelete.status)
+
+        val deleted = client.delete("/exercises/exercise-created") {
+            bearerAuth(adminToken)
+        }
+        assertEquals(HttpStatusCode.NoContent, deleted.status)
+    }
+
+    @Test
+    fun `foreign keys cascade for course lesson and student deletions while teacher owned courses survive`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        transaction {
+            Users.insert { it[id] = "teacher-1"; it[name] = "teacher-1"; it[email] = "teacher1@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
+            Users.insert { it[id] = "teacher-2"; it[name] = "teacher-2"; it[email] = "teacher2@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
+            Users.insert { it[id] = "teacher-3"; it[name] = "teacher-3"; it[email] = "teacher3@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
+            Users.insert { it[id] = "student-1"; it[name] = "student-1"; it[email] = "student1@example.com"; it[passwordHash] = "hash"; it[role] = "LEARNER" }
+            Users.insert { it[id] = "student-2"; it[name] = "student-2"; it[email] = "student2@example.com"; it[passwordHash] = "hash"; it[role] = "LEARNER" }
+
+            Courses.insert { it[id] = "course-1"; it[title] = "course-1"; it[description] = "course-1"; it[creatorId] = "teacher-1"; it[isOfficial] = false; it[joinCode] = "JOIN1" }
+            Courses.insert { it[id] = "course-2"; it[title] = "course-2"; it[description] = "course-2"; it[creatorId] = "teacher-2"; it[isOfficial] = false; it[joinCode] = "JOIN2" }
+            Courses.insert { it[id] = "course-3"; it[title] = "course-3"; it[description] = "course-3"; it[creatorId] = "teacher-3"; it[isOfficial] = false; it[joinCode] = "JOIN3" }
+
+            Lessons.insert { it[id] = "lesson-1"; it[courseId] = "course-1"; it[title] = "lesson-1"; it[theoryContent] = "lesson-1"; it[orderIndex] = 0 }
+            Lessons.insert { it[id] = "lesson-2"; it[courseId] = "course-2"; it[title] = "lesson-2"; it[theoryContent] = "lesson-2"; it[orderIndex] = 0 }
+            Lessons.insert { it[id] = "lesson-3"; it[courseId] = "course-3"; it[title] = "lesson-3"; it[theoryContent] = "lesson-3"; it[orderIndex] = 0 }
+
+            Exercises.insert { it[id] = "exercise-1"; it[lessonId] = "lesson-1"; it[question] = "exercise-1"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE" }
+            Exercises.insert { it[id] = "exercise-2"; it[lessonId] = "lesson-2"; it[question] = "exercise-2"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE" }
+            Exercises.insert { it[id] = "exercise-3"; it[lessonId] = "lesson-3"; it[question] = "exercise-3"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE" }
+
+            UserProgressTable.insert { it[userId] = "student-1"; it[totalScore] = 10 }
+            UserProgressTable.insert { it[userId] = "student-2"; it[totalScore] = 20 }
+            CompletedLessons.insert { it[userId] = "student-1"; it[lessonId] = "lesson-1" }
+            CompletedLessons.insert { it[userId] = "student-2"; it[lessonId] = "lesson-2" }
+            EnrolledCourses.insert { it[userId] = "student-1"; it[courseId] = "course-1" }
+            EnrolledCourses.insert { it[userId] = "student-2"; it[courseId] = "course-2" }
+        }
+
+        transaction {
+            Courses.deleteWhere { Courses.id eq "course-1" }
+            Lessons.deleteWhere { Lessons.id eq "lesson-2" }
+            Users.deleteWhere { Users.id eq "student-2" }
+            Users.deleteWhere { Users.id eq "teacher-3" }
+
+            assertEquals(0L, Lessons.selectAll().where { Lessons.id eq "lesson-1" }.count())
+            assertEquals(0L, Exercises.selectAll().where { Exercises.id eq "exercise-1" }.count())
+            assertEquals(0L, EnrolledCourses.selectAll().where { EnrolledCourses.courseId eq "course-1" }.count())
+            assertEquals(0L, CompletedLessons.selectAll().where { CompletedLessons.lessonId eq "lesson-1" }.count())
+            assertEquals(0L, Exercises.selectAll().where { Exercises.id eq "exercise-2" }.count())
+            assertEquals(0L, CompletedLessons.selectAll().where { CompletedLessons.lessonId eq "lesson-2" }.count())
+            assertEquals(0L, UserProgressTable.selectAll().where { UserProgressTable.userId eq "student-2" }.count())
+            assertEquals(0L, EnrolledCourses.selectAll().where { EnrolledCourses.userId eq "student-2" }.count())
+            assertEquals(1L, Courses.selectAll().where { Courses.id eq "course-3" }.count())
+        }
+    }
+
     private suspend fun registerUserAndGetToken(
         client: io.ktor.client.HttpClient,
-        email: String
+        email: String,
+        role: UserRole = UserRole.LEARNER
     ): String {
         val response = client.post("/auth/register") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -188,7 +564,7 @@ class ServerIntegrationTest {
                     name = "Integration User",
                     email = email,
                     password = "secret123",
-                    role = UserRole.LEARNER
+                    role = role
                 )
             )
         }
@@ -217,5 +593,104 @@ class ServerIntegrationTest {
                 it[joinCode] = "JOIN123"
             }
         }
+    }
+
+    private fun seedCourseLesson(courseId: String, lessonId: String) {
+        transaction {
+            Courses.insert {
+                it[id] = courseId
+                it[title] = courseId
+                it[description] = courseId
+                it[creatorId] = "teacher-owner"
+                it[isOfficial] = false
+                it[joinCode] = null
+            }
+
+            Lessons.insert {
+                it[id] = lessonId
+                it[Lessons.courseId] = courseId
+                it[title] = lessonId
+                it[theoryContent] = lessonId
+                it[orderIndex] = 0
+            }
+        }
+    }
+
+    private fun seedOwnedCourseWithLesson(courseId: String, creatorId: String, lessonId: String) {
+        transaction {
+            Courses.insert {
+                it[id] = courseId
+                it[title] = courseId
+                it[description] = courseId
+                it[Courses.creatorId] = creatorId
+                it[isOfficial] = false
+                it[joinCode] = null
+            }
+
+            Lessons.insert {
+                it[id] = lessonId
+                it[Lessons.courseId] = courseId
+                it[title] = lessonId
+                it[theoryContent] = lessonId
+                it[orderIndex] = 0
+            }
+        }
+    }
+
+    private fun seedOwnedCourseWithLessonAndExercise(
+        courseId: String,
+        creatorId: String,
+        lessonId: String,
+        exerciseId: String
+    ) {
+        seedOwnedCourseWithLesson(courseId = courseId, creatorId = creatorId, lessonId = lessonId)
+
+        transaction {
+            Exercises.insert {
+                it[id] = exerciseId
+                it[Exercises.lessonId] = lessonId
+                it[question] = exerciseId
+                it[options] = "a,b"
+                it[correctAnswer] = "a"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+        }
+    }
+
+    private suspend fun <T> withSystemProperties(properties: Map<String, String>, block: suspend () -> T): T {
+        val previousValues = properties.mapValues { (name, _) -> System.getProperty(name) }
+
+        properties.forEach { (name, value) ->
+            System.setProperty(name, value)
+        }
+
+        return try {
+            block()
+        } finally {
+            previousValues.forEach { (name, previousValue) ->
+                if (previousValue == null) {
+                    System.clearProperty(name)
+                } else {
+                    System.setProperty(name, previousValue)
+                }
+            }
+        }
+    }
+
+    private suspend fun captureStandardOut(block: suspend () -> Unit): String {
+        val originalOut = System.out
+        val outputBuffer = ByteArrayOutputStream()
+        val captureStream = PrintStream(outputBuffer, true, Charsets.UTF_8.name())
+
+        try {
+            System.setOut(captureStream)
+            block()
+        } finally {
+            captureStream.flush()
+            System.setOut(originalOut)
+            captureStream.close()
+        }
+
+        return outputBuffer.toString(Charsets.UTF_8.name())
     }
 }

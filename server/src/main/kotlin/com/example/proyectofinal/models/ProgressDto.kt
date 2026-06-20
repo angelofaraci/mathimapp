@@ -9,10 +9,3 @@ data class UpdateProgressRequest(
     val scoreToAdd: Int = 0,
     val completedLessonId: String? = null
 )
-
-@Serializable
-data class CompleteLessonRequest(
-    val userId: String,
-    val lessonId: String,
-    val score: Int = 0
-)

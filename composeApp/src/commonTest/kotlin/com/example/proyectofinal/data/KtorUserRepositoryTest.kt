@@ -5,11 +5,12 @@ import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
 import com.example.proyectofinal.domain.User
 import com.example.proyectofinal.domain.UserRole
+import com.example.proyectofinal.models.CompleteLessonRequest
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.BeforeTest
@@ -193,5 +194,43 @@ class KtorUserRepositoryTest {
         val dbUser = database.appDatabaseQueries.selectUserById("user-update").executeAsOneOrNull()
         assertEquals("Updated Name", dbUser?.name)
         assertEquals("updated@example.com", dbUser?.email)
+    }
+
+    @Test
+    fun `saveUserProgress posts CompleteLessonRequest to progress endpoint`() = runTest {
+        val requestBody = CompleteLessonRequest(
+            userId = "user-progress",
+            lessonId = "lesson-progress",
+            score = 42
+        )
+        var capturedPath: String? = null
+        var capturedMethod: HttpMethod? = null
+        var capturedRequest: CompleteLessonRequest? = null
+
+        val mockEngine = MockEngine { request ->
+            capturedPath = request.url.encodedPath
+            capturedMethod = request.method
+            capturedRequest = json.decodeFromString(request.body.toByteArray().decodeToString())
+
+            respond(
+                content = "",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val httpClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(json)
+            }
+        }
+
+        val api = UserApi(httpClient)
+
+        api.saveUserProgress(requestBody)
+
+        assertEquals("/progress", capturedPath)
+        assertEquals(HttpMethod.Post, capturedMethod)
+        assertEquals(requestBody, capturedRequest)
     }
 }

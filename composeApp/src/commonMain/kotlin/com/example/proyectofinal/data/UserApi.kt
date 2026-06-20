@@ -2,6 +2,7 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.BASE_URL
 import com.example.proyectofinal.domain.User
+import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.domain.UserProgress
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -25,10 +26,10 @@ class UserApi(private val client: HttpClient) {
         return client.get("$BASE_URL/progress/$userId").body()
     }
 
-    suspend fun saveUserProgress(progress: UserProgress) {
+    suspend fun saveUserProgress(request: CompleteLessonRequest) {
         client.post("$BASE_URL/progress") {
             contentType(ContentType.Application.Json)
-            setBody(progress)
+            setBody(request)
         }
     }
 }

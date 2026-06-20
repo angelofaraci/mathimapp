@@ -19,6 +19,11 @@ fun Application.authRoutes() {
         post("/auth/register") {
             val request = call.receive<RegisterRequest>()
 
+            if (request.role == UserRole.ADMIN) {
+                call.respond(HttpStatusCode.Forbidden, "Public ADMIN registration is not allowed")
+                return@post
+            }
+
             val existingUser = dbQuery {
                 Users.selectAll().where { Users.email eq request.email }.firstOrNull()
             }

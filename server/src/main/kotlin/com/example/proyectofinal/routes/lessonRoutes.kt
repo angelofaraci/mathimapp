@@ -1,9 +1,12 @@
 package com.example.proyectofinal.routes
 
-import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.Exercises
+import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.*
+import com.example.proyectofinal.plugins.currentRole
+import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -37,6 +40,7 @@ fun Application.lessonRoutes() {
 
             get("/lessons/{id}") {
                 val lessonId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val hideAnswers = call.currentRole() == UserRole.LEARNER
 
                 val lesson = dbQuery {
                     val lessonRow = Lessons.selectAll().where { Lessons.id eq lessonId }.firstOrNull()
@@ -49,7 +53,7 @@ fun Application.lessonRoutes() {
                                 lessonId = row[Exercises.lessonId],
                                 question = row[Exercises.question],
                                 options = row[Exercises.options].split(","),
-                                correctAnswer = row[Exercises.correctAnswer],
+                                correctAnswer = if (hideAnswers) "" else row[Exercises.correctAnswer],
                                 type = ExerciseType.valueOf(row[Exercises.type])
                             )
                         }
@@ -68,6 +72,12 @@ fun Application.lessonRoutes() {
 
             post("/lessons") {
                 val request = call.receive<CreateLessonRequest>()
+
+                val creatorId = dbQuery {
+                    Courses.selectAll().where { Courses.id eq request.courseId }.firstOrNull()?.get(Courses.creatorId)
+                } ?: return@post call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@post
 
                 dbQuery {
                     val maxOrder = Lessons.selectAll().where { Lessons.courseId eq request.courseId }
@@ -98,6 +108,16 @@ fun Application.lessonRoutes() {
                 val lessonId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
                 val request = call.receive<UpdateLessonRequest>()
 
+                val creatorId = dbQuery {
+                    (Lessons innerJoin Courses)
+                        .select(Courses.creatorId)
+                        .where { Lessons.id eq lessonId }
+                        .firstOrNull()
+                        ?.get(Courses.creatorId)
+                } ?: return@put call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@put
+
                 val updated = dbQuery {
                     Lessons.update({ Lessons.id eq lessonId }) { row ->
                         request.title?.let { row[Lessons.title] = it }
@@ -124,6 +144,16 @@ fun Application.lessonRoutes() {
 
             delete("/lessons/{id}") {
                 val lessonId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+
+                val creatorId = dbQuery {
+                    (Lessons innerJoin Courses)
+                        .select(Courses.creatorId)
+                        .where { Lessons.id eq lessonId }
+                        .firstOrNull()
+                        ?.get(Courses.creatorId)
+                } ?: return@delete call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@delete
 
                 val deleted = dbQuery {
                     Lessons.deleteWhere { Lessons.id eq lessonId }

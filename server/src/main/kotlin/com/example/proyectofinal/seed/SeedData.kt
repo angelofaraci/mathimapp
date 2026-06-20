@@ -1,18 +1,41 @@
 package com.example.proyectofinal.seed
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.example.proyectofinal.database.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.core.eq
 
 object SeedData {
-    private const val ADMIN_ID = "admin-001"
-    private const val ADMIN_EMAIL = "admin@mathapp.com"
-    private const val ADMIN_PASSWORD = "admin123"
+    private data class AdminSeedConfig(
+        val id: String,
+        val name: String,
+        val email: String,
+        val password: String
+    )
+
+    private fun configuredValue(
+        envName: String,
+        propertyName: String,
+        defaultValue: String? = null
+    ): String =
+        System.getenv(envName)?.takeIf { it.isNotBlank() }
+            ?: System.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+            ?: defaultValue
+            ?: error("$envName or -D$propertyName must be configured")
+
+    private fun adminConfig(): AdminSeedConfig = AdminSeedConfig(
+        id = configuredValue("ADMIN_SEED_ID", "seed.admin.id", "admin-001"),
+        name = configuredValue("ADMIN_SEED_NAME", "seed.admin.name", "Admin"),
+        email = configuredValue("ADMIN_SEED_EMAIL", "seed.admin.email"),
+        password = configuredValue("ADMIN_SEED_PASSWORD", "seed.admin.password")
+    )
 
     fun seedOfficialCourses() {
+        val admin = adminConfig()
+
         transaction {
-            val existingAdmin = Users.selectAll().where { Users.email eq ADMIN_EMAIL }.firstOrNull()
+            val existingAdmin = Users.selectAll().where { Users.email eq admin.email }.firstOrNull()
             if (existingAdmin != null) {
                 println("Seed data already exists, skipping...")
                 return@transaction
@@ -21,10 +44,10 @@ object SeedData {
             println("Seeding official courses...")
 
             Users.insert {
-                it[Users.id] = ADMIN_ID
-                it[Users.name] = "Admin"
-                it[Users.email] = ADMIN_EMAIL
-                it[Users.passwordHash] = "bcrypt_hash_placeholder"
+                it[Users.id] = admin.id
+                it[Users.name] = admin.name
+                it[Users.email] = admin.email
+                it[Users.passwordHash] = BCrypt.withDefaults().hashToString(12, admin.password.toCharArray())
                 it[Users.role] = "ADMIN"
             }
 
@@ -33,7 +56,7 @@ object SeedData {
                 it[Courses.id] = basicArithmeticId
                 it[Courses.title] = "Basic Arithmetic"
                 it[Courses.description] = "Learn the fundamentals of addition, subtraction, multiplication, and division."
-                it[Courses.creatorId] = ADMIN_ID
+                it[Courses.creatorId] = admin.id
                 it[Courses.isOfficial] = true
                 it[Courses.joinCode] = "ARITH101"
             }
@@ -184,7 +207,6 @@ object SeedData {
             }
 
             println("Seed data created successfully!")
-            println("Admin credentials: email=$ADMIN_EMAIL, password=$ADMIN_PASSWORD")
         }
     }
 }

@@ -42,12 +42,38 @@ Supported variables:
 - `DB_URL` default: `jdbc:postgresql://localhost:5432/MathimApp`
 - `DB_DRIVER` default: `org.postgresql.Driver`
 - `DB_USER` default: `postgres`
+- `JWT_SECRET` or JVM property `jwt.secret` (required, no default)
+- `ADMIN_SEED_ID` or JVM property `seed.admin.id` (required when seed data is enabled)
+- `ADMIN_SEED_NAME` or JVM property `seed.admin.name` (required when seed data is enabled)
+- `ADMIN_SEED_EMAIL` or JVM property `seed.admin.email` (required when seed data is enabled)
+- `ADMIN_SEED_PASSWORD` or JVM property `seed.admin.password` (required when seed data is enabled)
 
 Example on Windows PowerShell:
 
 ```powershell
 $env:DB_URL="jdbc:postgresql://localhost:5432/MathimApp"
 $env:DB_USER="postgres"
-$env:DB_PASSWORD="password"
+$env:DB_PASSWORD="<set-local-db-password>"
+$env:JWT_SECRET="<set-long-random-jwt-secret>"
+$env:ADMIN_SEED_ID="admin-1"
+$env:ADMIN_SEED_NAME="Admin"
+$env:ADMIN_SEED_EMAIL="admin@example.com"
+$env:ADMIN_SEED_PASSWORD="<set-admin-seed-password>"
 .\gradlew.bat :server:run
 ```
+
+Example on macOS/Linux:
+
+```shell
+export DB_URL="jdbc:postgresql://localhost:5432/MathimApp"
+export DB_USER="postgres"
+export DB_PASSWORD="<set-local-db-password>"
+export JWT_SECRET="<set-long-random-jwt-secret>"
+export ADMIN_SEED_ID="admin-1"
+export ADMIN_SEED_NAME="Admin"
+export ADMIN_SEED_EMAIL="admin@example.com"
+export ADMIN_SEED_PASSWORD="<set-admin-seed-password>"
+./gradlew :server:run
+```
+
+If you prefer JVM properties instead of environment variables, pass `-Djwt.secret=...` and `-Dseed.admin.*=...` to the Gradle run task or your server process.

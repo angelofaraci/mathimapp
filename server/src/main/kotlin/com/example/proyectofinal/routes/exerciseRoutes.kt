@@ -1,8 +1,12 @@
 package com.example.proyectofinal.routes
 
+import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.Exercises
+import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.*
+import com.example.proyectofinal.plugins.currentRole
+import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -17,6 +21,7 @@ fun Application.exerciseRoutes() {
         authenticate("auth-jwt") {
             get("/lessons/{lessonId}/exercises") {
                 val lessonId = call.parameters["lessonId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val hideAnswers = call.currentRole() == UserRole.LEARNER
 
                 val exercises = dbQuery {
                     Exercises.selectAll().where { Exercises.lessonId eq lessonId }
@@ -26,7 +31,7 @@ fun Application.exerciseRoutes() {
                                 lessonId = row[Exercises.lessonId],
                                 question = row[Exercises.question],
                                 options = row[Exercises.options].split(","),
-                                correctAnswer = row[Exercises.correctAnswer],
+                                correctAnswer = if (hideAnswers) "" else row[Exercises.correctAnswer],
                                 type = ExerciseType.valueOf(row[Exercises.type])
                             )
                         }
@@ -36,6 +41,16 @@ fun Application.exerciseRoutes() {
 
             post("/exercises") {
                 val request = call.receive<CreateExerciseRequest>()
+
+                val creatorId = dbQuery {
+                    (Lessons innerJoin Courses)
+                        .select(Courses.creatorId)
+                        .where { Lessons.id eq request.lessonId }
+                        .firstOrNull()
+                        ?.get(Courses.creatorId)
+                } ?: return@post call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@post
 
                 dbQuery {
                     Exercises.insert {
@@ -63,6 +78,16 @@ fun Application.exerciseRoutes() {
             put("/exercises/{id}") {
                 val exerciseId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
                 val request = call.receive<UpdateExerciseRequest>()
+
+                val creatorId = dbQuery {
+                    (Exercises innerJoin Lessons innerJoin Courses)
+                        .select(Courses.creatorId)
+                        .where { Exercises.id eq exerciseId }
+                        .firstOrNull()
+                        ?.get(Courses.creatorId)
+                } ?: return@put call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@put
 
                 val updated = dbQuery {
                     Exercises.update({ Exercises.id eq exerciseId }) { row ->
@@ -94,6 +119,16 @@ fun Application.exerciseRoutes() {
 
             delete("/exercises/{id}") {
                 val exerciseId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+
+                val creatorId = dbQuery {
+                    (Exercises innerJoin Lessons innerJoin Courses)
+                        .select(Courses.creatorId)
+                        .where { Exercises.id eq exerciseId }
+                        .firstOrNull()
+                        ?.get(Courses.creatorId)
+                } ?: return@delete call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@delete
 
                 val deleted = dbQuery {
                     Exercises.deleteWhere { Exercises.id eq exerciseId }

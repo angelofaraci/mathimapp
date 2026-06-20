@@ -59,3 +59,10 @@ data class UserProgress(
     val totalScore: Int = 0,
     val enrolledCourseIds: Set<String> = emptySet()
 )
+
+@Serializable
+data class CompleteLessonRequest(
+    val userId: String,
+    val lessonId: String,
+    val score: Int = 0
+)

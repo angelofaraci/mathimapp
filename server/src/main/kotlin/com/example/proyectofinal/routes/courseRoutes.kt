@@ -5,6 +5,7 @@ import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.*
+import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -69,6 +70,7 @@ fun Application.courseRoutes() {
 
             get("/courses/creator/{creatorId}") {
                 val creatorId = call.parameters["creatorId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                if (!call.requireSelfOrAdmin(creatorId)) return@get
 
                 val courses = dbQuery {
                     Courses.selectAll().where { Courses.creatorId eq creatorId }
@@ -88,6 +90,7 @@ fun Application.courseRoutes() {
 
             get("/courses/enrolled/{userId}") {
                 val userId = call.parameters["userId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                if (!call.requireSelfOrAdmin(userId)) return@get
 
                 val courses = dbQuery {
                     val enrolledCourseIds = EnrolledCourses.selectAll().where { EnrolledCourses.userId eq userId }
@@ -110,6 +113,7 @@ fun Application.courseRoutes() {
 
             post("/courses") {
                 val request = call.receive<CreateCourseRequest>()
+                if (!call.requireSelfOrAdmin(request.creatorId)) return@post
 
                 dbQuery {
                     Courses.insert {
@@ -137,6 +141,12 @@ fun Application.courseRoutes() {
             put("/courses/{id}") {
                 val courseId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
                 val request = call.receive<UpdateCourseRequest>()
+
+                val creatorId = dbQuery {
+                    Courses.selectAll().where { Courses.id eq courseId }.firstOrNull()?.get(Courses.creatorId)
+                } ?: return@put call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@put
 
                 val updated = dbQuery {
                     Courses.update({ Courses.id eq courseId }) { row ->
@@ -168,6 +178,12 @@ fun Application.courseRoutes() {
             delete("/courses/{id}") {
                 val courseId = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
 
+                val creatorId = dbQuery {
+                    Courses.selectAll().where { Courses.id eq courseId }.firstOrNull()?.get(Courses.creatorId)
+                } ?: return@delete call.respond(HttpStatusCode.NotFound)
+
+                if (!call.requireSelfOrAdmin(creatorId)) return@delete
+
                 val deleted = dbQuery {
                     Courses.deleteWhere { Courses.id eq courseId }
                 }
@@ -181,6 +197,7 @@ fun Application.courseRoutes() {
 
             post("/courses/join") {
                 val request = call.receive<JoinCourseRequest>()
+                if (!call.requireSelfOrAdmin(request.userId)) return@post
 
                 val course = dbQuery {
                     val course = Courses.selectAll().where { Courses.joinCode eq request.code }.firstOrNull()

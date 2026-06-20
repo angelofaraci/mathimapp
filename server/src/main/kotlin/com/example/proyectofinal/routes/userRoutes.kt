@@ -6,6 +6,8 @@ import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.models.UpdateUserRequest
 import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.models.UserProgress as DTOUserProgress
+import com.example.proyectofinal.plugins.currentRole
+import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -21,6 +23,7 @@ fun Application.userRoutes() {
         authenticate("auth-jwt") {
             get("/users/{id}") {
                 val userId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                if (!call.requireSelfOrAdmin(userId)) return@get
 
                 val user = dbQuery {
                     val userRow = Users.selectAll().where { Users.id eq userId }.firstOrNull()
@@ -39,7 +42,15 @@ fun Application.userRoutes() {
 
             put("/users/{id}") {
                 val userId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+                if (!call.requireSelfOrAdmin(userId)) return@put
+
                 val request = call.receive<UpdateUserRequest>()
+                val currentRole = call.currentRole() ?: return@put call.respond(HttpStatusCode.Unauthorized)
+
+                if (request.role != null && currentRole != UserRole.ADMIN) {
+                    call.respond(HttpStatusCode.Forbidden, "Only admins can change roles")
+                    return@put
+                }
 
                 val updated = dbQuery {
                     Users.update({ Users.id eq userId }) { row ->
@@ -68,6 +79,7 @@ fun Application.userRoutes() {
 
             get("/progress/{userId}") {
                 val userId = call.parameters["userId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                if (!call.requireSelfOrAdmin(userId)) return@get
 
                 val progress = dbQuery {
                     val progressRow = UserProgress.selectAll().where { UserProgress.userId eq userId }.firstOrNull()
@@ -91,6 +103,7 @@ fun Application.userRoutes() {
 
             post("/progress") {
                 val request = call.receive<CompleteLessonRequest>()
+                if (!call.requireSelfOrAdmin(request.userId)) return@post
 
                 dbQuery {
                     val existingProgress = UserProgress.selectAll().where { UserProgress.userId eq request.userId }.firstOrNull()
