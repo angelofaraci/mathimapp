@@ -57,10 +57,24 @@ enum class ExerciseType {
 data class UserProgress(
     val userId: String,
     val completedLessonIds: Set<String> = emptySet(),
+    val completedExerciseIds: Set<String> = emptySet(),
     val totalScore: Int = 0,
     val enrolledCourseIds: Set<String> = emptySet()
 )
 
+@Serializable
+data class CompleteExerciseRequest(
+    val exerciseId: String,
+    val score: Int = 0
+)
+
+@Serializable
+data class ExerciseCompletionResponse(
+    val exerciseId: String,
+    val lessonId: String,
+    val lessonCompleted: Boolean,
+    val progress: UserProgress
+)
 @Serializable
 data class CompleteLessonRequest(
     val userId: String,

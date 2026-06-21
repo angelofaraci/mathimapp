@@ -3,6 +3,7 @@ package com.example.proyectofinal
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.example.proyectofinal.database.CompletedExercises
 import com.example.proyectofinal.database.CompletedLessons
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.DatabaseFactory
@@ -12,18 +13,19 @@ import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.models.AuthResponse
+import com.example.proyectofinal.models.CompleteExerciseRequest
 import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
-import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.Security
 import io.ktor.client.call.body
@@ -41,6 +43,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -304,7 +307,7 @@ class ServerIntegrationTest {
     }
 
     @Test
-    fun `posting progress updates score and enforces progress visibility`() = testApplication {
+    fun `exercise completion uses authenticated learner identity and updates progress`() = testApplication {
         setupTestDatabase()
 
         application {
@@ -316,53 +319,97 @@ class ServerIntegrationTest {
                 json(Json { ignoreUnknownKeys = true })
             }
         }
-
         val token = registerUserAndGetToken(client, email = "progress@example.com")
-        val otherToken = registerUserAndGetToken(client, email = "other-progress@example.com")
+        registerUserAndGetToken(client, email = "other-progress@example.com")
         val userId = transaction { Users.selectAll().where { Users.email eq "progress@example.com" }.single()[Users.id] }
-        seedCourseLesson("course-progress", "lesson-1")
-
-        val updateResponse = client.post("/progress") {
+        val otherUserId = transaction { Users.selectAll().where { Users.email eq "other-progress@example.com" }.single()[Users.id] }
+        seedOfficialCourseWithLesson(courseId = "course-progress", lessonId = "lesson-1", schoolYear = 3)
+        transaction {
+            Exercises.insert {
+                it[id] = "exercise-1"
+                it[lessonId] = "lesson-1"
+                it[question] = "2 + 2 = ?"
+                it[options] = "3,4"
+                it[correctAnswer] = "4"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+        }
+        val updateResponse = client.post("/exercises/exercise-1/complete") {
             bearerAuth(token)
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(
-                CompleteLessonRequest(
-                    userId = userId,
-                    lessonId = "lesson-1",
-                    score = 15
-                )
-            )
+            setBody(CompleteExerciseRequest(exerciseId = "exercise-1", score = 15))
         }
-
         assertEquals(HttpStatusCode.OK, updateResponse.status)
-
-        val progressResponse = client.get("/progress/$userId") {
-            bearerAuth(token)
-        }
-
-        assertEquals(HttpStatusCode.OK, progressResponse.status)
-
-        val progress = progressResponse.body<UserProgress>()
-        assertEquals(userId, progress.userId)
-        assertEquals(15, progress.totalScore)
-        assertEquals(setOf("lesson-1"), progress.completedLessonIds)
-        assertEquals(emptySet(), progress.enrolledCourseIds)
-
-        val forbidden = client.get("/progress/$userId") {
-            bearerAuth(otherToken)
-        }
-
-        assertEquals(HttpStatusCode.Forbidden, forbidden.status)
-
-        val admin = client.get("/progress/$userId") {
-            bearerAuth(Security.generateToken("admin-1", UserRole.ADMIN.name))
-        }
-
-        assertEquals(HttpStatusCode.OK, admin.status)
-
+        val completion = updateResponse.body<ExerciseCompletionResponse>()
+        assertEquals(true, completion.lessonCompleted)
+        assertEquals(userId, completion.progress.userId)
+        assertEquals(setOf("exercise-1"), completion.progress.completedExerciseIds)
+        assertEquals(setOf("lesson-1"), completion.progress.completedLessonIds)
+        assertEquals(15, completion.progress.totalScore)
         transaction {
+            assertEquals(
+                1L,
+                CompletedExercises.selectAll()
+                    .where {
+                        (CompletedExercises.userId eq userId) and
+                            (CompletedExercises.exerciseId eq "exercise-1")
+                    }
+                    .count()
+            )
+            assertEquals(
+                0L,
+                CompletedExercises.selectAll()
+                    .where { CompletedExercises.userId eq otherUserId }
+                    .count()
+            )
             val completed = CompletedLessons.selectAll().where { CompletedLessons.userId eq userId }.single()
             assertEquals("lesson-1", completed[CompletedLessons.lessonId])
+        }
+    }
+
+    @Test
+    fun `exercise completion validates path body match and learner progress deprecation`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+        val token = registerUserAndGetToken(client, email = "mismatch@example.com")
+        val userId = transaction {
+            Users.selectAll().where { Users.email eq "mismatch@example.com" }.single()[Users.id]
+        }
+        seedOfficialCourseWithLesson(courseId = "course-mismatch", lessonId = "lesson-mismatch", schoolYear = 3)
+        transaction {
+            Exercises.insert {
+                it[id] = "exercise-real"
+                it[lessonId] = "lesson-mismatch"
+                it[question] = "Question"
+                it[options] = "a,b"
+                it[correctAnswer] = "a"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+        }
+        val response = client.post("/exercises/exercise-real/complete") {
+            bearerAuth(token)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(CompleteExerciseRequest(exerciseId = "exercise-other", score = 10))
+        }
+        val deprecatedResponse = client.post("/progress") {
+            bearerAuth(token)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(CompleteLessonRequest(userId = userId, lessonId = "lesson-legacy", score = 12))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(HttpStatusCode.Gone, deprecatedResponse.status)
+        transaction {
+            assertEquals(0L, CompletedLessons.selectAll().where { CompletedLessons.userId eq userId }.count())
+            assertEquals(0L, UserProgressTable.selectAll().where { UserProgressTable.userId eq userId }.count())
         }
     }
 

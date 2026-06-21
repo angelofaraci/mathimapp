@@ -35,6 +35,7 @@ object DatabaseFactory {
                 Exercises,
                 UserProgress,
                 CompletedLessons,
+                CompletedExercises,
                 EnrolledCourses
             )
 

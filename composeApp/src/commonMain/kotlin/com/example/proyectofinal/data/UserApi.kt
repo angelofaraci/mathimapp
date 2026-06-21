@@ -1,7 +1,8 @@
 package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
-import com.example.proyectofinal.models.CompleteLessonRequest
+import com.example.proyectofinal.models.CompleteExerciseRequest
+import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import io.ktor.client.*
@@ -31,10 +32,10 @@ class UserApi(
         return client.get("$baseUrl/progress/$userId").body()
     }
 
-    suspend fun saveUserProgress(request: CompleteLessonRequest) {
-        client.post("$baseUrl/progress") {
+    suspend fun completeExercise(exerciseId: String, score: Int = 0): ExerciseCompletionResponse {
+        return client.post("$baseUrl/exercises/$exerciseId/complete") {
             contentType(ContentType.Application.Json)
-            setBody(request)
-        }
+            setBody(CompleteExerciseRequest(exerciseId = exerciseId, score = score))
+        }.body()
     }
 }

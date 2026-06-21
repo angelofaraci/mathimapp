@@ -1,12 +1,16 @@
 package com.example.proyectofinal
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.example.proyectofinal.database.CompletedExercises
+import com.example.proyectofinal.database.CompletedLessons
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.DatabaseFactory
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
+import com.example.proyectofinal.database.UserProgress as UserProgressTable
+import com.example.proyectofinal.models.CompleteExerciseRequest
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
@@ -18,11 +22,14 @@ import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.service.AuthService
 import com.example.proyectofinal.service.CourseReadResult
 import com.example.proyectofinal.service.CourseService
+import com.example.proyectofinal.service.ExerciseCompletionResult
 import com.example.proyectofinal.service.ExerciseService
 import com.example.proyectofinal.service.LessonListReadResult
 import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
 import com.example.proyectofinal.service.TheoryUpdateResult
+import com.example.proyectofinal.service.UserService
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -464,6 +471,91 @@ class LessonExerciseServiceTest {
                     assertEquals(0, resultSet.getInt("school_year"))
                 }
             }
+        }
+    }
+}
+
+class UserServiceTest {
+    @BeforeTest
+    fun setUp() {
+        initServiceTestDatabase()
+    }
+
+    @Test
+    fun `complete exercise is first wins and completes lesson on final exercise`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "learner-1", role = UserRole.LEARNER)
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
+        insertLesson(id = "lesson-1", courseId = "official-course")
+        insertExercise(id = "exercise-1", lessonId = "lesson-1")
+        insertExercise(id = "exercise-2", lessonId = "lesson-1")
+        val service = UserService()
+        val firstResult = service.completeExercise(
+            userId = "learner-1",
+            role = UserRole.LEARNER,
+            request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 10)
+        )
+        val duplicateResult = service.completeExercise(
+            userId = "learner-1",
+            role = UserRole.LEARNER,
+            request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 99)
+        )
+        val finalResult = service.completeExercise(
+            userId = "learner-1",
+            role = UserRole.LEARNER,
+            request = CompleteExerciseRequest(exerciseId = "exercise-2", score = 15)
+        )
+        val firstSuccess = assertIs<ExerciseCompletionResult.Success>(firstResult)
+        assertEquals(false, firstSuccess.response.lessonCompleted)
+        assertEquals(10, firstSuccess.response.progress.totalScore)
+        assertEquals(setOf("exercise-1"), firstSuccess.response.progress.completedExerciseIds)
+        val duplicateSuccess = assertIs<ExerciseCompletionResult.Success>(duplicateResult)
+        assertEquals(10, duplicateSuccess.response.progress.totalScore)
+        assertEquals(setOf("exercise-1"), duplicateSuccess.response.progress.completedExerciseIds)
+        assertEquals(false, duplicateSuccess.response.lessonCompleted)
+        val finalSuccess = assertIs<ExerciseCompletionResult.Success>(finalResult)
+        assertEquals(true, finalSuccess.response.lessonCompleted)
+        assertEquals(25, finalSuccess.response.progress.totalScore)
+        assertEquals(setOf("exercise-1", "exercise-2"), finalSuccess.response.progress.completedExerciseIds)
+        assertEquals(setOf("lesson-1"), finalSuccess.response.progress.completedLessonIds)
+        transaction {
+            val completion = CompletedExercises.selectAll()
+                .where {
+                    (CompletedExercises.userId eq "learner-1") and
+                        (CompletedExercises.exerciseId eq "exercise-1")
+                }
+                .single()
+            assertEquals(2L, CompletedExercises.selectAll().count())
+            assertEquals(10, completion[CompletedExercises.score])
+            assertEquals(
+                1L,
+                CompletedLessons.selectAll()
+                    .where {
+                        (CompletedLessons.userId eq "learner-1") and
+                            (CompletedLessons.lessonId eq "lesson-1")
+                    }
+                    .count()
+            )
+        }
+    }
+
+    @Test
+    fun `complete exercise rejects private exercise access for unenrolled learner`() {
+        insertUser(id = "teacher-1", role = UserRole.TEACHER)
+        insertUser(id = "learner-1", role = UserRole.LEARNER)
+        insertCourse(id = "private-course", creatorId = "teacher-1", isOfficial = false)
+        insertLesson(id = "lesson-1", courseId = "private-course")
+        insertExercise(id = "exercise-1", lessonId = "lesson-1")
+        val result = UserService().completeExercise(
+            userId = "learner-1",
+            role = UserRole.LEARNER,
+            request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 10)
+        )
+        assertEquals(ExerciseCompletionResult.Forbidden, result)
+        transaction {
+            assertEquals(0L, CompletedExercises.selectAll().count())
+            assertEquals(0L, CompletedLessons.selectAll().count())
+            assertEquals(0L, UserProgressTable.selectAll().count())
         }
     }
 }

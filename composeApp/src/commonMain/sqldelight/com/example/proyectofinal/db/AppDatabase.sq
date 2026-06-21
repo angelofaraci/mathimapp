@@ -66,6 +66,15 @@ CREATE TABLE CompletedLesson (
     FOREIGN KEY(lessonId) REFERENCES LessonEntity(id) ON DELETE CASCADE
 );
 
+-- Many-to-Many: Completed Exercises
+CREATE TABLE CompletedExercise (
+    userId TEXT NOT NULL,
+    exerciseId TEXT NOT NULL,
+    PRIMARY KEY(userId, exerciseId),
+    FOREIGN KEY(userId) REFERENCES UserEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY(exerciseId) REFERENCES ExerciseEntity(id) ON DELETE CASCADE
+);
+
 -- Many-to-Many: Enrolled Courses
 CREATE TABLE EnrolledCourse (
     userId TEXT NOT NULL,
@@ -133,6 +142,13 @@ SELECT lessonId FROM CompletedLesson WHERE userId = ?;
 
 insertCompletedLesson:
 INSERT OR REPLACE INTO CompletedLesson(userId, lessonId)
+VALUES (?, ?);
+
+selectCompletedExercisesByUserId:
+SELECT exerciseId FROM CompletedExercise WHERE userId = ?;
+
+insertCompletedExercise:
+INSERT OR REPLACE INTO CompletedExercise(userId, exerciseId)
 VALUES (?, ?);
 
 selectEnrolledCoursesByUserId:

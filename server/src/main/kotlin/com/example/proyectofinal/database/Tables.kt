@@ -59,6 +59,14 @@ object CompletedLessons : Table("completed_lessons") {
     override val primaryKey = PrimaryKey(userId, lessonId)
 }
 
+object CompletedExercises : Table("completed_exercises") {
+    val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
+    val exerciseId = reference("exercise_id", Exercises.id, onDelete = ReferenceOption.CASCADE)
+    val score = integer("score").default(0)
+
+    override val primaryKey = PrimaryKey(userId, exerciseId)
+}
+
 object EnrolledCourses : Table("enrolled_courses") {
     val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
     val courseId = reference("course_id", Courses.id, onDelete = ReferenceOption.CASCADE)
