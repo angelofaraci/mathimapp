@@ -37,6 +37,13 @@ object DatabaseFactory {
                 CompletedLessons,
                 EnrolledCourses
             )
+
+            exec(
+                """
+                ALTER TABLE courses
+                    ADD COLUMN IF NOT EXISTS school_year INTEGER NOT NULL DEFAULT 0
+                """.trimIndent()
+            )
         }
     }
 

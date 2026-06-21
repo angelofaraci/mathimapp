@@ -3,7 +3,10 @@ package com.example.proyectofinal.routes
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.JoinCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
+import com.example.proyectofinal.plugins.currentRole
+import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
+import com.example.proyectofinal.service.CourseReadResult
 import com.example.proyectofinal.service.CourseService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -33,10 +36,16 @@ fun Application.courseRoutes(service: CourseService) {
 
             get("/courses/{id}") {
                 val courseId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val userId = call.currentUserId()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
 
-                val course = service.getCourseById(courseId) ?: return@get call.respond(HttpStatusCode.NotFound)
-
-                call.respond(course)
+                when (val result = service.getCourseByIdForUser(courseId, userId, role)) {
+                    is CourseReadResult.Success -> call.respond(result.course)
+                    CourseReadResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                    CourseReadResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
             }
 
             get("/courses/creator/{creatorId}") {

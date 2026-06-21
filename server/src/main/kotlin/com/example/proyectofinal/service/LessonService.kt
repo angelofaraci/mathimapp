@@ -22,6 +22,18 @@ sealed interface TheoryUpdateResult {
     object NotFound : TheoryUpdateResult
 }
 
+sealed interface LessonReadResult {
+    data class Success(val lesson: Lesson) : LessonReadResult
+    object Forbidden : LessonReadResult
+    object NotFound : LessonReadResult
+}
+
+sealed interface LessonListReadResult {
+    data class Success(val lessons: List<Lesson>) : LessonListReadResult
+    object Forbidden : LessonListReadResult
+    object NotFound : LessonListReadResult
+}
+
 class LessonService {
     fun getLessonsByCourseId(courseId: String): List<Lesson> = dbQuery {
         Lessons.selectAll()
@@ -41,6 +53,51 @@ class LessonService {
             .map { it.toExercise(hideAnswers) }
 
         lesson.toLesson(exercises)
+    }
+
+    fun getLessonsByCourseIdForUser(courseId: String, userId: String, role: UserRole): LessonListReadResult {
+        val lessonAccess = dbQuery {
+            Courses.select(Courses.id, Courses.creatorId, Courses.isOfficial)
+                .where { Courses.id eq courseId }
+                .firstOrNull()
+                ?.let {
+                    CourseContentAccess(
+                        courseId = it[Courses.id],
+                        creatorId = it[Courses.creatorId],
+                        isOfficial = it[Courses.isOfficial]
+                    )
+                }
+        } ?: return LessonListReadResult.NotFound
+
+        if (!canReadCourseContent(lessonAccess, userId, role)) {
+            return LessonListReadResult.Forbidden
+        }
+
+        return LessonListReadResult.Success(getLessonsByCourseId(courseId))
+    }
+
+    fun getLessonByIdForUser(id: String, userId: String, role: UserRole): LessonReadResult {
+        val lessonAccess = dbQuery {
+            (Lessons innerJoin Courses)
+                .select(Lessons.courseId, Courses.creatorId, Courses.isOfficial)
+                .where { Lessons.id eq id }
+                .firstOrNull()
+                ?.let {
+                    CourseContentAccess(
+                        courseId = it[Lessons.courseId],
+                        creatorId = it[Courses.creatorId],
+                        isOfficial = it[Courses.isOfficial]
+                    )
+                }
+        } ?: return LessonReadResult.NotFound
+
+        if (!canReadCourseContent(lessonAccess, userId, role)) {
+            return LessonReadResult.Forbidden
+        }
+
+        return getLessonById(id, hideAnswers = role == UserRole.LEARNER)
+            ?.let { LessonReadResult.Success(it) }
+            ?: LessonReadResult.NotFound
     }
 
     fun createLesson(request: CreateLessonRequest): Lesson = dbQuery {

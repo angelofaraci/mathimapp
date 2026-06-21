@@ -7,6 +7,8 @@ import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
+import com.example.proyectofinal.service.LessonListReadResult
+import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
 import com.example.proyectofinal.service.TheoryUpdateResult
 import io.ktor.http.HttpStatusCode
@@ -26,18 +28,30 @@ fun Application.lessonRoutes(service: LessonService) {
         authenticate("auth-jwt") {
             get("/courses/{courseId}/lessons") {
                 val courseId = call.parameters["courseId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val userId = call.currentUserId()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
 
-                call.respond(service.getLessonsByCourseId(courseId))
+                when (val result = service.getLessonsByCourseIdForUser(courseId, userId, role)) {
+                    is LessonListReadResult.Success -> call.respond(result.lessons)
+                    LessonListReadResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                    LessonListReadResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
             }
 
             get("/lessons/{id}") {
                 val lessonId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-                val hideAnswers = call.currentRole() == UserRole.LEARNER
+                val userId = call.currentUserId()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
 
-                val lesson = service.getLessonById(lessonId, hideAnswers)
-                    ?: return@get call.respond(HttpStatusCode.NotFound)
-
-                call.respond(lesson)
+                when (val result = service.getLessonByIdForUser(lessonId, userId, role)) {
+                    is LessonReadResult.Success -> call.respond(result.lesson)
+                    LessonReadResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                    LessonReadResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
             }
 
             post("/lessons") {

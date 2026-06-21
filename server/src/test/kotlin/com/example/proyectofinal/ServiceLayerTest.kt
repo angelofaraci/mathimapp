@@ -16,14 +16,18 @@ import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.service.AuthService
+import com.example.proyectofinal.service.CourseReadResult
 import com.example.proyectofinal.service.CourseService
 import com.example.proyectofinal.service.ExerciseService
+import com.example.proyectofinal.service.LessonListReadResult
+import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
 import com.example.proyectofinal.service.TheoryUpdateResult
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.sql.DriverManager
 import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -203,6 +207,94 @@ class LessonExerciseServiceTest {
     }
 
     @Test
+    fun `lesson read access follows role and enrollment visibility`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "teacher-owner", role = UserRole.TEACHER)
+        insertUser(id = "teacher-other", role = UserRole.TEACHER)
+        insertUser(id = "learner-enrolled", role = UserRole.LEARNER)
+        insertUser(id = "learner-other", role = UserRole.LEARNER)
+
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
+        insertCourse(id = "teacher-course", creatorId = "teacher-owner")
+        insertLesson(id = "official-lesson", courseId = "official-course", theoryContent = "Official theory")
+        insertLesson(id = "teacher-lesson", courseId = "teacher-course", theoryContent = "Teacher theory")
+        insertExercise(id = "exercise-teacher", lessonId = "teacher-lesson", correctAnswer = "4")
+        enrollUser(userId = "learner-enrolled", courseId = "teacher-course")
+
+        val service = LessonService()
+
+        assertEquals(
+            "teacher-lesson",
+            assertIs<LessonReadResult.Success>(
+                service.getLessonByIdForUser("teacher-lesson", "teacher-owner", UserRole.TEACHER)
+            ).lesson.id
+        )
+        assertEquals(
+            "teacher-lesson",
+            assertIs<LessonReadResult.Success>(
+                service.getLessonByIdForUser("teacher-lesson", "admin-1", UserRole.ADMIN)
+            ).lesson.id
+        )
+        assertEquals(
+            "official-lesson",
+            assertIs<LessonReadResult.Success>(
+                service.getLessonByIdForUser("official-lesson", "learner-other", UserRole.LEARNER)
+            ).lesson.id
+        )
+
+        val enrolledLesson = assertIs<LessonReadResult.Success>(
+            service.getLessonByIdForUser("teacher-lesson", "learner-enrolled", UserRole.LEARNER)
+        ).lesson
+        assertEquals("", enrolledLesson.exercises.single().correctAnswer)
+
+        assertEquals(
+            LessonReadResult.Forbidden,
+            service.getLessonByIdForUser("teacher-lesson", "teacher-other", UserRole.TEACHER)
+        )
+        assertEquals(
+            LessonReadResult.Forbidden,
+            service.getLessonByIdForUser("teacher-lesson", "learner-other", UserRole.LEARNER)
+        )
+        assertEquals(
+            LessonReadResult.NotFound,
+            service.getLessonByIdForUser("missing-lesson", "admin-1", UserRole.ADMIN)
+        )
+        assertEquals(
+            LessonListReadResult.Forbidden,
+            service.getLessonsByCourseIdForUser("teacher-course", "learner-other", UserRole.LEARNER)
+        )
+    }
+
+    @Test
+    fun `course read access blocks private course details for outsiders`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "teacher-owner", role = UserRole.TEACHER)
+        insertUser(id = "learner-enrolled", role = UserRole.LEARNER)
+        insertUser(id = "learner-other", role = UserRole.LEARNER)
+
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
+        insertCourse(id = "teacher-course", creatorId = "teacher-owner")
+        insertLesson(id = "teacher-lesson", courseId = "teacher-course")
+        enrollUser(userId = "learner-enrolled", courseId = "teacher-course")
+
+        val service = CourseService()
+
+        assertIs<CourseReadResult.Success>(
+            service.getCourseByIdForUser("teacher-course", "teacher-owner", UserRole.TEACHER)
+        )
+        assertIs<CourseReadResult.Success>(
+            service.getCourseByIdForUser("teacher-course", "learner-enrolled", UserRole.LEARNER)
+        )
+        assertIs<CourseReadResult.Success>(
+            service.getCourseByIdForUser("official-course", "learner-other", UserRole.LEARNER)
+        )
+        assertEquals(
+            CourseReadResult.Forbidden,
+            service.getCourseByIdForUser("teacher-course", "learner-other", UserRole.LEARNER)
+        )
+    }
+
+    @Test
     fun `theory updates persist only for allowed roles and scopes`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "teacher-owner", role = UserRole.TEACHER)
@@ -299,6 +391,80 @@ class LessonExerciseServiceTest {
 
         assertTrue(service.deleteExercise("exercise-1"))
         assertTrue(service.getExercisesByLessonId("lesson-1", hideAnswers = false).isEmpty())
+    }
+
+    @Test
+    fun `database init backfills missing course school year column and is idempotent`() {
+        val url = "jdbc:h2:mem:${UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
+
+        DriverManager.getConnection(url, "sa", "").use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute(
+                    """
+                    CREATE TABLE users (
+                        id VARCHAR(50) PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL,
+                        email VARCHAR(100) NOT NULL,
+                        password_hash VARCHAR(255) NOT NULL,
+                        role VARCHAR(20) NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE courses (
+                        id VARCHAR(50) PRIMARY KEY,
+                        title VARCHAR(200) NOT NULL,
+                        description VARCHAR(1000) NOT NULL,
+                        creator_id VARCHAR(50) NOT NULL,
+                        is_official BOOLEAN NOT NULL DEFAULT FALSE,
+                        join_code VARCHAR(20)
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    INSERT INTO users (id, name, email, password_hash, role)
+                    VALUES ('legacy-teacher', 'Legacy Teacher', 'legacy@example.com', 'hash', 'TEACHER')
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    INSERT INTO courses (id, title, description, creator_id, is_official, join_code)
+                    VALUES ('legacy-course', 'Legacy Course', 'Created before school year', 'legacy-teacher', FALSE, NULL)
+                    """.trimIndent()
+                )
+            }
+        }
+
+        DatabaseFactory.init(
+            url = url,
+            driver = "org.h2.Driver",
+            user = "sa",
+            password = ""
+        )
+
+        DatabaseFactory.init(
+            url = url,
+            driver = "org.h2.Driver",
+            user = "sa",
+            password = ""
+        )
+
+        DriverManager.getConnection(url, "sa", "").use { connection ->
+            connection.metaData.getColumns(null, null, "courses", "school_year").use { columns ->
+                assertTrue(columns.next())
+            }
+
+            connection.prepareStatement("SELECT school_year FROM courses WHERE id = ?").use { statement ->
+                statement.setString(1, "legacy-course")
+
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    assertEquals(0, resultSet.getInt("school_year"))
+                }
+            }
+        }
     }
 }
 

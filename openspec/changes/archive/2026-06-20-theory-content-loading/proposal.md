@@ -41,7 +41,7 @@ Adopt **Approach A (Minimal Extension)** from exploration. Add `schoolYear` to t
 | `server/.../database/Tables.kt` | Modified | Add `schoolYear` to `Courses`. |
 | `server/.../routes/lessonRoutes.kt` | Modified | Add `GET /courses/official` and `PUT /lessons/{id}/theory`. |
 | `server/.../service/LessonService.kt` | Modified | Theory CRUD with role checks. |
-| `server/.../models/LessonDto.kt` | Modified | Theory update request/response shapes. |
+| `server/.../models/CourseDto.kt` | Modified | Add `schoolYear` to course request DTOs. |
 | `shared/.../models/Models.kt` | Modified | Add `schoolYear` to `Course`. |
 | `composeApp/.../sqldelight/AppDatabase.sq` | Modified | Add `schoolYear` column; update queries. |
 | `composeApp/.../data/LessonApi.kt` | Modified | Add theory and filtered course endpoints. |

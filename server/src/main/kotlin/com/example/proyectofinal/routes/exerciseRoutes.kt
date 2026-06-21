@@ -2,10 +2,12 @@ package com.example.proyectofinal.routes
 
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
-import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
+import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import com.example.proyectofinal.service.ExerciseService
+import com.example.proyectofinal.service.LessonReadResult
+import com.example.proyectofinal.service.LessonService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -18,14 +20,21 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
 
-fun Application.exerciseRoutes(service: ExerciseService) {
+fun Application.exerciseRoutes(service: ExerciseService, lessonService: LessonService) {
     routing {
         authenticate("auth-jwt") {
             get("/lessons/{lessonId}/exercises") {
                 val lessonId = call.parameters["lessonId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-                val hideAnswers = call.currentRole() == UserRole.LEARNER
+                val userId = call.currentUserId()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@get call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
 
-                call.respond(service.getExercisesByLessonId(lessonId, hideAnswers))
+                when (val result = lessonService.getLessonByIdForUser(lessonId, userId, role)) {
+                    is LessonReadResult.Success -> call.respond(result.lesson.exercises)
+                    LessonReadResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                    LessonReadResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
             }
 
             post("/exercises") {

@@ -193,6 +193,32 @@ class ServerIntegrationTest {
     }
 
     @Test
+    fun `protected read routes return 404 for missing resources with valid token`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val token = registerUserAndGetToken(client, email = "missing-resource@example.com")
+
+        listOf(
+            "/courses/missing-course",
+            "/courses/missing-course/lessons",
+            "/lessons/missing-lesson",
+            "/lessons/missing-lesson/exercises"
+        ).forEach { path ->
+            assertEquals(HttpStatusCode.NotFound, client.get(path) { bearerAuth(token) }.status, path)
+        }
+    }
+
+    @Test
     fun `signed token without userId is rejected`() = testApplication {
         setupTestDatabase()
 
@@ -357,6 +383,8 @@ class ServerIntegrationTest {
         val learnerToken = registerUserAndGetToken(client, email = "learner-content@example.com")
 
         transaction {
+            val learnerId = Users.selectAll().where { Users.email eq "learner-content@example.com" }.single()[Users.id]
+
             Courses.insert {
                 it[id] = "course-content"
                 it[title] = "Content Course"
@@ -382,6 +410,11 @@ class ServerIntegrationTest {
                 it[correctAnswer] = "4"
                 it[type] = "MULTIPLE_CHOICE"
             }
+
+            EnrolledCourses.insert {
+                it[userId] = learnerId
+                it[courseId] = "course-content"
+            }
         }
 
         val lesson = client.get("/lessons/lesson-content") { bearerAuth(learnerToken) }.body<Lesson>()
@@ -389,6 +422,111 @@ class ServerIntegrationTest {
 
         assertEquals("", lesson.exercises.single().correctAnswer)
         assertEquals("", exercises.single().correctAnswer)
+    }
+
+    @Test
+    fun `lesson read route enforces visibility scopes`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val enrolledToken = registerUserAndGetToken(client, email = "enrolled-learner@example.com")
+        val enrolledLearnerId = transaction {
+            Users.selectAll().where { Users.email eq "enrolled-learner@example.com" }.single()[Users.id]
+        }
+
+        seedOfficialCourseWithLesson(
+            courseId = "official-visible-course",
+            lessonId = "official-visible-lesson",
+            schoolYear = 3
+        )
+        seedOwnedCourseWithLesson(
+            courseId = "private-visible-course",
+            creatorId = "teacher-owner",
+            lessonId = "private-visible-lesson"
+        )
+
+        transaction {
+            EnrolledCourses.insert {
+                it[userId] = enrolledLearnerId
+                it[courseId] = "private-visible-course"
+            }
+
+            Exercises.insert {
+                it[id] = "private-visible-exercise"
+                it[lessonId] = "private-visible-lesson"
+                it[question] = "Private question"
+                it[options] = "a,b"
+                it[correctAnswer] = "a"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+        }
+
+        val outsiderLearnerToken = Security.generateToken("learner-outsider", UserRole.LEARNER.name)
+        val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
+        val otherTeacherToken = Security.generateToken("teacher-other", UserRole.TEACHER.name)
+        val adminToken = Security.generateToken("admin-user", UserRole.ADMIN.name)
+
+        val officialVisible = client.get("/lessons/official-visible-lesson") {
+            bearerAuth(outsiderLearnerToken)
+        }
+        val enrolledVisible = client.get("/lessons/private-visible-lesson") {
+            bearerAuth(enrolledToken)
+        }
+        val ownerVisible = client.get("/lessons/private-visible-lesson") {
+            bearerAuth(ownerToken)
+        }
+        val adminVisible = client.get("/lessons/private-visible-lesson") {
+            bearerAuth(adminToken)
+        }
+        val learnerForbidden = client.get("/lessons/private-visible-lesson") {
+            bearerAuth(outsiderLearnerToken)
+        }
+        val teacherForbidden = client.get("/lessons/private-visible-lesson") {
+            bearerAuth(otherTeacherToken)
+        }
+        val courseLessonsForbidden = client.get("/courses/private-visible-course/lessons") {
+            bearerAuth(outsiderLearnerToken)
+        }
+        val courseDetailForbidden = client.get("/courses/private-visible-course") {
+            bearerAuth(outsiderLearnerToken)
+        }
+        val exercisesForbidden = client.get("/lessons/private-visible-lesson/exercises") {
+            bearerAuth(outsiderLearnerToken)
+        }
+        val courseLessonsVisible = client.get("/courses/private-visible-course/lessons") {
+            bearerAuth(enrolledToken)
+        }
+        val courseDetailVisible = client.get("/courses/private-visible-course") {
+            bearerAuth(ownerToken)
+        }
+        val exercisesVisible = client.get("/lessons/private-visible-lesson/exercises") {
+            bearerAuth(enrolledToken)
+        }
+
+        assertEquals(HttpStatusCode.OK, officialVisible.status)
+        assertEquals(HttpStatusCode.OK, enrolledVisible.status)
+        assertEquals(HttpStatusCode.OK, ownerVisible.status)
+        assertEquals(HttpStatusCode.OK, adminVisible.status)
+        assertEquals(HttpStatusCode.Forbidden, learnerForbidden.status)
+        assertEquals(HttpStatusCode.Forbidden, teacherForbidden.status)
+        assertEquals(HttpStatusCode.Forbidden, courseLessonsForbidden.status)
+        assertEquals(HttpStatusCode.Forbidden, courseDetailForbidden.status)
+        assertEquals(HttpStatusCode.Forbidden, exercisesForbidden.status)
+        assertEquals(HttpStatusCode.OK, courseLessonsVisible.status)
+        assertEquals(listOf("private-visible-lesson"), courseLessonsVisible.body<List<Lesson>>().map { it.id })
+        assertEquals(HttpStatusCode.OK, courseDetailVisible.status)
+        assertEquals(listOf("private-visible-lesson"), courseDetailVisible.body<Course>().lessons.map { it.id })
+        assertEquals(HttpStatusCode.OK, exercisesVisible.status)
+        assertEquals("", exercisesVisible.body<List<Exercise>>().single().correctAnswer)
     }
 
     @Test

@@ -7,13 +7,21 @@ import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
+import com.example.proyectofinal.models.UserRole
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+
+sealed interface CourseReadResult {
+    data class Success(val course: Course) : CourseReadResult
+    object Forbidden : CourseReadResult
+    object NotFound : CourseReadResult
+}
 
 class CourseService {
     fun getOfficialCourses(schoolYear: Int? = null): List<Course> = dbQuery {
@@ -40,6 +48,29 @@ class CourseService {
             .map { it.toLesson() }
 
         course.toCourse(lessons)
+    }
+
+    fun getCourseByIdForUser(id: String, userId: String, role: UserRole): CourseReadResult {
+        val courseAccess = dbQuery {
+            Courses.select(Courses.id, Courses.creatorId, Courses.isOfficial)
+                .where { Courses.id eq id }
+                .firstOrNull()
+                ?.let {
+                    CourseContentAccess(
+                        courseId = it[Courses.id],
+                        creatorId = it[Courses.creatorId],
+                        isOfficial = it[Courses.isOfficial]
+                    )
+                }
+        } ?: return CourseReadResult.NotFound
+
+        if (!canReadCourseContent(courseAccess, userId, role)) {
+            return CourseReadResult.Forbidden
+        }
+
+        return getCourseById(id)
+            ?.let { CourseReadResult.Success(it) }
+            ?: CourseReadResult.NotFound
     }
 
     fun getCoursesByCreator(creatorId: String): List<Course> = dbQuery {

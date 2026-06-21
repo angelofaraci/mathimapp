@@ -48,7 +48,7 @@ Course (id, title, description, creatorId, isOfficial, joinCode)
 ## Affected Areas
 
 - `server/src/main/kotlin/com/example/proyectofinal/database/Tables.kt` — add `schoolYear` to `Courses`; optionally split `theoryContent` out
-- `server/src/main/kotlin/com/example/proyectofinal/models/LessonDto.kt` — add theory-specific request/response shapes
+- `server/src/main/kotlin/com/example/proyectofinal/models/CourseDto.kt` — add `schoolYear` to course request DTOs
 - `server/src/main/kotlin/com/example/proyectofinal/routes/lessonRoutes.kt` — add admin/teacher authorization gates
 - `server/src/main/kotlin/com/example/proyectofinal/service/LessonService.kt` — add theory CRUD with role checks
 - `shared/src/commonMain/kotlin/com/example/proyectofinal/models/Models.kt` — add `schoolYear` to `Course`; possibly add `TheoryContent` model
