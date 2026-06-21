@@ -78,17 +78,38 @@ private fun AppPreview() {
 }
 
 @Composable
+@Preview
+private fun CourseListEmptyPreview() {
+    MaterialTheme {
+        CourseList(emptyList())
+    }
+}
+
+@Composable
 fun CourseList(courses: List<Course>) {
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         Text(
             text = "Welcome to MathApp!",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(courses) { course ->
-                CourseCard(course)
+
+        if (courses.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "No courses available yet.")
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(courses) { course ->
+                    CourseCard(course)
+                }
             }
         }
     }
