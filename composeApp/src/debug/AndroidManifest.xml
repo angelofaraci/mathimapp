@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Development only: allows the Android emulator to call the local backend at http://10.0.2.2. -->
+    <!-- Production note: replace local HTTP traffic with HTTPS and remove this debug-only override. -->
+    <application android:usesCleartextTraffic="true" />
+
+</manifest>
