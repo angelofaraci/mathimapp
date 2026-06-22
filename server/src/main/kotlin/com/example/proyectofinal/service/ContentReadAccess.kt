@@ -17,7 +17,7 @@ internal fun canReadCourseContent(access: CourseContentAccess, userId: String, r
     when (role) {
         UserRole.ADMIN -> true
         UserRole.TEACHER -> access.creatorId == userId
-        UserRole.LEARNER -> access.isOfficial || isUserEnrolledInCourse(userId, access.courseId)
+        UserRole.STUDENT -> access.isOfficial || isUserEnrolledInCourse(userId, access.courseId)
     }
 
 private fun isUserEnrolledInCourse(userId: String, courseId: String): Boolean = dbQuery {

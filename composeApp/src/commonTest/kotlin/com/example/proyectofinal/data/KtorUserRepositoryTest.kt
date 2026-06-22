@@ -2,8 +2,10 @@ package com.example.proyectofinal.data
 
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
+import app.cash.sqldelight.db.SqlDriver
 import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.models.CompleteExerciseRequest
 import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.User
@@ -23,12 +25,13 @@ import kotlin.test.assertEquals
 
 class KtorUserRepositoryTest {
     private lateinit var database: AppDatabase
+    private lateinit var driver: SqlDriver
     private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
 
     @BeforeTest
     fun setup() {
-        val driver = createTestDriver()
+        driver = createTestDriver()
 
         val intAdapter = object : ColumnAdapter<Int, Long> {
             override fun decode(databaseValue: Long): Int = databaseValue.toInt()
@@ -47,9 +50,37 @@ class KtorUserRepositoryTest {
                 totalScoreAdapter = intAdapter
             ),
             UserEntityAdapter = UserEntity.Adapter(
-                roleAdapter = EnumColumnAdapter()
+                roleAdapter = userRoleColumnAdapter
             )
         )
+    }
+
+    @Test
+    fun `user role adapter decodes legacy learner rows and preserves canonical student rows`() {
+        driver.execute(
+            null,
+            "INSERT INTO UserEntity(id, name, email, role) VALUES (?, ?, ?, ?)",
+            4
+        ) {
+            var parameterIndex = 0
+            bindString(parameterIndex++, "legacy-user")
+            bindString(parameterIndex++, "Legacy User")
+            bindString(parameterIndex++, "legacy@example.com")
+            bindString(parameterIndex++, "LEARNER")
+        }
+
+        val legacyUser = database.appDatabaseQueries.selectUserById("legacy-user").executeAsOne()
+        assertEquals(UserRole.STUDENT, legacyUser.role)
+
+        database.appDatabaseQueries.insertUser(
+            id = "student-user",
+            name = "Student User",
+            email = "student@example.com",
+            role = UserRole.STUDENT
+        )
+
+        val studentUser = database.appDatabaseQueries.selectUserById("student-user").executeAsOne()
+        assertEquals(UserRole.STUDENT, studentUser.role)
     }
 
     @Test
@@ -58,7 +89,7 @@ class KtorUserRepositoryTest {
             id = "user-1",
             name = "John Doe",
             email = "john@example.com",
-            role = UserRole.LEARNER
+            role = UserRole.STUDENT
         )
 
         val mockEngine = MockEngine { request ->
@@ -85,7 +116,7 @@ class KtorUserRepositoryTest {
 
         assertEquals("John Doe", user?.name)
         assertEquals("john@example.com", user?.email)
-        assertEquals(UserRole.LEARNER, user?.role)
+        assertEquals(UserRole.STUDENT, user?.role)
 
         val dbUser = database.appDatabaseQueries.selectUserById("user-1").executeAsOneOrNull()
         assertEquals("John Doe", dbUser?.name)
@@ -128,7 +159,7 @@ class KtorUserRepositoryTest {
     }
 
     @Test
-    fun `getUserRole returns LEARNER as default on failure`() = runTest {
+    fun `getUserRole returns STUDENT as default on failure`() = runTest {
         val userId = "unknown-user"
 
         val mockEngine = MockEngine { _ ->
@@ -150,7 +181,7 @@ class KtorUserRepositoryTest {
 
         val role = repository.getUserRole(userId)
 
-        assertEquals(UserRole.LEARNER, role)
+        assertEquals(UserRole.STUDENT, role)
     }
 
     @Test
@@ -159,7 +190,7 @@ class KtorUserRepositoryTest {
             id = "user-update",
             name = "Original Name",
             email = "original@example.com",
-            role = UserRole.LEARNER
+            role = UserRole.STUDENT
         )
 
         database.appDatabaseQueries.insertUser(
@@ -268,7 +299,7 @@ class KtorUserRepositoryTest {
             id = userId,
             name = "Progress User",
             email = "progress@example.com",
-            role = UserRole.LEARNER
+            role = UserRole.STUDENT
         )
         database.appDatabaseQueries.insertCourse(
             id = "course-1",
@@ -343,7 +374,7 @@ class KtorUserRepositoryTest {
             id = userId,
             name = "Progress User",
             email = "progress@example.com",
-            role = UserRole.LEARNER
+            role = UserRole.STUDENT
         )
         database.appDatabaseQueries.insertCourse(
             id = "course-1",

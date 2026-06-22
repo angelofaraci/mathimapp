@@ -4,6 +4,7 @@ import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseType
 import io.ktor.client.*
@@ -43,7 +44,7 @@ class KtorExerciseRepositoryTest {
                 totalScoreAdapter = intAdapter
             ),
             UserEntityAdapter = UserEntity.Adapter(
-            roleAdapter = EnumColumnAdapter()
+                roleAdapter = userRoleColumnAdapter
             )
         )
 

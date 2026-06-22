@@ -61,7 +61,8 @@ class AuthService {
             id = id,
             name = name,
             email = email,
-            role = UserRole.valueOf(role)
+            role = UserRole.parse(role)
+                ?: error("Unknown stored auth user role: $role")
         )
     }
 

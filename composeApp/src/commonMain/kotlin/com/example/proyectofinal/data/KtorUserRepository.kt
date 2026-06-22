@@ -31,7 +31,7 @@ class KtorUserRepository(
             insertUserToLocal(user)
             user.role
         } catch (e: Exception) {
-            UserRole.LEARNER
+            UserRole.STUDENT
         }
     }
 

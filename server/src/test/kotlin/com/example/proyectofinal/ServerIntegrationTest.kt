@@ -26,6 +26,7 @@ import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
+import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.Security
 import io.ktor.client.call.body
@@ -231,7 +232,7 @@ class ServerIntegrationTest {
 
         val tokenWithoutUserId = JWT.create()
             .withIssuer(Security.ISSUER)
-            .withClaim("role", UserRole.LEARNER.name)
+            .withClaim("role", UserRole.STUDENT.name)
             .sign(Algorithm.HMAC256("test-jwt-secret"))
 
         val response = client.get("/courses/official") {
@@ -239,6 +240,38 @@ class ServerIntegrationTest {
         }
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `legacy learner role values still authenticate and hydrate as student`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        transaction {
+            Users.insert {
+                it[id] = "legacy-student"
+                it[name] = "Legacy Student"
+                it[email] = "legacy-student@example.com"
+                it[passwordHash] = "hash"
+                it[role] = "LEARNER"
+            }
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val response = client.get("/users/legacy-student") {
+            bearerAuth(Security.generateToken("legacy-student", "LEARNER"))
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(UserRole.STUDENT, response.body<User>().role)
     }
 
     @Test
@@ -517,7 +550,7 @@ class ServerIntegrationTest {
             }
         }
 
-        val outsiderLearnerToken = Security.generateToken("learner-outsider", UserRole.LEARNER.name)
+        val outsiderLearnerToken = Security.generateToken("learner-outsider", UserRole.STUDENT.name)
         val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
         val otherTeacherToken = Security.generateToken("teacher-other", UserRole.TEACHER.name)
         val adminToken = Security.generateToken("admin-user", UserRole.ADMIN.name)
@@ -596,7 +629,7 @@ class ServerIntegrationTest {
             lessonId = "lesson-owned"
         )
 
-        val learnerToken = Security.generateToken("learner-user", UserRole.LEARNER.name)
+        val learnerToken = Security.generateToken("learner-user", UserRole.STUDENT.name)
         val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
         val adminToken = Security.generateToken("admin-user", UserRole.ADMIN.name)
 
@@ -734,7 +767,7 @@ class ServerIntegrationTest {
             exerciseId = "exercise-owned"
         )
 
-        val learnerToken = Security.generateToken("learner-user", UserRole.LEARNER.name)
+        val learnerToken = Security.generateToken("learner-user", UserRole.STUDENT.name)
         val ownerToken = Security.generateToken("teacher-owner", UserRole.TEACHER.name)
         val adminToken = Security.generateToken("admin-user", UserRole.ADMIN.name)
 
@@ -807,8 +840,8 @@ class ServerIntegrationTest {
             Users.insert { it[id] = "teacher-1"; it[name] = "teacher-1"; it[email] = "teacher1@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
             Users.insert { it[id] = "teacher-2"; it[name] = "teacher-2"; it[email] = "teacher2@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
             Users.insert { it[id] = "teacher-3"; it[name] = "teacher-3"; it[email] = "teacher3@example.com"; it[passwordHash] = "hash"; it[role] = "TEACHER" }
-            Users.insert { it[id] = "student-1"; it[name] = "student-1"; it[email] = "student1@example.com"; it[passwordHash] = "hash"; it[role] = "LEARNER" }
-            Users.insert { it[id] = "student-2"; it[name] = "student-2"; it[email] = "student2@example.com"; it[passwordHash] = "hash"; it[role] = "LEARNER" }
+            Users.insert { it[id] = "student-1"; it[name] = "student-1"; it[email] = "student1@example.com"; it[passwordHash] = "hash"; it[role] = "STUDENT" }
+            Users.insert { it[id] = "student-2"; it[name] = "student-2"; it[email] = "student2@example.com"; it[passwordHash] = "hash"; it[role] = "STUDENT" }
 
             Courses.insert { it[id] = "course-1"; it[title] = "course-1"; it[description] = "course-1"; it[creatorId] = "teacher-1"; it[isOfficial] = false; it[joinCode] = "JOIN1" }
             Courses.insert { it[id] = "course-2"; it[title] = "course-2"; it[description] = "course-2"; it[creatorId] = "teacher-2"; it[isOfficial] = false; it[joinCode] = "JOIN2" }
@@ -851,7 +884,7 @@ class ServerIntegrationTest {
     private suspend fun registerUserAndGetToken(
         client: io.ktor.client.HttpClient,
         email: String,
-        role: UserRole = UserRole.LEARNER
+        role: UserRole = UserRole.STUDENT
     ): String {
         val response = client.post("/auth/register") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())

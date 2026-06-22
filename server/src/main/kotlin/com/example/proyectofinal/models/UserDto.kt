@@ -7,7 +7,7 @@ data class RegisterRequest(
     val name: String,
     val email: String,
     val password: String,
-    val role: UserRole = UserRole.LEARNER
+    val role: UserRole = UserRole.STUDENT
 )
 
 @Serializable

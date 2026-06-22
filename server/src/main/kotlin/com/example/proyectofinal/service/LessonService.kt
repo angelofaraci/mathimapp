@@ -95,7 +95,7 @@ class LessonService {
             return LessonReadResult.Forbidden
         }
 
-        return getLessonById(id, hideAnswers = role == UserRole.LEARNER)
+        return getLessonById(id, hideAnswers = role == UserRole.STUDENT)
             ?.let { LessonReadResult.Success(it) }
             ?: LessonReadResult.NotFound
     }
@@ -170,7 +170,7 @@ class LessonService {
         val canUpdateTheory = when (role) {
             UserRole.ADMIN -> lessonAccess.isOfficial
             UserRole.TEACHER -> lessonAccess.creatorId == userId
-            UserRole.LEARNER -> false
+            UserRole.STUDENT -> false
         }
 
         if (!canUpdateTheory) {

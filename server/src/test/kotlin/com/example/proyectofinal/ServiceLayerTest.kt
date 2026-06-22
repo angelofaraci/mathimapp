@@ -54,7 +54,7 @@ class CourseServiceTest {
     fun `course service query methods return persisted data`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
-        insertUser(id = "student-1", role = UserRole.LEARNER)
+        insertUser(id = "student-1", role = UserRole.STUDENT)
         insertCourse(id = "official-course-year-3", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
         insertCourse(id = "official-course-year-4", creatorId = "admin-1", isOfficial = true, schoolYear = 4)
         insertCourse(id = "teacher-course", creatorId = "teacher-1", joinCode = "JOIN123")
@@ -87,7 +87,7 @@ class CourseServiceTest {
     @Test
     fun `course service mutation methods persist changes`() {
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
-        insertUser(id = "student-1", role = UserRole.LEARNER)
+        insertUser(id = "student-1", role = UserRole.STUDENT)
 
         val service = CourseService()
         val created = service.createCourse(
@@ -218,8 +218,8 @@ class LessonExerciseServiceTest {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "teacher-owner", role = UserRole.TEACHER)
         insertUser(id = "teacher-other", role = UserRole.TEACHER)
-        insertUser(id = "learner-enrolled", role = UserRole.LEARNER)
-        insertUser(id = "learner-other", role = UserRole.LEARNER)
+        insertUser(id = "learner-enrolled", role = UserRole.STUDENT)
+        insertUser(id = "learner-other", role = UserRole.STUDENT)
 
         insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
         insertCourse(id = "teacher-course", creatorId = "teacher-owner")
@@ -245,12 +245,12 @@ class LessonExerciseServiceTest {
         assertEquals(
             "official-lesson",
             assertIs<LessonReadResult.Success>(
-                service.getLessonByIdForUser("official-lesson", "learner-other", UserRole.LEARNER)
+                service.getLessonByIdForUser("official-lesson", "learner-other", UserRole.STUDENT)
             ).lesson.id
         )
 
         val enrolledLesson = assertIs<LessonReadResult.Success>(
-            service.getLessonByIdForUser("teacher-lesson", "learner-enrolled", UserRole.LEARNER)
+            service.getLessonByIdForUser("teacher-lesson", "learner-enrolled", UserRole.STUDENT)
         ).lesson
         assertEquals("", enrolledLesson.exercises.single().correctAnswer)
 
@@ -260,7 +260,7 @@ class LessonExerciseServiceTest {
         )
         assertEquals(
             LessonReadResult.Forbidden,
-            service.getLessonByIdForUser("teacher-lesson", "learner-other", UserRole.LEARNER)
+            service.getLessonByIdForUser("teacher-lesson", "learner-other", UserRole.STUDENT)
         )
         assertEquals(
             LessonReadResult.NotFound,
@@ -268,7 +268,7 @@ class LessonExerciseServiceTest {
         )
         assertEquals(
             LessonListReadResult.Forbidden,
-            service.getLessonsByCourseIdForUser("teacher-course", "learner-other", UserRole.LEARNER)
+            service.getLessonsByCourseIdForUser("teacher-course", "learner-other", UserRole.STUDENT)
         )
     }
 
@@ -276,8 +276,8 @@ class LessonExerciseServiceTest {
     fun `course read access blocks private course details for outsiders`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "teacher-owner", role = UserRole.TEACHER)
-        insertUser(id = "learner-enrolled", role = UserRole.LEARNER)
-        insertUser(id = "learner-other", role = UserRole.LEARNER)
+        insertUser(id = "learner-enrolled", role = UserRole.STUDENT)
+        insertUser(id = "learner-other", role = UserRole.STUDENT)
 
         insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true, schoolYear = 3)
         insertCourse(id = "teacher-course", creatorId = "teacher-owner")
@@ -290,14 +290,14 @@ class LessonExerciseServiceTest {
             service.getCourseByIdForUser("teacher-course", "teacher-owner", UserRole.TEACHER)
         )
         assertIs<CourseReadResult.Success>(
-            service.getCourseByIdForUser("teacher-course", "learner-enrolled", UserRole.LEARNER)
+            service.getCourseByIdForUser("teacher-course", "learner-enrolled", UserRole.STUDENT)
         )
         assertIs<CourseReadResult.Success>(
-            service.getCourseByIdForUser("official-course", "learner-other", UserRole.LEARNER)
+            service.getCourseByIdForUser("official-course", "learner-other", UserRole.STUDENT)
         )
         assertEquals(
             CourseReadResult.Forbidden,
-            service.getCourseByIdForUser("teacher-course", "learner-other", UserRole.LEARNER)
+            service.getCourseByIdForUser("teacher-course", "learner-other", UserRole.STUDENT)
         )
     }
 
@@ -484,7 +484,7 @@ class UserServiceTest {
     @Test
     fun `complete exercise is first wins and completes lesson on final exercise`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
-        insertUser(id = "learner-1", role = UserRole.LEARNER)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
         insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
         insertLesson(id = "lesson-1", courseId = "official-course")
         insertExercise(id = "exercise-1", lessonId = "lesson-1")
@@ -492,17 +492,17 @@ class UserServiceTest {
         val service = UserService()
         val firstResult = service.completeExercise(
             userId = "learner-1",
-            role = UserRole.LEARNER,
+            role = UserRole.STUDENT,
             request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 10)
         )
         val duplicateResult = service.completeExercise(
             userId = "learner-1",
-            role = UserRole.LEARNER,
+            role = UserRole.STUDENT,
             request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 99)
         )
         val finalResult = service.completeExercise(
             userId = "learner-1",
-            role = UserRole.LEARNER,
+            role = UserRole.STUDENT,
             request = CompleteExerciseRequest(exerciseId = "exercise-2", score = 15)
         )
         val firstSuccess = assertIs<ExerciseCompletionResult.Success>(firstResult)
@@ -542,13 +542,13 @@ class UserServiceTest {
     @Test
     fun `complete exercise rejects private exercise access for unenrolled learner`() {
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
-        insertUser(id = "learner-1", role = UserRole.LEARNER)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
         insertCourse(id = "private-course", creatorId = "teacher-1", isOfficial = false)
         insertLesson(id = "lesson-1", courseId = "private-course")
         insertExercise(id = "exercise-1", lessonId = "lesson-1")
         val result = UserService().completeExercise(
             userId = "learner-1",
-            role = UserRole.LEARNER,
+            role = UserRole.STUDENT,
             request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 10)
         )
         assertEquals(ExerciseCompletionResult.Forbidden, result)

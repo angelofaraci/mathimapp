@@ -4,6 +4,10 @@
 
 Protect server routes with authenticated identity and role rules, and keep sensitive credentials out of source and logs.
 
+## Compatibility
+
+During the role rename transition, the system MUST treat legacy `LEARNER` and canonical `STUDENT` values as equivalent when reading persisted user rows, local cache rows, and JWT role claims. New writes and newly issued JWT claims MUST emit `STUDENT`.
+
 ## Requirements
 
 ### Requirement: JWT Protected Access
@@ -24,11 +28,11 @@ The system MUST verify the authenticated user's JWT identity on protected routes
 
 ### Requirement: Registration Role Limits
 
-The system MUST allow public registration to create only LEARNER or TEACHER users in current code and MUST NOT create ADMIN users from client-supplied registration data.
+The system MUST allow public registration to create only STUDENT or TEACHER users and MUST NOT create ADMIN users from client-supplied registration data.
 
-#### Scenario: Learner or teacher registration succeeds
+#### Scenario: Student or teacher registration succeeds
 
-- GIVEN a public registration request for LEARNER or TEACHER
+- GIVEN a public registration request for STUDENT or TEACHER
 - WHEN the request is valid
 - THEN the system SHALL create the user with the requested non-admin role
 
@@ -40,7 +44,7 @@ The system MUST allow public registration to create only LEARNER or TEACHER user
 
 ### Requirement: Protected Course And Progress Access
 
-The system MUST require a logged-in user for course reads and course actions, MUST allow learners to view only their own progress, and MUST allow admins to view all progress.
+The system MUST require a logged-in user for course reads and course actions, MUST allow students to view only their own progress, and MUST allow admins to view all progress.
 
 #### Scenario: Unauthenticated course access is denied
 
@@ -50,9 +54,9 @@ The system MUST require a logged-in user for course reads and course actions, MU
 
 #### Scenario: Progress visibility follows role
 
-- GIVEN an authenticated learner or admin
+- GIVEN an authenticated student or admin
 - WHEN the user requests progress data
-- THEN the system SHALL return only the learner's own progress or all progress for admin access
+- THEN the system SHALL return only the student's own progress or all progress for admin access
 
 #### Scenario: Teacher-scoped progress access is not in scope
 
@@ -76,20 +80,20 @@ The system MUST read the JWT secret from environment or configuration and MUST s
 - WHEN the seed runs
 - THEN the system SHALL not print reusable credentials or secrets
 
-### Requirement: Learner Responses Hide Correct Answers
+### Requirement: Student Responses Hide Correct Answers
 
-The system MUST omit correct answers from normal learner-facing content endpoints.
+The system MUST omit correct answers from normal student-facing content endpoints.
 
-#### Scenario: Learner response hides answers
+#### Scenario: Student response hides answers
 
-- GIVEN a learner request for exercise content
+- GIVEN a student request for exercise content
 - WHEN the system returns the payload
 - THEN the system SHALL exclude the correct answer from the response
 
 #### Scenario: Hidden answers do not break content delivery
 
 - GIVEN an exercise with a correct answer stored server-side
-- WHEN a learner fetches the content
+- WHEN a student fetches the content
 - THEN the system SHALL still return the exercise content without revealing the answer
 
 ### Requirement: Theory Mutation Authorization

@@ -19,6 +19,7 @@ import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -41,6 +42,14 @@ val appModule = module {
     viewModelOf(::CourseViewModel)
 }
 
+internal val userRoleColumnAdapter = object : ColumnAdapter<UserRole, String> {
+    override fun decode(databaseValue: String): UserRole =
+        UserRole.parse(databaseValue)
+            ?: error("Unknown persisted user role: $databaseValue")
+
+    override fun encode(value: UserRole): String = value.name
+}
+
 private fun createAppDatabase(driverFactory: DatabaseDriverFactory): AppDatabase {
     val intAdapter = object : ColumnAdapter<Int, Long> {
         override fun decode(databaseValue: Long): Int = databaseValue.toInt()
@@ -60,7 +69,7 @@ private fun createAppDatabase(driverFactory: DatabaseDriverFactory): AppDatabase
             totalScoreAdapter = intAdapter
         ),
         UserEntityAdapter = UserEntity.Adapter(
-            roleAdapter = EnumColumnAdapter()
+            roleAdapter = userRoleColumnAdapter
         )
     )
 }

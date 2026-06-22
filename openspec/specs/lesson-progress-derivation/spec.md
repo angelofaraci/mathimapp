@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Derive lesson completion from completed exercises and remove direct learner lesson-completion behavior from the normal flow.
+Derive lesson completion from completed exercises and remove direct student lesson-completion behavior from the normal flow.
 
 ## Requirements
 
@@ -22,13 +22,13 @@ The system MUST mark a lesson complete only when the student has completed all e
 - WHEN progress is evaluated
 - THEN the system SHALL not mark the lesson complete
 
-### Requirement: Direct Lesson Completion Is Deprecated For Learners
+### Requirement: Direct Lesson Completion Is Deprecated For Students
 
-The system MUST deprecate direct learner-driven completion through POST /progress for normal completion because completion is derived from exercise completions.
+The system MUST deprecate direct student-driven completion through POST /progress for normal completion because completion is derived from exercise completions.
 
-#### Scenario: Learner direct completion is blocked
+#### Scenario: Student direct completion is blocked
 
-- GIVEN a learner submits POST /progress to finish a lesson directly
+- GIVEN a student submits POST /progress to finish a lesson directly
 - WHEN the request is processed
 - THEN the system SHALL not treat it as the normal completion path
 

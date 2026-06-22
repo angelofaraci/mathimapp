@@ -61,7 +61,7 @@ class UserService {
         role: UserRole,
         request: CompleteExerciseRequest
     ): ExerciseCompletionResult = dbQuery {
-        if (role != UserRole.LEARNER) {
+        if (role != UserRole.STUDENT) {
             return@dbQuery ExerciseCompletionResult.Forbidden
         }
         val exerciseAccess = (Exercises innerJoin Lessons innerJoin Courses)

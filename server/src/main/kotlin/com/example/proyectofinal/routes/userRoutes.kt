@@ -60,8 +60,8 @@ fun Application.userRoutes(service: UserService) {
                     ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
                 val role = call.currentRole()
                     ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
-                if (role != UserRole.LEARNER) {
-                    return@post call.respond(HttpStatusCode.Forbidden, "Only learners can complete exercises")
+                if (role != UserRole.STUDENT) {
+                    return@post call.respond(HttpStatusCode.Forbidden, "Only students can complete exercises")
                 }
                 when (val result = service.completeExercise(userId, role, request)) {
                     is ExerciseCompletionResult.Success -> call.respond(result.response)
@@ -71,10 +71,10 @@ fun Application.userRoutes(service: UserService) {
             }
             post("/progress") {
                 val currentRole = call.currentRole() ?: return@post call.respond(HttpStatusCode.Unauthorized)
-                if (currentRole == UserRole.LEARNER) {
+                if (currentRole == UserRole.STUDENT) {
                     return@post call.respond(
                         HttpStatusCode.Gone,
-                        "Direct lesson completion is deprecated for learners; complete exercises instead"
+                        "Direct lesson completion is deprecated for students; complete exercises instead"
                     )
                 }
                 if (currentRole != UserRole.ADMIN) {

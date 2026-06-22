@@ -48,5 +48,6 @@ internal fun ResultRow.toUser(): User =
         id = this[Users.id],
         name = this[Users.name],
         email = this[Users.email],
-        role = UserRole.valueOf(this[Users.role])
+        role = UserRole.parse(this[Users.role])
+            ?: error("Unknown persisted user role: ${this[Users.role]}")
     )

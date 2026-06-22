@@ -9,6 +9,7 @@ import com.example.proyectofinal.db.UserEntity
 import com.example.proyectofinal.db.UserProgressEntity
 import com.example.proyectofinal.db.createTestDriver
 import com.example.proyectofinal.di.appModule
+import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.ui.CourseUiState
@@ -168,7 +169,7 @@ private fun createTestAppDatabase(): AppDatabase {
             totalScoreAdapter = intAdapter
         ),
         UserEntityAdapter = UserEntity.Adapter(
-            roleAdapter = EnumColumnAdapter()
+            roleAdapter = userRoleColumnAdapter
         )
     )
 }

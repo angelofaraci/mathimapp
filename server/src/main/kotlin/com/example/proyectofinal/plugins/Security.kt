@@ -55,7 +55,7 @@ fun ApplicationCall.currentRole(): UserRole? =
         ?.getClaim("role")
         ?.asString()
         ?.takeIf { it.isNotBlank() }
-        ?.let { role -> runCatching { UserRole.valueOf(role) }.getOrNull() }
+        ?.let(UserRole::parse)
 
 private suspend fun ApplicationCall.respondAuthFailure(): Boolean {
     respond(HttpStatusCode.Unauthorized, "Invalid or expired token")

@@ -7,12 +7,23 @@ data class User(
     val id: String,
     val name: String,
     val email: String,
-    val role: UserRole = UserRole.LEARNER
+    val role: UserRole = UserRole.STUDENT
 )
 
 @Serializable
 enum class UserRole {
-    ADMIN, TEACHER, LEARNER
+    ADMIN,
+    TEACHER,
+    STUDENT;
+
+    companion object {
+        fun parse(value: String): UserRole? = when (value.trim().uppercase()) {
+            "LEARNER", "STUDENT" -> STUDENT
+            "TEACHER" -> TEACHER
+            "ADMIN" -> ADMIN
+            else -> null
+        }
+    }
 }
 
 @Serializable

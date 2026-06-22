@@ -5,8 +5,8 @@
 
 ## Quick Path
 
-1. Start with `role-naming-cleanup` before any new feature references roles.
-2. Follow with `versioned-db-migrations` or `lesson-read-access-control`, depending on whether deployment safety or access control is the higher immediate priority.
+1. ✅ `role-naming-cleanup` — completed.
+2. Start with `versioned-db-migrations` or `lesson-read-access-control`, depending on whether deployment safety or access control is the higher immediate priority.
 3. Then pick learner-facing or teacher-facing tracks depending on product priority.
 
 ## Completed Slices
@@ -17,20 +17,13 @@
 | `theory-content-loading` | OpenSpec archived | Runtime theory loading, school-year filtering, role-scoped theory editing | 48 tests, 0 failures |
 | `lesson-progress-tracking` | OpenSpec archived | Exercise completion as atomic progress, lesson derivation from exercises, client-server progress sync | 35+ tests, 0 failures |
 | `configurable-api-base-url` | OpenSpec archived | Configurable base URL resolution for Android, iOS, and JVM targets | `:composeApp:jvmTest` + targeted platform checks |
+| `role-naming-cleanup` | OpenSpec archived | Rename `LEARNER` → `STUDENT` in shared models, server, compose app, and specs with backward-compatible parser | 64 tests, 0 failures — `:server:test`, `:composeApp:jvmTest` |
 
 ## Next Slices (Ordered)
 
 ### Phase 1 — Foundation (do these first)
 
-#### 1. `role-naming-cleanup`
-- **Scope**: Decide `LEARNER` vs `STUDENT` and align `shared` models, backend rules, UI copy, and specs.
-- **Rationale**: Every new feature references roles; delaying this creates a wider refactor later.
-- **Dependencies**: None.
-- **Affected modules**: `shared`, `server`, `composeApp`.
-- **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
-- **Review-size risk**: **Low-Medium** (~100–150 lines, touches many files, purely rename).
-
-#### 2. `versioned-db-migrations`
+#### 1. `versioned-db-migrations`
 - **Scope**: Replace `SchemaUtils.create(...)` with a versioned migration strategy (Flyway, Liquibase, or Exposed migrations).
 - **Rationale**: Persistent deployments currently have no migration path for schema changes (e.g., `courses.school_year`). Required before production data.
 - **Dependencies**: None.
@@ -38,7 +31,7 @@
 - **Expected verification**: Migration scripts run against fresh and pre-seeded test databases; `:server:test`.
 - **Review-size risk**: **Medium** (~100–200 lines).
 
-#### 3. `lesson-read-access-control`
+#### 2. `lesson-read-access-control`
 - **Scope**: Enforce ownership/enrollment/role gating on `GET /lessons/{id}` so learners only see lessons they can access.
 - **Rationale**: Closes a known security gap from `theory-content-loading` (any authenticated user can read any lesson theory today).
 - **Dependencies**: `backend-auth-security` (delivered), `theory-management` (delivered).
@@ -100,12 +93,12 @@
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium-High** (~300–400 lines). Consider chained PRs.
 
-## Recommended First Slice
+## Recommended Next Slice
 
-**`role-naming-cleanup`**
-- It is now the earliest cross-cutting rename that should happen before more role-dependent slices land.
-- Keeping `LEARNER` vs `STUDENT` unresolved increases future review size across `shared`, `server`, and `composeApp`.
-- Still small enough to stay reviewable while reducing follow-up churn.
+**`versioned-db-migrations`**
+- Deployment safety is the highest infrastructure priority before any production data.
+- `role-naming-cleanup` (completed) resolved the cross-cutting rename risk.
+- Alternative: `lesson-read-access-control` if access-control hardening is a more pressing product concern.
 
 ## Deferred / Non-Goals
 
@@ -143,8 +136,8 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 ## Dependency Graph (Simplified)
 
 ```
-role-naming-cleanup ─────────► lesson-read-access-control ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
-versioned-db-migrations ─────────────────────────────────────────▲
+role-naming-cleanup ─── (archived) ───► lesson-read-access-control ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
+versioned-db-migrations ───────────────────────────────────────────▲
 onboarding-school-year ─────────────────────────────────────────┤
 exercise-practice-ui ───────────────────────────────────────────┘
     │
