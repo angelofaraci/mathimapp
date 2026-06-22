@@ -29,6 +29,7 @@ import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
 import com.example.proyectofinal.service.TheoryUpdateResult
 import com.example.proyectofinal.service.UserService
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -39,6 +40,7 @@ import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -417,6 +419,7 @@ class LessonExerciseServiceTest {
                     )
                     """.trimIndent()
                 )
+                statement.execute("CREATE UNIQUE INDEX idx_users_email ON users (email)")
                 statement.execute(
                     """
                     CREATE TABLE courses (
@@ -426,6 +429,74 @@ class LessonExerciseServiceTest {
                         creator_id VARCHAR(50) NOT NULL,
                         is_official BOOLEAN NOT NULL DEFAULT FALSE,
                         join_code VARCHAR(20)
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE lessons (
+                        id VARCHAR(50) PRIMARY KEY,
+                        course_id VARCHAR(50) NOT NULL,
+                        title VARCHAR(200) NOT NULL,
+                        theory_content TEXT NOT NULL,
+                        order_index INTEGER NOT NULL DEFAULT 0,
+                        CONSTRAINT fk_lessons_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE exercises (
+                        id VARCHAR(50) PRIMARY KEY,
+                        lesson_id VARCHAR(50) NOT NULL,
+                        question VARCHAR(500) NOT NULL,
+                        options VARCHAR(500) NOT NULL,
+                        correct_answer VARCHAR(255) NOT NULL,
+                        type VARCHAR(30) NOT NULL DEFAULT 'MULTIPLE_CHOICE',
+                        CONSTRAINT fk_exercises_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE user_progress (
+                        user_id VARCHAR(50) PRIMARY KEY,
+                        total_score INTEGER NOT NULL DEFAULT 0,
+                        CONSTRAINT fk_user_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE completed_lessons (
+                        user_id VARCHAR(50) NOT NULL,
+                        lesson_id VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (user_id, lesson_id),
+                        CONSTRAINT fk_completed_lessons_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_completed_lessons_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE completed_exercises (
+                        user_id VARCHAR(50) NOT NULL,
+                        exercise_id VARCHAR(50) NOT NULL,
+                        score INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY (user_id, exercise_id),
+                        CONSTRAINT fk_completed_exercises_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_completed_exercises_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE enrolled_courses (
+                        user_id VARCHAR(50) NOT NULL,
+                        course_id VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (user_id, course_id),
+                        CONSTRAINT fk_enrolled_courses_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_enrolled_courses_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
                     )
                     """.trimIndent()
                 )
@@ -472,6 +543,49 @@ class LessonExerciseServiceTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `database init fails when a pending migration cannot be applied`() {
+        val url = "jdbc:h2:mem:${UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
+
+        DriverManager.getConnection(url, "sa", "").use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute(
+                    """
+                    CREATE TABLE legacy_placeholder (
+                        id INTEGER PRIMARY KEY
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        Flyway.configure()
+            .dataSource(url, "sa", "")
+            .locations("classpath:db/migration")
+            .baselineVersion("1")
+            .load()
+            .baseline()
+
+        val error = assertFailsWith<Exception> {
+            DatabaseFactory.init(
+                url = url,
+                driver = "org.h2.Driver",
+                user = "sa",
+                password = ""
+            )
+        }
+
+        val migrationFailureDetected = generateSequence(error as Throwable?) { it.cause }
+            .mapNotNull { it.message }
+            .any { message ->
+                message.contains("V2__ensure_courses_school_year.sql") ||
+                    (message.contains("courses", ignoreCase = true) &&
+                        message.contains("school_year", ignoreCase = true))
+            }
+
+        assertTrue(migrationFailureDetected)
     }
 }
 

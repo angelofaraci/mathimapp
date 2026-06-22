@@ -33,6 +33,8 @@ dependencies {
     // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
     implementation(libs.postgresql)
 
     // JWT
@@ -53,6 +55,8 @@ dependencies {
     testImplementation(libs.ktor.client.content.negotiation)
     testImplementation(libs.ktor.serialization.kotlinx.json)
     testImplementation(libs.kotlin.test)
+    // Flyway 10.x publishes a PostgreSQL database module but no matching flyway-database-h2 artifact.
+    // H2 migration coverage stays explicit through the in-memory driver below and the server test suite.
     testImplementation(libs.h2)
 }
 

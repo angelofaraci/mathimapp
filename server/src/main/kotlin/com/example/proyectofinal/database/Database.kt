@@ -1,8 +1,7 @@
 package com.example.proyectofinal.database
 
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 object DatabaseFactory {
     fun init() {
@@ -20,32 +19,36 @@ object DatabaseFactory {
         user: String,
         password: String
     ) {
-        Database.connect(
+        migrate(
             url = url,
             driver = driver,
             user = user,
             password = password
         )
 
-        transaction {
-            SchemaUtils.create(
-                Users,
-                Courses,
-                Lessons,
-                Exercises,
-                UserProgress,
-                CompletedLessons,
-                CompletedExercises,
-                EnrolledCourses
-            )
+        Database.connect(
+            url = url,
+            driver = driver,
+            user = user,
+            password = password
+        )
+    }
 
-            exec(
-                """
-                ALTER TABLE courses
-                    ADD COLUMN IF NOT EXISTS school_year INTEGER NOT NULL DEFAULT 0
-                """.trimIndent()
-            )
-        }
+    private fun migrate(
+        url: String,
+        driver: String,
+        user: String,
+        password: String
+    ) {
+        Class.forName(driver)
+
+        Flyway.configure()
+            .dataSource(url, user, password)
+            .locations("classpath:db/migration")
+            .baselineOnMigrate(true)
+            .baselineVersion("1")
+            .load()
+            .migrate()
     }
 
     private fun env(name: String, defaultValue: String): String =

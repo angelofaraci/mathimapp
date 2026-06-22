@@ -15,10 +15,12 @@
 - Consider `CallLogging`, `StatusPages`, health checks, and consistent error responses.
 - Document operational expectations for auth, database, and seed startup paths.
 
-### Versioned database migrations
+### ~~Versioned database migrations~~ ✅ (archived 2026-06-22)
 
-- Replace reliance on `SchemaUtils.create(...)` with a versioned migration strategy.
-- Define rollback or fix-forward expectations before using real production data.
+- Replaced `SchemaUtils.create(...)` with Flyway programmatic migration on startup.
+- Baseline V1 (`V1__baseline_current_schema.sql`) + guarded V2 (`V2__ensure_courses_school_year.sql`) in place.
+- `openspec/backlog.md` documents the rule: every future server schema change needs a matching Flyway migration script.
+- CI drift/checksum validation remains deferred.
 
 ### Configurable KMP API base URL
 
