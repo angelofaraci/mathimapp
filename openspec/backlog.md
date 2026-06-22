@@ -15,6 +15,12 @@
 - Consider `CallLogging`, `StatusPages`, health checks, and consistent error responses.
 - Document operational expectations for auth, database, and seed startup paths.
 
+### Web admin panel
+
+- Provide an administrator-facing panel accessible through the web.
+- Use it for operational/admin workflows that do not belong in the student or teacher mobile experience.
+- Technology stack is intentionally undecided; evaluate frontend/backend integration options when the slice is planned.
+
 ### ~~Versioned database migrations~~ ✅ (archived 2026-06-22)
 
 - Replaced `SchemaUtils.create(...)` with Flyway programmatic migration on startup.
