@@ -136,8 +136,7 @@ class ServerIntegrationTest {
                 RegisterRequest(
                     name = "Test User",
                     email = "test@example.com",
-                    password = "secret123",
-                    role = UserRole.TEACHER
+                    password = "secret123"
                 )
             )
         }
@@ -147,18 +146,18 @@ class ServerIntegrationTest {
         val auth = response.body<AuthResponse>()
         assertEquals("Test User", auth.user.name)
         assertEquals("test@example.com", auth.user.email)
-        assertEquals(UserRole.TEACHER, auth.user.role)
+        assertEquals(UserRole.STUDENT, auth.user.role)
         assertTrue(auth.token.isNotBlank())
 
         transaction {
             val savedUser = Users.selectAll().where { Users.email eq "test@example.com" }.single()
             assertEquals("Test User", savedUser[Users.name])
-            assertEquals("TEACHER", savedUser[Users.role])
+            assertEquals("STUDENT", savedUser[Users.role])
         }
     }
 
     @Test
-    fun `public admin registration is rejected`() = testApplication {
+    fun `public registration ignores legacy role payload and persists student`() = testApplication {
         setupTestDatabase()
 
         application {
@@ -173,13 +172,26 @@ class ServerIntegrationTest {
 
         val response = client.post("/auth/register") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(RegisterRequest("Blocked Admin", "blocked-admin@example.com", "secret123", UserRole.ADMIN))
+            setBody(
+                """
+                {
+                  "name": "Legacy Admin Attempt",
+                  "email": "legacy-admin@example.com",
+                  "password": "secret123",
+                  "role": "ADMIN"
+                }
+                """.trimIndent()
+            )
         }
 
-        assertEquals(HttpStatusCode.Forbidden, response.status)
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val auth = response.body<AuthResponse>()
+        assertEquals(UserRole.STUDENT, auth.user.role)
 
         transaction {
-            assertEquals(0L, Users.selectAll().where { Users.email eq "blocked-admin@example.com" }.count())
+            val savedUser = Users.selectAll().where { Users.email eq "legacy-admin@example.com" }.single()
+            assertEquals("STUDENT", savedUser[Users.role])
         }
     }
 
@@ -883,8 +895,7 @@ class ServerIntegrationTest {
 
     private suspend fun registerUserAndGetToken(
         client: io.ktor.client.HttpClient,
-        email: String,
-        role: UserRole = UserRole.STUDENT
+        email: String
     ): String {
         val response = client.post("/auth/register") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -892,8 +903,7 @@ class ServerIntegrationTest {
                 RegisterRequest(
                     name = "Integration User",
                     email = email,
-                    password = "secret123",
-                    role = role
+                    password = "secret123"
                 )
             )
         }

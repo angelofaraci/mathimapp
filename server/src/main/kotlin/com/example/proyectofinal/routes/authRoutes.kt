@@ -16,11 +16,6 @@ fun Application.authRoutes(service: AuthService) {
         post("/auth/register") {
             val request = call.receive<RegisterRequest>()
 
-            if (request.role == UserRole.ADMIN) {
-                call.respond(HttpStatusCode.Forbidden, "Public ADMIN registration is not allowed")
-                return@post
-            }
-
             val existingUser = service.findUserByEmail(request.email)
             if (existingUser != null) {
                 call.respond(HttpStatusCode.Conflict, "Email already registered")
@@ -32,7 +27,7 @@ fun Application.authRoutes(service: AuthService) {
 
             val user = service.createUser(userId = userId, request = request, passwordHash = passwordHash)
 
-            val token = Security.generateToken(userId, request.role.name)
+            val token = Security.generateToken(userId, user.role.name)
 
             call.respond(AuthResponse(token = token, user = user))
         }

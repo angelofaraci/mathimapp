@@ -1,11 +1,15 @@
 schema: spec-driven
 
 context: |
-  Tech stack: Kotlin Multiplatform + Compose Multiplatform + Gradle, Android/iOS targets.
-  Architecture: Shared `composeApp` module with commonMain/androidMain/iosMain source sets.
+  Tech stack: Kotlin Multiplatform + Compose Multiplatform + Gradle, targeting Android, iOS, and JVM.
+  Modules:
+    - composeApp: Compose Multiplatform UI, Ktor HTTP client, SQLDelight local DB, Koin DI.
+    - shared: @Serializable cross-module contracts (User, Course, Lesson, Exercise, UserProgress).
+    - server: Ktor Netty backend, Exposed ORM, Flyway migrations, PostgreSQL, JWT auth, bcrypt.
+    - iosApp: Native Swift/Xcode entrypoint (no KMP logic).
   Domain: Gamified math learning for Argentina primary/secondary levels with teacher-managed classes.
-  Testing: `kotlin.test` in `composeApp/src/commonTest`; no CI config detected.
-  Style: Kotlin official code style, JVM 11, AndroidX/Material3, Gradle config cache enabled.
+  Testing: kotlin.test across commonTest/jvmTest/androidUnitTest (app), Ktor testApplication + H2 (server).
+  Style: Kotlin official code style, JVM 17, Compose Multiplatform 1.8.0, Gradle config cache enabled.
 
 rules:
   proposal:
@@ -25,10 +29,23 @@ rules:
     instructions:
       - Follow existing code patterns and conventions
     tdd: false
-    test_command: "./gradlew :composeApp:allTests"
+    test_command: "./gradlew :composeApp:jvmTest"
   verify:
-    test_command: "./gradlew :composeApp:allTests"
+    test_command: "./gradlew :server:test :composeApp:jvmTest"
     build_command: "./gradlew :composeApp:assembleDebug"
     coverage_threshold: 0
   archive:
     - Warn before merging destructive deltas (large removals)
+
+testing:
+  strict_tdd: false
+  framework: kotlin.test
+  layers:
+    unit: true
+    integration: true
+    e2e: false
+  coverage: false
+  quality:
+    linter: false
+    type_checker: true
+    formatter: false

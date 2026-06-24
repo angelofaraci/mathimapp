@@ -2,9 +2,11 @@ package com.example.proyectofinal.di
 
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
+import com.example.proyectofinal.data.AuthApi
 import com.example.proyectofinal.data.CourseApi
 import com.example.proyectofinal.data.ExerciseApi
 import com.example.proyectofinal.data.KtorCourseRepository
+import com.example.proyectofinal.data.KtorAuthRepository
 import com.example.proyectofinal.data.KtorExerciseRepository
 import com.example.proyectofinal.data.KtorLessonRepository
 import com.example.proyectofinal.data.KtorUserRepository
@@ -15,12 +17,15 @@ import com.example.proyectofinal.db.CourseEntity
 import com.example.proyectofinal.db.ExerciseEntity
 import com.example.proyectofinal.db.UserEntity
 import com.example.proyectofinal.db.UserProgressEntity
+import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseViewModel
+import com.example.proyectofinal.ui.LoginViewModel
+import com.example.proyectofinal.ui.RegisterViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -33,13 +38,17 @@ val appModule = module {
     single { LessonApi(get(), get()) }
     single { ExerciseApi(get(), get()) }
     single { UserApi(get(), get()) }
+    single { AuthApi(get(), get()) }
 
     single<CourseRepository> { KtorCourseRepository(get(), get()) }
+    single<AuthRepository> { KtorAuthRepository(get(), get()) }
     single<LessonRepository> { KtorLessonRepository(get(), get()) }
     single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
     single<UserRepository> { KtorUserRepository(get(), get()) }
 
     viewModelOf(::CourseViewModel)
+    viewModelOf(::LoginViewModel)
+    viewModelOf(::RegisterViewModel)
 }
 
 internal val userRoleColumnAdapter = object : ColumnAdapter<UserRole, String> {

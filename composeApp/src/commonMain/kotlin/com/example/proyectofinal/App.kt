@@ -12,10 +12,19 @@ import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.data.MockCourseRepository
 import com.example.proyectofinal.di.appModule
 import com.example.proyectofinal.di.rememberPlatformModule
+import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
+import com.example.proyectofinal.ui.AuthGateRouter
+import com.example.proyectofinal.ui.AuthView
+import com.example.proyectofinal.ui.LoginScreen
+import com.example.proyectofinal.ui.LoginViewModel
+import com.example.proyectofinal.ui.RegisterScreen
+import com.example.proyectofinal.ui.RegisterViewModel
+import com.example.proyectofinal.ui.resolveAuthView
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -30,20 +39,47 @@ fun App() {
             modifier = Modifier.fillMaxSize()
         ) {
             MaterialTheme {
-                CourseScreen()
+                AuthGate()
             }
         }
     }
 }
 
 @Composable
-private fun CourseScreen(viewModel: CourseViewModel = koinViewModel<CourseViewModel>()) {
-    val uiState by viewModel.uiState.collectAsState()
-    CourseContent(uiState)
+private fun AuthGate() {
+    val authRepository = koinInject<AuthRepository>()
+    val session by authRepository.session.collectAsState()
+    val router = remember { AuthGateRouter() }
+    val target by router.target.collectAsState()
+
+    when (resolveAuthView(session, target)) {
+        AuthView.COURSE -> CourseScreen(
+            onLogout = { authRepository.logout() }
+        )
+
+        AuthView.LOGIN -> LoginScreen(
+            viewModel = koinViewModel<LoginViewModel>(),
+            onSwitchToRegister = router::switchToRegister
+        )
+
+        AuthView.REGISTER -> RegisterScreen(
+            viewModel = koinViewModel<RegisterViewModel>(),
+            onSwitchToLogin = router::switchToLogin
+        )
+    }
 }
 
 @Composable
-private fun CourseContent(uiState: CourseUiState) {
+private fun CourseScreen(
+    onLogout: () -> Unit,
+    viewModel: CourseViewModel = koinViewModel<CourseViewModel>()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    CourseContent(uiState, onLogout)
+}
+
+@Composable
+private fun CourseContent(uiState: CourseUiState, onLogout: () -> Unit = {}) {
     when (val state = uiState) {
         is CourseUiState.Loading -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -51,7 +87,7 @@ private fun CourseContent(uiState: CourseUiState) {
             }
         }
         is CourseUiState.Success -> {
-            CourseList(state.courses)
+            CourseList(state.courses, onLogout)
         }
         is CourseUiState.Error -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -81,22 +117,32 @@ private fun AppPreview() {
 @Preview
 private fun CourseListEmptyPreview() {
     MaterialTheme {
-        CourseList(emptyList())
+        CourseList(emptyList()) {}
     }
 }
 
 @Composable
-fun CourseList(courses: List<Course>) {
+fun CourseList(courses: List<Course>, onLogout: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text(
-            text = "Welcome to MathApp!",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Welcome to MathApp!",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            TextButton(onClick = onLogout) {
+                Text("Logout")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (courses.isEmpty()) {
             Box(

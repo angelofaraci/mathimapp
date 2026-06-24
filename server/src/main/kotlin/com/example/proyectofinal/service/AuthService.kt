@@ -24,14 +24,14 @@ class AuthService {
             it[Users.name] = request.name
             it[Users.email] = request.email
             it[Users.passwordHash] = passwordHash
-            it[Users.role] = request.role.name
+            it[Users.role] = UserRole.STUDENT.name
         }
 
         User(
             id = userId,
             name = request.name,
             email = request.email,
-            role = request.role
+            role = UserRole.STUDENT
         )
     }
 
