@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '../lib/api';
 
@@ -59,20 +59,20 @@ export default function Users() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Debounce search input
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearch(value);
-      setSaveError(null);
-      // Simple debounce: clear any pending timeout and set a new one
-      const timeoutId = setTimeout(() => {
-        setDebouncedSearch(value);
-        setPage(0);
-      }, 400);
-      return () => clearTimeout(timeoutId);
-    },
-    [],
-  );
+  // Debounce search input: useEffect cleanup clears the previous timeout
+  // on each keystroke, so only the last one fires after 400ms.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setSaveError(null);
+  };
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-users', page, debouncedSearch],

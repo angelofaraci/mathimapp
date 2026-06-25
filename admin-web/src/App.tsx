@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import Login from './pages/Login';
 import Users from './pages/Users';
@@ -19,12 +19,12 @@ function NavBar() {
 
   return (
     <nav className="nav-bar">
-      <a href="/users" className="nav-link">
+      <Link to="/users" className="nav-link">
         Users
-      </a>
-      <a href="/courses" className="nav-link">
+      </Link>
+      <Link to="/courses" className="nav-link">
         Courses
-      </a>
+      </Link>
       <button className="logout-btn" onClick={logout}>
         Log out
       </button>
