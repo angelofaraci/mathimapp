@@ -3,7 +3,9 @@ package com.example.proyectofinal.service
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
+import com.example.proyectofinal.models.AdminCourseResponse
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
@@ -34,6 +36,31 @@ class CourseService {
         Courses.selectAll()
             .where { filter }
             .map { it.toCourse() }
+    }
+
+    fun getAllCoursesAdmin(): List<AdminCourseResponse> = dbQuery {
+        Courses.selectAll().map { courseRow ->
+            val courseId = courseRow[Courses.id]
+            val creatorName = Users.selectAll()
+                .where { Users.id eq courseRow[Courses.creatorId] }
+                .firstOrNull()
+                ?.get(Users.name) ?: "Unknown"
+
+            val enrollmentCount = EnrolledCourses.selectAll()
+                .where { EnrolledCourses.courseId eq courseId }
+                .count()
+
+            AdminCourseResponse(
+                id = courseId,
+                title = courseRow[Courses.title],
+                description = courseRow[Courses.description],
+                creatorId = courseRow[Courses.creatorId],
+                creatorName = creatorName,
+                enrollmentCount = enrollmentCount.toInt(),
+                isOfficial = courseRow[Courses.isOfficial],
+                schoolYear = courseRow[Courses.schoolYear]
+            )
+        }
     }
 
     fun getCourseById(id: String): Course? = dbQuery {

@@ -9,15 +9,19 @@ import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
+import com.example.proyectofinal.models.AdminUserResponse
 import com.example.proyectofinal.models.CompleteExerciseRequest
 import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.PageResponse
 import com.example.proyectofinal.models.UpdateUserRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -34,6 +38,43 @@ class UserService {
             .where { Users.id eq id }
             .firstOrNull()
             ?.toUser()
+    }
+
+    fun listUsers(query: String? = null, page: Int = 0, size: Int = 20): PageResponse<AdminUserResponse> = dbQuery {
+        val searchPattern = query?.let { "%$it%" }
+
+        val totalElements = if (searchPattern != null) {
+            Users.selectAll()
+                .where { (Users.name like searchPattern) or (Users.email like searchPattern) }
+                .count()
+        } else {
+            Users.selectAll().count()
+        }
+
+        val items = (if (searchPattern != null) {
+            Users.selectAll()
+                .where { (Users.name like searchPattern) or (Users.email like searchPattern) }
+        } else {
+            Users.selectAll()
+        }).orderBy(Users.name)
+            .limit(size)
+            .offset((page * size).toLong())
+            .map { row ->
+                AdminUserResponse(
+                    id = row[Users.id],
+                    name = row[Users.name],
+                    email = row[Users.email],
+                    role = UserRole.parse(row[Users.role]) ?: UserRole.STUDENT
+                )
+            }
+
+        PageResponse(
+            items = items,
+            page = page,
+            size = size,
+            totalElements = totalElements,
+            totalPages = if (size > 0) ((totalElements + size - 1) / size).toInt() else 0
+        )
     }
 
     fun updateUser(id: String, request: UpdateUserRequest): User? {

@@ -9,6 +9,7 @@ fun Application.configureCors() {
         allowHost("localhost:8080")
         allowHost("127.0.0.1:8080")
         allowHost("10.0.2.2:8080") // Android emulator localhost
+        allowHost("localhost:5173") // Vite dev server
         
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
