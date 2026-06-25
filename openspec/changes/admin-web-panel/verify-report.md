@@ -188,3 +188,210 @@ None.
 - 2 SUGGESTIONs for design-doc honesty and a future perf cleanup.
 
 `next_recommended`: **commit-sdd-artifacts-and-pr** — orchestrator commits the untracked `design.md` + `specs/` + this verify-report, pushes `feature/admin-web-panel`, and opens PR 1.
+
+---
+
+# Verification Report: Admin Web Panel — PR 2 (Frontend SPA Slice)
+
+## Change
+`admin-web-panel` — PR 2 slice (Phases 4–5: React SPA shell, auth gate, user management page, course overview page).
+PR 1 (Phases 1–3: backend) was verified separately above and is not re-verified here, except for contract alignment against the backend DTOs.
+
+- **Slot**: PR 2 / stacked-to-main / base: `feat/admin-web-panel` / slice branch: `feat/admin-web-panel-spa`
+- **Verifying commits**: `471172f`, `808f873`, `9030fa9`, `fae31c9`, `6d2cf61` (5 commits; 15 files, +1034 / −8)
+- **Persistence mode**: openspec
+- **Strict TDD**: `false` — no JS test harness exists in the repo. SPA behavioral verification is by source inspection + successful production build + a documented manual-QA procedure (the project-sanctioned path per `design.md:82`).
+- **Date**: 2026-06-25
+
+---
+
+## Overall Verdict (PR 2)
+**PASS WITH WARNINGS**
+
+- `npm run build` (`tsc -b && vite build`) → **0 errors, 83 modules transformed, exit code 0** (BUILD SUCCESSFUL).
+- Contract alignment against `server/.../models/AdminDtos.kt` and `shared/.../models/Models.kt` → **all 4 contracts align, zero field/type mismatches**.
+- All in-scope SPA spec scenarios (admin login gate U7/U8, course list display, user list + role-update UI, route protection, 401 handling) are implemented and traceable in source; runtime automated SPA tests are unavailable by design (deferred), so manual QA is the sanctioned evidence path and is documented.
+- Slice boundary is clean: PR 2 touches only `admin-web/` + `openspec/.../tasks.md`; **no `server/`, `shared/`, `composeApp/`, or `iosApp/` files were modified**.
+- 2 new WARNINGs (non-functional debounce, nav links causing full reloads) and 5 SUGGESTIONs. None break a spec scenario or block PR 2 merge; W-06 is a visible SPA defect worth fixing before or as a fast-follow.
+
+---
+
+## Build Evidence
+
+| Command | Result |
+|---|---|
+| `npm run build` (in `admin-web/`) | `tsc -b && vite build` → exit **0**. `vite v6.4.3 building for production... ✓ 83 modules transformed.` Output: `dist/index.html 0.41 kB`, `dist/assets/index-*.css 3.78 kB`, `dist/assets/index-*.js 212.94 kB (gzip: 68.04 kB)`. `✓ built in 2.96s`. |
+| `tsc -b` (type-check) | Pass — `tsconfig.json` is `strict` + `noUnusedLocals` + `noUnusedParameters`; no type errors. |
+| Node/npm | Node `v22.22.2`, npm `10.9.7`. `node_modules` present. |
+
+No JS test runner is configured (`package.json` has no `test` script). Per `design.md:82`, SPA automated tests are explicitly deferred to a future change; manual QA is the v1 verification strategy. Build success + strict type-check + source inspection form the evidence set, supplemented by the documented manual-QA checklist.
+
+---
+
+## Contract Alignment (Backend DTO ↔ SPA TypeScript)
+
+All shapes compared field-by-field. **No mismatches found.** The SPA will not break at runtime against the real backend on contract grounds.
+
+### Contract 1 — `POST /auth/login` → `AuthResponse` (login gate)
+
+| Backend field (`shared/.../models/Models.kt:27-30, 6-11`) | TS field (`admin-web/src/lib/auth.tsx:19-22, 12-17`) | Align |
+|---|---|---|
+| `AuthResponse.token: String` | `AuthResponse.token: string` | ✅ |
+| `AuthResponse.user: User` | `AuthResponse.user: User` | ✅ |
+| `User.id: String` | `User.id: string` | ✅ |
+| `User.name: String` | `User.name: string` | ✅ |
+| `User.email: String` | `User.email: string` | ✅ |
+| `User.role: UserRole` (serializes as enum name `ADMIN`/`TEACHER`/`STUDENT`) | `User.role: 'STUDENT' \| 'TEACHER' \| 'ADMIN'` | ✅ |
+| `LoginRequest { email: String, password: String }` (`Models.kt:21-24`) | sends `{ email, password }` (`auth.tsx:70`) | ✅ |
+
+### Contract 2 — `GET /admin/users` → `PageResponse<AdminUserResponse>`
+
+| Backend field (`AdminDtos.kt:6-20`) | TS field (`Users.tsx:7-20`) | Align |
+|---|---|---|
+| `PageResponse.items: List<T>` | `items: T[]` | ✅ |
+| `PageResponse.page: Int` | `page: number` | ✅ |
+| `PageResponse.size: Int` | `size: number` | ✅ |
+| `PageResponse.totalElements: Long` | `totalElements: number` | ✅ (Long→JSON number; JS `number` safe for user counts) |
+| `PageResponse.totalPages: Int` | `totalPages: number` | ✅ |
+| `AdminUserResponse.id: String` | `AdminUser.id: string` | ✅ |
+| `AdminUserResponse.name: String` | `AdminUser.name: string` | ✅ |
+| `AdminUserResponse.email: String` | `AdminUser.email: string` | ✅ |
+| `AdminUserResponse.role: UserRole` | `AdminUser.role: string` | ✅ (string accepts enum name; bound to a 3-option `<select>`) |
+
+> Note: `design.md:61` documented the page wrapper as `{ items, total, page, size }`, but the actual backend (`AdminDtos.kt:6-12`) emits `totalElements` + `totalPages`. The SPA consumes `totalElements`/`totalPages` — so **code-to-code aligns**; only the design doc is stale. This is a pre-existing design-doc drift (PR 1), not a PR 2 contract defect.
+
+### Contract 3 — `GET /admin/courses` → `List<AdminCourseResponse>`
+
+| Backend field (`AdminDtos.kt:23-32`) | TS field (`Courses.tsx:6-15`) | Align |
+|---|---|---|
+| `id: String` | `id: string` | ✅ |
+| `title: String` | `title: string` | ✅ |
+| `description: String` | `description: string` | ✅ |
+| `creatorId: String` | `creatorId: string` | ✅ |
+| `creatorName: String` | `creatorName: string` | ✅ |
+| `enrollmentCount: Int` | `enrollmentCount: number` | ✅ |
+| `isOfficial: Boolean` | `isOfficial: boolean` | ✅ |
+| `schoolYear: Int` | `schoolYear: number` | ✅ |
+
+### Contract 4 — `PUT /admin/users/{id}/role` → `AdminUserResponse` (body `RoleUpdateRequest`)
+
+| Backend (`AdminDtos.kt:35-37`) | TS (`Users.tsx:41-49`) | Align |
+|---|---|---|
+| Request body `RoleUpdateRequest.role: String` | sends `JSON.stringify({ role })` (`Users.tsx:47`) | ✅ |
+| Response `AdminUserResponse` (id, name, email, role) | expects `AdminUser` (`Users.tsx:44`) | ✅ |
+
+The `<select>` options are exactly `['STUDENT','TEACHER','ADMIN']` (`Users.tsx:22`), all valid for `UserRole.parse`. No invalid value can be sent from the UI.
+
+---
+
+## Spec Scenario Coverage (SPA-relevant)
+
+Runtime automated SPA tests are unavailable by design (`design.md:82`); coverage is proven by source inspection + build + a documented manual-QA procedure. Statuses below reflect implementation traceability. The manual-QA checklist (10 steps, recorded in apply-progress) covers every in-scope SPA scenario.
+
+### `admin-user-management` — SPA Login Gate (PR 2 scope)
+
+| # | Scenario | Status | Evidence |
+|---|---|---|---|
+| U7 | Admin login navigates to dashboard (stores token, navigates to dashboard) | PASS | `auth.tsx:68` `POST /auth/login`; `auth.tsx:73` ADMIN check passes; `auth.tsx:83` `sessionStorage.setItem('admin_token', …)` (stores bearer); `auth.tsx:85-86` `setToken`/`setUser`; `App.tsx:46-51` `/login` route redirects an authenticated user via `<Navigate to="/users" replace />`. `/users` renders the dashboard (user list). Manual QA steps 3–4. |
+| U8 | Non-admin login is blocked (clears token, displays "Access denied — ADMIN role required") | PASS | `auth.tsx:73` `res.user.role !== 'ADMIN'` → `auth.tsx:75-76` removes `admin_token` + `admin_user` (clears token); `auth.tsx:79` `setError('Access denied — ADMIN role required')` (**exact spec string**); `Login.tsx:29` renders the error banner. Manual QA step 9. |
+
+### `admin-user-management` — User List + Role Update UI (PR 2 scope)
+
+| # | Scenario | Status | Evidence |
+|---|---|---|---|
+| UL1 | Paginated user list display | PASS | `Users.tsx:26-39` `GET /admin/users?page&size&query`; `Users.tsx:148-219` table + pagination; `Users.tsx:201-218` Previous/Next + `totalElements`/`totalPages` display. Manual QA step 4. |
+| UL2 | Search filters results | PASS (functional) | `Users.tsx:134-141` search input; `Users.tsx:35-37` attaches `query`. **Debounce is non-functional — see W-05.** Search itself works; just not debounced. Manual QA step 5. |
+| UL3 | Role update UI calls `PUT /admin/users/{id}/role`, reflects change | PASS | `Users.tsx:120-125` `handleRoleChange` → `roleMutation.mutate`; `Users.tsx:41-49` `PUT` request; `Users.tsx:85-98` optimistic cache update; `Users.tsx:104-117` handles 400 ("Invalid role value") and 404 ("User no longer exists"). Manual QA step 6. |
+
+### `admin-course-overview` — Course List Display (PR 2 scope)
+
+| # | Scenario | Status | Evidence |
+|---|---|---|---|
+| CL1 | Course list displays title, creatorName, enrollmentCount, isOfficial, schoolYear | PASS | `Courses.tsx:19-21` `GET /admin/courses`; `Courses.tsx:40-49` headers; `Courses.tsx:60-68` renders `creatorName`, `enrollmentCount`, `isOfficial` (Yes/No), `schoolYear`; `Courses.tsx:52-57` empty state. Backend scenarios C1/C2/C3 already PASS (PR 1). Manual QA step 7. |
+
+### Cross-cutting SPA behavior
+
+| # | Behavior | Status | Evidence |
+|---|---|---|---|
+| AG1 | Route protection — non-ADMIN / no token redirected to `/login` | PASS | `App.tsx:7-15` `AuthGuard`: `if (!token \|\| !user \|\| user.role !== 'ADMIN') return <Navigate to="/login" replace />`; applied to `/users` and `/courses` (`App.tsx:53-68`). Manual QA step 10. |
+| AG2 | 401 handling — clear token + redirect | PASS | `api.ts:40-44`: on `response.status === 401`, `clearToken()` + `window.location.href = '/login'` + throw `ApiError(401, 'Session expired')`. |
+| AG3 | Logout clears session | PASS | `auth.tsx:101-107` `logout()` → `clearToken()` + remove `admin_user` + reset state. Manual QA step 8. |
+
+---
+
+## Task Consistency
+
+| Phase | Tasks | State |
+|---|---|---|
+| Phase 4 (SPA shell & auth) | 4.1, 4.2, 4.3, 4.4 | all `[x]` ✅ |
+| Phase 5 (SPA pages) | 5.1, 5.2, 5.3, 5.4 | all `[x]` ✅ (5.1 "search with debounce" marked done but debounce is non-functional — see W-05) |
+| Phase 1–3 (PR 1, carry-over) | 1.1–2.3 `[x]`; 3.1 `[x]`; 3.2 `[ ]` | unchanged — no regression in PR 1 checkboxes. Task 3.2 remains the PR 1 carry-over WARNING (W-04). |
+
+No PR 2 task was left unchecked. Phase 4–5 are complete.
+
+---
+
+## Slice Boundary Check
+
+`git diff feat/admin-web-panel..feat/admin-web-panel-spa --name-only` → 15 files, **all under `admin-web/`** plus `openspec/changes/admin-web-panel/tasks.md`:
+
+```
+admin-web/.gitignore, index.html, package.json, vite.config.ts, tsconfig.json
+admin-web/src/{main.tsx, App.tsx, App.css, vite-env.d.ts}
+admin-web/src/lib/{api.ts, auth.tsx}
+admin-web/src/pages/{Login.tsx, Users.tsx, Courses.tsx}
+openspec/changes/admin-web-panel/tasks.md
+```
+
+**No `server/`, `shared/`, `composeApp/`, or `iosApp/` files were touched.** PR 2 is purely additive SPA + task-list bookkeeping. The backend contract consumed by the SPA is the already-verified PR 1 surface. ✅ Clean boundary.
+
+---
+
+## Deviation Assessment (PR 2)
+
+### D2-01: npm instead of pnpm — ACCEPTABLE (INFO)
+`proposal.md:75` explicitly permits "Node.js / pnpm (or npm)". pnpm is not installed in this environment; npm was used. `package.json` is a standalone project (not a workspace member). npm is standard and fully supported by Vite. **Not a problem.**
+
+### D2-02: No component library (297 lines plain CSS) — ACCEPTABLE (SUGGESTION S-06)
+`proposal.md:34` mentions shadcn/ui as a *recommendation* ("React offers the richest admin component ecosystem"), not a requirement. v1 ships plain CSS in `App.css`. Acceptable for a v1 admin tool of this size; revisit if the panel grows.
+
+### D2-03: Role update on-change (no Save button) — ACCEPTABLE, satisfies spec (SUGGESTION S-07)
+The role `<select>` saves immediately on change (`Users.tsx:172-186`) rather than via a Save button. The spec's role-update scenarios (U4/U5/U6) govern the API contract (`PUT` is made, role persisted, 400 on invalid, 404 on missing) — all satisfied; no Save button is mandated. Minor UX note: an accidental selection commits immediately (S-07). No spec violation.
+
+### D2-04: No `.env.example` — ACCEPTABLE (SUGGESTION S-04)
+`VITE_API_BASE_URL` defaults to `http://localhost:8080` (`api.ts:1`) and is typed in `vite-env.d.ts:3-5`. The default matches the documented dev backend (`./gradlew :server:run`), so v1 functions without it. A `.env.example` would improve onboarding/deployment clarity to non-local hosts (S-04), but is not required for v1.
+
+---
+
+## Issues
+
+### CRITICAL
+None. Build passes, all contracts align, every in-scope SPA spec scenario is implemented and traceable, no PR 2 task is unchecked, and the slice boundary is clean.
+
+### WARNING
+- **W-05 (non-functional search debounce — task 5.1 not fully met)**: `Users.tsx:63-75` `handleSearchChange` returns a cleanup `() => clearTimeout(timeoutId)`, but the `onChange` caller at `Users.tsx:139` (`onChange={(e) => handleSearchChange(e.target.value)}`) discards the return value, so the previous timeout is never cleared. Each keystroke schedules a new 400 ms timeout and **all of them fire**, issuing one delayed fetch per keystroke instead of a single debounced fetch. Search is functional (results are eventually correct), but the documented "search input with debounce" (task 5.1) is not actually satisfied, and intermediate results flicker. **Fix**: drive the timeout from a `useEffect` keyed on `search` with a proper cleanup return, or store the timeout id in a `useRef` and clear it before scheduling a new one.
+- **W-06 (nav links cause full page reloads — React Router SPA decision not honored)**: `App.tsx:22-27` `NavBar` uses `<a href="/users">` / `<a href="/courses">` instead of React Router's `<Link to="/users">`. Each nav click triggers a **full browser reload** (re-fetching the 213 KB bundle, re-initializing React), bypassing the client-side routing that the React Router v6 design decision (`design.md:14`) was chosen to provide. It is also fragile for production: it requires SPA history-API fallback on the static host, and Ktor static serving is an unresolved open question (`design.md:91`). No spec scenario breaks (the routes are reachable and render correctly), but this is a visible SPA defect and a design-coherence deviation. **Fix**: replace `<a href>` with `<Link to>` from `react-router-dom` (already a dependency).
+
+### SUGGESTION
+- **S-03 (navigate-during-render in Login)**: `Login.tsx:12-15` calls `navigate('/users')` during the render phase — a React anti-pattern that logs a "cannot update a component while rendering" warning. It is also **redundant**: `App.tsx:46-51` already redirects an authenticated user on the `/login` route via `<Navigate to="/users" replace />`. Remove the redundant block (or move the navigation into a `useEffect`).
+- **S-04 (add `.env.example`)**: see D2-04. Document `VITE_API_BASE_URL` for onboarding/deployment clarity.
+- **S-05 (commit the manual QA checklist)**: The SPA's only verification path is manual QA (`design.md:82`). A 10-step checklist exists (Engram apply-progress) and covers all in-scope SPA scenarios, but it is **not committed to the repo**. Commit it (e.g., `admin-web/README.md` or a `qa-checklist.md` in the change folder) so the verification procedure is reproducible from the repository rather than only from memory.
+- **S-06 (component library)**: see D2-02. Plain CSS is fine for v1; revisit if the panel grows.
+- **S-07 (role update on-change UX)**: see D2-03. Consider a confirm step if accidental role changes become common.
+
+### Carry-over from PR 1 (not introduced by PR 2; still pending for `sdd-archive`)
+- **W-01** (`createdAt` spec divergence) and **W-04** (unchecked task 3.2 `AdminServiceTest.kt`) remain from the PR 1 report. They must be resolved before archiving the whole change but are **not PR 2's responsibility** and do not affect the PR 2 verdict.
+
+---
+
+## Final Verdict (PR 2)
+**PASS WITH WARNINGS**
+
+- `npm run build` → 0 errors, 83 modules, exit 0 (BUILD SUCCESSFUL).
+- Contract alignment → 4/4 contracts match field-for-field; no runtime-breaking mismatch.
+- All in-scope SPA spec scenarios implemented and traceable (U7, U8, UL1, UL2, UL3, CL1, AG1–AG3); manual QA is the sanctioned evidence path and is documented.
+- Phase 4–5 tasks complete; Phase 1–3 checkboxes unchanged.
+- Slice boundary clean — no backend/shared files touched.
+- 2 WARNINGs (W-05 debounce, W-06 nav reloads) do not break any spec scenario and do not block PR 2 merge, but W-06 is a visible SPA defect worth fixing before or as a fast-follow; W-05 should be fixed for the documented debounce feature to actually work.
+
+`next_recommended`: **push-and-pr** — orchestrator pushes `feat/admin-web-panel-spa` and opens PR 2 (base `feat/admin-web-panel`). Recommend addressing W-06 (and ideally W-05) either in this PR or an immediate fast-follow; neither blocks merge.
