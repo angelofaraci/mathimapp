@@ -3,6 +3,7 @@ package com.example.proyectofinal
 import com.example.proyectofinal.database.DatabaseFactory
 import com.example.proyectofinal.plugins.configureCors
 import com.example.proyectofinal.plugins.configureSecurity
+import com.example.proyectofinal.routes.adminRoutes
 import com.example.proyectofinal.routes.authRoutes
 import com.example.proyectofinal.routes.courseRoutes
 import com.example.proyectofinal.routes.exerciseRoutes
@@ -57,6 +58,7 @@ fun Application.module(
     courseRoutes(courseService)
     lessonRoutes(lessonService)
     exerciseRoutes(exerciseService, lessonService)
+    adminRoutes(userService, courseService)
 
     if (seedData) {
         SeedData.seedOfficialCourses()
