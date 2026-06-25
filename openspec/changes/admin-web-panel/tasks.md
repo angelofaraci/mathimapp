@@ -42,14 +42,14 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: SPA Shell & Auth (PR 2)
 
-- [ ] 4.1 Scaffold `admin-web/` — Vite + React 18 + TypeScript + React Router v6 + TanStack Query. Create `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, `src/main.tsx`, `src/App.tsx`.
-- [ ] 4.2 Create API client in `src/lib/api.ts` — `fetch()` wrapper attaching `Authorization: Bearer <token>`, reads token from `sessionStorage`, clears on 401.
-- [ ] 4.3 Create auth context in `src/lib/auth.tsx` — login via `POST /auth/login`, store token, check `user.role === "ADMIN"`, reject non-ADMIN with access-denied message.
-- [ ] 4.4 Build login page at `src/pages/Login.tsx` — email/password form, calls auth context login, navigates to `/users` on success.
+- [x] 4.1 Scaffold `admin-web/` — Vite + React 18 + TypeScript + React Router v6 + TanStack Query. Create `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, `src/main.tsx`, `src/App.tsx`.
+- [x] 4.2 Create API client in `src/lib/api.ts` — `fetch()` wrapper attaching `Authorization: Bearer <token>`, reads token from `sessionStorage`, clears on 401.
+- [x] 4.3 Create auth context in `src/lib/auth.tsx` — login via `POST /auth/login`, store token, check `user.role === "ADMIN"`, reject non-ADMIN with access-denied message.
+- [x] 4.4 Build login page at `src/pages/Login.tsx` — email/password form, calls auth context login, navigates to `/users` on success.
 
 ## Phase 5: SPA Pages (PR 2)
 
-- [ ] 5.1 Build user list page at `src/pages/Users.tsx` — paginated table from `GET /admin/users?page=&size=&query=`, search input with debounce.
-- [ ] 5.2 Build role update UI — inline dropdown per user row, calls `PUT /admin/users/{id}/role`, optimistically updates list.
-- [ ] 5.3 Build course overview page at `src/pages/Courses.tsx` — table from `GET /admin/courses` displaying title, creatorName, enrollmentCount, isOfficial, schoolYear.
-- [ ] 5.4 Wire routes in `App.tsx` — `/login` (public), `/users` (protected), `/courses` (protected), redirect unknown paths to `/users`. Protect with `AuthGuard` component requiring valid ADMIN token.
+- [x] 5.1 Build user list page at `src/pages/Users.tsx` — paginated table from `GET /admin/users?page=&size=&query=`, search input with debounce.
+- [x] 5.2 Build role update UI — inline dropdown per user row, calls `PUT /admin/users/{id}/role`, optimistically updates list.
+- [x] 5.3 Build course overview page at `src/pages/Courses.tsx` — table from `GET /admin/courses` displaying title, creatorName, enrollmentCount, isOfficial, schoolYear.
+- [x] 5.4 Wire routes in `App.tsx` — `/login` (public), `/users` (protected), `/courses` (protected), redirect unknown paths to `/users`. Protect with `AuthGuard` component requiring valid ADMIN token.
