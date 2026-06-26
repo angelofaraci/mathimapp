@@ -6,8 +6,8 @@
 ## Quick Path
 
 1. ✅ `role-naming-cleanup` — completed.
-2. Start with `versioned-db-migrations` or `lesson-read-access-control`, depending on whether deployment safety or access control is the higher immediate priority.
-3. Then pick learner-facing or teacher-facing tracks depending on product priority.
+2. ✅ `versioned-db-migrations` — completed and archived.
+3. Reconcile `lesson-read-access-control`, then pick learner-facing or teacher-facing tracks depending on product priority.
 
 ## Completed Slices
 
@@ -18,30 +18,23 @@
 | `lesson-progress-tracking` | OpenSpec archived | Exercise completion as atomic progress, lesson derivation from exercises, client-server progress sync | 35+ tests, 0 failures |
 | `configurable-api-base-url` | OpenSpec archived | Configurable base URL resolution for Android, iOS, and JVM targets | `:composeApp:jvmTest` + targeted platform checks |
 | `role-naming-cleanup` | OpenSpec archived | Rename `LEARNER` → `STUDENT` in shared models, server, compose app, and specs with backward-compatible parser | 64 tests, 0 failures — `:server:test`, `:composeApp:jvmTest` |
+| `versioned-db-migrations` | OpenSpec archived | Flyway-based versioned migrations with baseline + guarded school-year follow-up migration | 30 tests, 0 failures — `:server:test` |
 
 ## Next Slices (Ordered)
 
 ### Phase 1 — Foundation (do these first)
 
-#### 1. `versioned-db-migrations`
-- **Scope**: Replace `SchemaUtils.create(...)` with a versioned migration strategy (Flyway, Liquibase, or Exposed migrations).
-- **Rationale**: Persistent deployments currently have no migration path for schema changes (e.g., `courses.school_year`). Required before production data.
-- **Dependencies**: None.
-- **Affected modules**: `server`.
-- **Expected verification**: Migration scripts run against fresh and pre-seeded test databases; `:server:test`.
-- **Review-size risk**: **Medium** (~100–200 lines).
-
-#### 2. `lesson-read-access-control`
-- **Scope**: Enforce ownership/enrollment/role gating on `GET /lessons/{id}` so learners only see lessons they can access.
-- **Rationale**: Closes a known security gap from `theory-content-loading` (any authenticated user can read any lesson theory today).
+#### 1. `lesson-read-access-control`
+- **Scope**: Reconcile, verify, and archive the lesson read gating already present in code; if gaps remain, close them before dependent classroom slices.
+- **Rationale**: `GET /courses/{courseId}/lessons` and `GET /lessons/{id}` already use user/role-aware service methods, but the roadmap and artifact trail are out of sync.
 - **Dependencies**: `backend-auth-security` (delivered), `theory-management` (delivered).
-- **Affected modules**: `server`, possibly `shared`.
+- **Affected modules**: `server`, possibly `shared` if a contract gap is discovered.
 - **Expected verification**: `:server:test` covering authorized, unauthorized, and cross-user scenarios.
 - **Review-size risk**: **Low** (~100–150 lines).
 
 ### Phase 2 — Learner Experience
 
-#### 4. `onboarding-school-year`
+#### 2. `onboarding-school-year`
 - **Scope**: Collect learner type and school year during onboarding; recommend the initial curriculum path.
 - **Rationale**: First learner-facing feature from the umbrella `learning` spec; unlocks the curriculum map.
 - **Dependencies**: `school-year-filtering` (delivered).
@@ -49,7 +42,7 @@
 - **Expected verification**: `:composeApp:jvmTest`; manual onboarding flow validation.
 - **Review-size risk**: **Medium** (~200–300 lines).
 
-#### 5. `exercise-practice-ui`
+#### 3. `exercise-practice-ui`
 - **Scope**: Build the interactive exercise screen where learners answer, submit, and receive immediate feedback; wire to `POST /exercises/{id}/complete`.
 - **Rationale**: Completes the end-to-end exercise-completion flow that currently exists only at the API/repository layer.
 - **Dependencies**: `exercise-completion` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year`.
@@ -57,7 +50,7 @@
 - **Expected verification**: `:composeApp:jvmTest`; manual end-to-end flow.
 - **Review-size risk**: **Medium-High** (~300–400 lines). Consider chained PRs: PR 1 = UI components, PR 2 = wiring + ViewModel.
 
-#### 6. `gamification-rewards`
+#### 4. `gamification-rewards`
 - **Scope**: Streaks and reward feedback after exercise completion; derive from cumulative progress already synced.
 - **Rationale**: Gamified practice from the umbrella `learning` spec; depends on stable progress tracking.
 - **Dependencies**: `exercise-practice-ui`, `progress-sync` (delivered).
@@ -67,7 +60,7 @@
 
 ### Phase 3 — Teacher & Classroom
 
-#### 7. `teacher-course-ownership`
+#### 5. `teacher-course-ownership`
 - **Scope**: Teacher-owned courses with Google Classroom-style behavior; teachers view student progress only for courses they own.
 - **Rationale**: Unblocks all classroom management features; defined in backlog and umbrella `classroom` spec.
 - **Dependencies**: `backend-auth-security` (delivered), `lesson-read-access-control`.
@@ -75,7 +68,7 @@
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~250–350 lines). Consider chained PRs: PR 1 = backend ownership model + routes, PR 2 = client UI.
 
-#### 8. `classroom-join-codes`
+#### 6. `classroom-join-codes`
 - **Scope**: Teacher creates a class and generates a join code; learner enrolls by entering the code.
 - **Rationale**: Core classroom feature from the umbrella `classroom` spec.
 - **Dependencies**: `teacher-course-ownership`.
@@ -85,7 +78,7 @@
 
 ### Phase 4 — Content Authoring
 
-#### 9. `teacher-content-assignment`
+#### 7. `teacher-content-assignment`
 - **Scope**: Teachers assign default platform theory/exercises or create custom content for a class/unit.
 - **Rationale**: Core content-authoring feature from the umbrella `content-authoring` spec.
 - **Dependencies**: `classroom-join-codes`, `theory-management` (delivered).
@@ -95,10 +88,10 @@
 
 ## Recommended Next Slice
 
-**`versioned-db-migrations`**
-- Deployment safety is the highest infrastructure priority before any production data.
-- `role-naming-cleanup` (completed) resolved the cross-cutting rename risk.
-- Alternative: `lesson-read-access-control` if access-control hardening is a more pressing product concern.
+**`lesson-read-access-control`**
+- The code path appears implemented, but the roadmap and artifact trail need reconciliation before teacher/classroom work depends on it.
+- Confirming the current behavior with tests and archiving the slice removes roadmap ambiguity and clarifies the next dependency edge.
+- Alternative: `onboarding-school-year` if product wants to prioritize the learner journey immediately and accepts deferring this reconciliation.
 
 ## Deferred / Non-Goals
 
@@ -137,7 +130,6 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 
 ```
 role-naming-cleanup ─── (archived) ───► lesson-read-access-control ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
-versioned-db-migrations ───────────────────────────────────────────▲
 onboarding-school-year ─────────────────────────────────────────┤
 exercise-practice-ui ───────────────────────────────────────────┘
     │

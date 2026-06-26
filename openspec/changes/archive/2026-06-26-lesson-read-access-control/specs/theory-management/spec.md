@@ -1,14 +1,11 @@
-# theory-management Specification
+# Delta for theory-management
 
-## Purpose
-
-Control loading and updating of lesson theory content with role-scoped access.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Theory Content Read Access
 
 The system MUST allow authenticated users to load lesson theory content based on visibility tiers: official courses (any authenticated user), enrolled courses (enrolled students only), course owner (TEACHER creator), and ADMIN (any lesson).
+(Previously: Generic "users they can access" without specifying visibility tiers)
 
 #### Scenario: Lesson theory is returned
 
@@ -27,20 +24,3 @@ The system MUST allow authenticated users to load lesson theory content based on
 - GIVEN no lesson exists with the requested ID
 - WHEN any authenticated user requests the lesson
 - THEN the system returns NotFound
-
-### Requirement: Theory Content Update Scope
-
-The system MUST allow ADMIN users to update theory for any lesson in an official course and MUST allow TEACHER users to update theory only for lessons in courses they created.
-
-#### Scenario: Admin updates official lesson theory
-
-- GIVEN an ADMIN requests a theory update for an official lesson
-- WHEN the update is valid
-- THEN the system SHALL store the new theory content
-
-#### Scenario: Teacher is limited to own courses
-
-- GIVEN a TEACHER requests a theory update for a lesson in a course they created
-- WHEN the update is valid
-- THEN the system SHALL store the new theory content
-- AND when the lesson belongs to another teacher's course, the system SHALL reject the update

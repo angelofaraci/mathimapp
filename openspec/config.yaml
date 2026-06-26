@@ -1,15 +1,16 @@
 schema: spec-driven
 
 context: |
-  Tech stack: Kotlin Multiplatform + Compose Multiplatform + Gradle, targeting Android, iOS, and JVM.
+  Tech stack: Kotlin 2.3.10 + Compose Multiplatform 1.8.0 + Gradle, targeting Android, iOS, and JVM.
   Modules:
-    - composeApp: Compose Multiplatform UI, Ktor HTTP client, SQLDelight local DB, Koin DI.
+    - composeApp: Compose Multiplatform UI, Ktor 3.4.1 HTTP client, SQLDelight 2.3.1 local DB, Koin 4.1.0 DI.
     - shared: @Serializable cross-module contracts (User, Course, Lesson, Exercise, UserProgress).
-    - server: Ktor Netty backend, Exposed ORM, Flyway migrations, PostgreSQL, JWT auth, bcrypt.
+    - server: Ktor Netty backend, Exposed 1.1.1 ORM, Flyway 10.22.0 migrations, PostgreSQL, JWT auth, bcrypt.
     - iosApp: Native Swift/Xcode entrypoint (no KMP logic).
+    - admin-web: React 18 + TypeScript + Vite 6 admin panel (no test infrastructure yet).
   Domain: Gamified math learning for Argentina primary/secondary levels with teacher-managed classes.
-  Testing: kotlin.test across commonTest/jvmTest/androidUnitTest (app), Ktor testApplication + H2 (server).
-  Style: Kotlin official code style, JVM 17, Compose Multiplatform 1.8.0, Gradle config cache enabled.
+  Testing: kotlin.test across commonTest/jvmTest/androidUnitTest (app, 52 tests), Ktor testApplication + H2 (server, 42 tests).
+  Style: Kotlin official code style, JVM 17, Gradle config cache + build cache enabled.
 
 rules:
   proposal:
@@ -39,11 +40,27 @@ rules:
 
 testing:
   strict_tdd: false
+  note: "strict_tdd disabled by openspec/config.yaml. Test runner exists (kotlin.test) so default would be true, but project convention is non-strict."
   framework: kotlin.test
-  layers:
-    unit: true
-    integration: true
-    e2e: false
+  runners:
+    server:
+      command: "./gradlew :server:test"
+      tests: 42
+      layers:
+        unit: true
+        integration: true
+        e2e: false
+    composeApp:
+      command: "./gradlew :composeApp:jvmTest"
+      tests: 52
+      layers:
+        unit: true
+        integration: true
+        e2e: false
+    admin_web:
+      command: null
+      tests: 0
+      note: "No test runner configured in package.json"
   coverage: false
   quality:
     linter: false
