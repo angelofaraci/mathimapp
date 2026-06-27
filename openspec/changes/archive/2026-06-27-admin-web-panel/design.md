@@ -44,10 +44,10 @@ React SPA at `admin-web/` consumes 3 new Ktor REST endpoints — `GET /admin/use
 
 | File | Action | Description |
 |------|--------|-------------|
-| `server/.../models/AdminDtos.kt` | Create | `PageResponse<T>`, `AdminCourse` (id, title, description, creatorId, creatorName, enrollmentCount, isOfficial, schoolYear) |
+| `server/.../models/AdminDtos.kt` | Create | `PageResponse<T>`, `AdminUserResponse`, `AdminCourseResponse`, `RoleUpdateRequest` |
 | `server/.../routes/adminRoutes.kt` | Create | `GET /admin/users`, `GET /admin/courses`, `PUT /admin/users/{id}/role` — all under `authenticate("auth-jwt")` with `requireAdmin()` |
-| `server/.../service/UserService.kt` | Modify | Add `listUsers(query: String?, page: Int, size: Int): PageResponse<User>` |
-| `server/.../service/CourseService.kt` | Modify | Add `getAllCoursesAdmin(): List<AdminCourse>` (join Users + count EnrolledCourses) |
+| `server/.../service/UserService.kt` | Modify | Add `listUsers(query: String?, page: Int, size: Int): PageResponse<AdminUserResponse>` |
+| `server/.../service/CourseService.kt` | Modify | Add `getAllCoursesAdmin(): List<AdminCourseResponse>` (resolve creator names + count enrollments) |
 | `server/.../plugins/Cors.kt` | Modify | Add `allowHost("localhost:5173")` for Vite dev |
 | `server/Main.kt` | Modify | Wire `adminRoutes(userService, courseService)` |
 | `admin-web/` (~10 files) | Create | Vite + React 18 + React Router + TanStack Query SPA |
@@ -58,13 +58,13 @@ React SPA at `admin-web/` consumes 3 new Ktor REST endpoints — `GET /admin/use
 
 ### `GET /admin/users`
 - **Query**: `page` (Int, default 0), `size` (Int, default 20, max 100), `query` (String?, optional)
-- **200**: `{ items: User[], total: Int, page: Int, size: Int }`
+- **200**: `{ items: AdminUserResponse[], page: Int, size: Int, totalElements: Long, totalPages: Int }`
 - **401/403**: standard (Security.kt:61,81)
 - **Service**: `dbQuery` with `LIKE "%query%"` on name/email, `ORDER BY name`, `LIMIT` + `OFFSET`, and separate `COUNT(*)`.
 
 ### `GET /admin/courses`
 - **No query params**
-- **200**: `AdminCourse[]` — each element carries `creatorName: String` (from join on Users) and `enrollmentCount: Int` (count from EnrolledCourses)
+- **200**: `AdminCourseResponse[]` — each element carries `creatorName: String` and `enrollmentCount: Int`
 - **401/403**: standard
 
 ### `PUT /admin/users/{id}/role`

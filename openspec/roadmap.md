@@ -7,7 +7,8 @@
 
 1. ✅ `role-naming-cleanup` — completed.
 2. ✅ `versioned-db-migrations` — completed and archived.
-3. Reconcile `lesson-read-access-control`, then pick learner-facing or teacher-facing tracks depending on product priority.
+3. ✅ `lesson-read-access-control` — completed and archived.
+4. Pick the next product track: learner-first (`onboarding-school-year`) or classroom-first (`teacher-course-ownership`).
 
 ## Completed Slices
 
@@ -19,22 +20,13 @@
 | `configurable-api-base-url` | OpenSpec archived | Configurable base URL resolution for Android, iOS, and JVM targets | `:composeApp:jvmTest` + targeted platform checks |
 | `role-naming-cleanup` | OpenSpec archived | Rename `LEARNER` → `STUDENT` in shared models, server, compose app, and specs with backward-compatible parser | 64 tests, 0 failures — `:server:test`, `:composeApp:jvmTest` |
 | `versioned-db-migrations` | OpenSpec archived | Flyway-based versioned migrations with baseline + guarded school-year follow-up migration | 30 tests, 0 failures — `:server:test` |
+| `lesson-read-access-control` | OpenSpec archived | Canonical lesson-read visibility and answer-masking reconciliation; theory read-access spec synced to existing backend behavior | 42 tests, 0 failures — `:server:test` |
 
 ## Next Slices (Ordered)
 
-### Phase 1 — Foundation (do these first)
+### Phase 1 — Learner Experience
 
-#### 1. `lesson-read-access-control`
-- **Scope**: Reconcile, verify, and archive the lesson read gating already present in code; if gaps remain, close them before dependent classroom slices.
-- **Rationale**: `GET /courses/{courseId}/lessons` and `GET /lessons/{id}` already use user/role-aware service methods, but the roadmap and artifact trail are out of sync.
-- **Dependencies**: `backend-auth-security` (delivered), `theory-management` (delivered).
-- **Affected modules**: `server`, possibly `shared` if a contract gap is discovered.
-- **Expected verification**: `:server:test` covering authorized, unauthorized, and cross-user scenarios.
-- **Review-size risk**: **Low** (~100–150 lines).
-
-### Phase 2 — Learner Experience
-
-#### 2. `onboarding-school-year`
+#### 1. `onboarding-school-year`
 - **Scope**: Collect learner type and school year during onboarding; recommend the initial curriculum path.
 - **Rationale**: First learner-facing feature from the umbrella `learning` spec; unlocks the curriculum map.
 - **Dependencies**: `school-year-filtering` (delivered).
@@ -42,7 +34,7 @@
 - **Expected verification**: `:composeApp:jvmTest`; manual onboarding flow validation.
 - **Review-size risk**: **Medium** (~200–300 lines).
 
-#### 3. `exercise-practice-ui`
+#### 2. `exercise-practice-ui`
 - **Scope**: Build the interactive exercise screen where learners answer, submit, and receive immediate feedback; wire to `POST /exercises/{id}/complete`.
 - **Rationale**: Completes the end-to-end exercise-completion flow that currently exists only at the API/repository layer.
 - **Dependencies**: `exercise-completion` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year`.
@@ -50,7 +42,7 @@
 - **Expected verification**: `:composeApp:jvmTest`; manual end-to-end flow.
 - **Review-size risk**: **Medium-High** (~300–400 lines). Consider chained PRs: PR 1 = UI components, PR 2 = wiring + ViewModel.
 
-#### 4. `gamification-rewards`
+#### 3. `gamification-rewards`
 - **Scope**: Streaks and reward feedback after exercise completion; derive from cumulative progress already synced.
 - **Rationale**: Gamified practice from the umbrella `learning` spec; depends on stable progress tracking.
 - **Dependencies**: `exercise-practice-ui`, `progress-sync` (delivered).
@@ -58,17 +50,17 @@
 - **Expected verification**: `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~200–300 lines).
 
-### Phase 3 — Teacher & Classroom
+### Phase 2 — Teacher & Classroom
 
-#### 5. `teacher-course-ownership`
+#### 4. `teacher-course-ownership`
 - **Scope**: Teacher-owned courses with Google Classroom-style behavior; teachers view student progress only for courses they own.
-- **Rationale**: Unblocks all classroom management features; defined in backlog and umbrella `classroom` spec.
-- **Dependencies**: `backend-auth-security` (delivered), `lesson-read-access-control`.
+- **Rationale**: First classroom slice now that lesson-read visibility is archived and no longer blocks ownership rules.
+- **Dependencies**: `backend-auth-security` (delivered), `lesson-read-access-control` (delivered).
 - **Affected modules**: `server`, `shared`, `composeApp`.
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~250–350 lines). Consider chained PRs: PR 1 = backend ownership model + routes, PR 2 = client UI.
 
-#### 6. `classroom-join-codes`
+#### 5. `classroom-join-codes`
 - **Scope**: Teacher creates a class and generates a join code; learner enrolls by entering the code.
 - **Rationale**: Core classroom feature from the umbrella `classroom` spec.
 - **Dependencies**: `teacher-course-ownership`.
@@ -76,9 +68,9 @@
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~200–300 lines).
 
-### Phase 4 — Content Authoring
+### Phase 3 — Content Authoring
 
-#### 7. `teacher-content-assignment`
+#### 6. `teacher-content-assignment`
 - **Scope**: Teachers assign default platform theory/exercises or create custom content for a class/unit.
 - **Rationale**: Core content-authoring feature from the umbrella `content-authoring` spec.
 - **Dependencies**: `classroom-join-codes`, `theory-management` (delivered).
@@ -88,19 +80,19 @@
 
 ## Recommended Next Slice
 
-**`lesson-read-access-control`**
-- The code path appears implemented, but the roadmap and artifact trail need reconciliation before teacher/classroom work depends on it.
-- Confirming the current behavior with tests and archiving the slice removes roadmap ambiguity and clarifies the next dependency edge.
-- Alternative: `onboarding-school-year` if product wants to prioritize the learner journey immediately and accepts deferring this reconciliation.
+**`onboarding-school-year`**
+- Foundation reconciliation is complete, so the smallest dependency-clean product slice is now the learner onboarding flow.
+- It unlocks the learner track (`exercise-practice-ui` → `gamification-rewards`) without reopening any backend access-control ambiguity.
+- Alternative: `teacher-course-ownership` if product wants to switch immediately to the classroom-management track now that `lesson-read-access-control` is archived.
 
 ## Deferred / Non-Goals
 
-These are explicitly out of scope for the current roadmap cycle. Revisit after Phase 4 or when product requirements change.
+These are explicitly out of scope for the current roadmap cycle. Revisit after Phase 3 or when product requirements change.
 
 | Item | Rationale |
 |------|-----------|
-| Web experience | Future compatibility only; no web module exists. |
-| Advanced analytics / payments / admin dashboards | Product decision not yet made. |
+| Learner/teacher web experience beyond the admin panel | `admin-web-panel` exists for operators, but learner- and teacher-facing product web clients remain out of scope for this roadmap cycle. |
+| Advanced analytics / payments / expanded admin reporting | Product decision not yet made. |
 | Regional/provincial content subdivision | MVP covers Argentina nationally; province split deferred. |
 | Rich math formula rendering | Markdown-only for MVP; LaTeX/MathML later if needed. |
 | Progressive hints, photo submissions | Backlog item; not required for core loop. |
@@ -129,12 +121,8 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 ## Dependency Graph (Simplified)
 
 ```
-role-naming-cleanup ─── (archived) ───► lesson-read-access-control ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
-onboarding-school-year ─────────────────────────────────────────┤
-exercise-practice-ui ───────────────────────────────────────────┘
-    │
-    ▼
-gamification-rewards
+lesson-read-access-control (archived) ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
+onboarding-school-year ────────────────► exercise-practice-ui ───────► gamification-rewards
 ```
 
 ## Maintenance

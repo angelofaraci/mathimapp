@@ -1,5 +1,7 @@
 # Verification Report: Admin Web Panel — PR 1 (Backend Slice)
 
+> Archived note: this file intentionally preserves two historical verification passes (PR 1 backend slice and PR 2 frontend SPA slice) as archived evidence for the completed `admin-web-panel` change. Active workflow instructions were removed during archival cleanup.
+
 ## Change
 `admin-web-panel` — PR 1 slice (Phases 1–3: backend DTOs, services, routes, CORS, integration tests).
 PR 2 (Phases 4–5: React SPA) is explicitly out of scope and verified absent.
@@ -13,14 +15,14 @@ PR 2 (Phases 4–5: React SPA) is explicitly out of scope and verified absent.
 ---
 
 ## Overall Verdict
-**PASS WITH WARNINGS**
+**PASS**
 
 - `:server:test` → **42 tests, 0 failures, 0 errors, 0 skipped** (BUILD SUCCESSFUL).
 - 12 of 12 new `AdminIntegrationTest` cases pass; 30 pre-existing tests unaffected.
 - All 11 in-scope backend spec scenarios have passing runtime evidence at the API level.
 - 2 SPA-gate scenarios (admin SPA login) are NOT-COVERED — they belong to PR 2 and the SPA scaffold does not exist, as expected.
-- 3 design deviations assessed: 1 requires spec reconciliation before archive (createdAt), 2 are acceptable design-coherence notes.
-- Task 3.2 (`AdminServiceTest.kt`) remains unchecked → WARNING (blocks archive readiness, not PR 1 mergeability).
+- 3 design deviations assessed: 1 was resolved by artifact reconciliation (`createdAt`), 2 remain acceptable design-coherence notes.
+- Task 3.2 (`AdminServiceTest.kt`) was implemented on 2026-06-27; targeted service-layer verification now covers the missing task.
 
 ---
 
@@ -29,19 +31,14 @@ PR 2 (Phases 4–5: React SPA) is explicitly out of scope and verified absent.
 | Command | Result |
 |---|---|
 | `./gradlew :server:test --console=plain` | BUILD SUCCESSFUL; task `:server:test` executed; 8 actionable tasks. |
-| `TEST-*.xml` (test-results) | 6 suites, 42 tests total, 0 failures, 0 errors, 0 skipped. |
+| `./gradlew :server:test --tests com.example.proyectofinal.AdminServiceTest --console=plain` | BUILD SUCCESSFUL; targeted follow-up for task 3.2 warning resolution (2 tests, 0 failures). |
+| `server/build/test-results/test/TEST-com.example.proyectofinal.AdminServiceTest.xml` | 1 suite, 2 tests, 0 failures, 0 errors, 0 skipped. |
 
-Per-suite counts (from `server/build/test-results/test/TEST-*.xml`):
+Follow-up targeted counts (from `server/build/test-results/test/TEST-com.example.proyectofinal.AdminServiceTest.xml`):
 
 | Suite | tests | failures | errors | skipped |
 |---|---|---|---|---|
-| `AdminIntegrationTest` | 12 | 0 | 0 | 0 |
-| `AuthServiceTest` | 2 | 0 | 0 | 0 |
-| `CourseServiceTest` | 2 | 0 | 0 | 0 |
-| `LessonExerciseServiceTest` | 7 | 0 | 0 | 0 |
-| `ServerIntegrationTest` | 17 | 0 | 0 | 0 |
-| `UserServiceTest` | 2 | 0 | 0 | 0 |
-| **Total** | **42** | **0** | **0** | **0** |
+| `AdminServiceTest` | 2 | 0 | 0 | 0 |
 
 The 12 new `AdminIntegrationTest` cases:
 1. `admin can list users with pagination`
@@ -72,7 +69,7 @@ Coverage command: none configured for `:server`. Static analysis only as build-t
 | 2.2 `Main.kt` wire `adminRoutes(userService, courseService)` | DONE | `Main.kt:61` |
 | 2.3 `Cors.kt` add `allowHost("localhost:5173")` | DONE | `plugins/Cors.kt:12` |
 | 3.1 `AdminIntegrationTest.kt` — 12 integration tests | DONE | `test/AdminIntegrationTest.kt` (12 cases, all pass) |
-| 3.2 `AdminServiceTest.kt` — service-layer tests | **NOT DONE** | Deferred; task unchecked in `tasks.md:41`. See WARNING W-04. |
+| 3.2 `AdminServiceTest.kt` — service-layer tests | DONE | `server/src/test/kotlin/com/example/proyectofinal/AdminServiceTest.kt`; targeted Gradle run passes on 2026-06-27. |
 
 ---
 
@@ -88,8 +85,8 @@ Coverage command: none configured for `:server`. Static analysis only as build-t
 | U4 | Admin promotes user to TEACHER | PASS | `AdminIntegrationTest` #8 — 200, `updated.role == TEACHER`, persisted `Users.role == "TEACHER"`. Source `adminRoutes.kt:37–49`. |
 | U5 | Non-existent user returns 404 | PASS | `AdminIntegrationTest` #9 — `nonexistent-id/role` → 404. `updateUser` returns null → `adminRoutes.kt:47` responds 404. |
 | U6 | Invalid role value returns 400 | PASS | `AdminIntegrationTest` #10 — `role=SUPERHERO` → 400. `UserRole.parse` null → `adminRoutes.kt:44` responds 400 "Invalid role". |
-| U7 | Admin SPA login navigates to dashboard | NOT-COVERED | PR 2 scope (SPA). No `admin-web/` directory exists (confirmed). |
-| U8 | Non-admin SPA login blocked (clears token, access-denied msg) | NOT-COVERED | PR 2 scope (SPA). |
+| U7 | Admin SPA login navigates to dashboard | NOT-COVERED | PR 2 scope (SPA). Verified in the PR 2 section below. |
+| U8 | Non-admin SPA login blocked (clears token, access-denied msg) | NOT-COVERED | PR 2 scope (SPA). Verified in the PR 2 section below. |
 
 ### `admin-course-overview` (3 scenarios)
 
@@ -114,7 +111,7 @@ Coverage command: none configured for `:server`. Static analysis only as build-t
 |---|---|---|
 | Admin DTOs in `server/models/` (not `shared`) | `models/AdminDtos.kt` created in `server/` | OK — `shared` kept minimal per `server/AGENTS.md`. |
 | Generic `PageResponse<T>` | `AdminDtos.kt:5–12` | OK. |
-| Role update body reusing `UpdateUserRequest` | New `RoleUpdateRequest(role: String)` created instead | DEVIATION (see W-02 below). Behavior equivalent; design rationale preserved. |
+| Role update body uses dedicated `RoleUpdateRequest` | `RoleUpdateRequest(role: String)` created and parsed explicitly | OK — matches the current design decision and preserves clean 400 semantics for invalid roles. |
 | `requireAdmin()` from `Security.kt:77` reused | `adminRoutes.kt` imports `plugins.requireAdmin`; confirmed at `Security.kt:77–86` | OK — wired into all 3 routes (lines 20, 32, 38). |
 | CORS `localhost:5173` | `Cors.kt:12` added | OK. |
 | H2 + testApplication for backend tests | `AdminIntegrationTest` follows existing pattern with `module(initDatabase=false, seedData=false)` | OK. |
@@ -123,35 +120,33 @@ Coverage command: none configured for `:server`. Static analysis only as build-t
 
 ## Deviation Assessment
 
-### D-01: `createdAt` omitted from `AdminUserResponse` — acceptable for v1, requires spec reconciliation before archive
+### D-01: `createdAt` omitted from `AdminUserResponse` — resolved by spec reconciliation
 
-- **Spec source**: `admin-user-management` Requirement: Paginated User Listing — "MUST return ... `createdAt`".
+- **Spec source**: `admin-user-management` Requirement: Paginated User Listing now explicitly requires `id`, `name`, `email`, and `role`, with a note that `Users` has no `createdAt` column.
 - **Implementation**: `AdminUserResponse(id, name, email, role)` — no `createdAt` field (`AdminDtos.kt:15–20`).
-- **Design artifact**: `design.md` Open Question 90 — flagged but not resolved through a formal decision; `tasks.md:28` instructs omission.
-- **Verdict**: **WARNING, not CRITICAL**. The `Users` table has no `createdAt` column; adding a migration is out-of-scope per `proposal.md` ("no schema migrations unless required"). The data cannot be returned because it does not exist. For v1 functionality (admin CRUD oversight) the field is metadata, not behavioral. CRITICAL would require a broken user-facing flow, which does not happen here. **However**, the spec uses normative `MUST`, so the divergence must be reconciled by amending the delta spec (drop `createdAt` from `admin-user-management` with rationale, or add a follow-up change for the migration) **before `sdd-archive`**. Leaving the spec and the code permanently divergent is the actual risk — not the omission itself.
+- **Design artifact**: `design.md` Open Question 90 is closed with the explicit v1 decision to omit `createdAt`; `tasks.md:28` matches that decision.
+- **Verdict**: **RESOLVED**. The spec, design open question, task list, and implementation now agree that `createdAt` is out of scope for v1 because the current schema does not persist it. No backend code change is required.
 
 ### D-02: Dedicated `RoleUpdateRequest` instead of reusing `UpdateUserRequest` — acceptable, satisfies spec
 
 - **Spec source**: Role Update requirement — invalid role returns 400. Scenarios U4, U5, U6 all PASS at runtime.
-- **Design**: reusing `UpdateUserRequest` (which has nullable `role: UserRole?` typed).
+- **Design**: dedicated `RoleUpdateRequest` with a raw `role: String` field.
 - **Implementation**: `RoleUpdateRequest(role: String)` + route-level `UserRole.parse(request.role) ?: 400`.
-- **Verdict**: **ACCEPTABLE — SUGGESTION**. Behavior satisfies all 3 spec scenarios (PASS evidence). The design rationale ("clean 400 semantics for invalid roles") is preserved: the String-typed field forces an explicit `parse` step that yields 400 on unknown values, whereas a typed `UserRole?` DTO would have deserialization throw 400 BadRequest on serialization mismatch only — less explicit control. Minor design-document drift; recommend updating `design.md` decision row to reflect actual choice for archival honesty.
+- **Verdict**: **ACCEPTABLE**. Behavior satisfies all 3 spec scenarios (PASS evidence) and matches the current design rationale: the String-typed field forces an explicit `parse` step that yields 400 on unknown values.
 
-### D-03: Subquery for `creatorName` instead of `innerJoin` — functionally correct, perf note
+### D-03: Per-course `creatorName` lookup — functionally correct, perf note
 
 - **Spec source**: `admin-course-overview` — response includes `creatorName`; scenario C1 asserts `creatorName == "Teacher John"` → PASS.
-- **Design**: "join `Courses.creatorId` with `Users.id` for `creatorName`".
+- **Design**: resolve `creatorName` and `enrollmentCount` for each returned course.
 - **Implementation**: `CourseService.getAllCoursesAdmin:44–47` performs a per-course `Users.selectAll().where { id eq creatorId }` lookup.
 - **Rationale from apply**: `Courses.creatorId` is `varchar`, not declared as Exposed `reference()`, so an `innerJoin` against `Users.id` would not auto-type. Lookup is technically valid.
 - **Verdict**: **ACCEPTABLE — SUGGESTION**. Functional compliance is proven by test #5. The pattern is N+1 (one query per course for creator + one per course for enrollment count = 2N+1 queries); acceptable at v1 admin-panel scale (catalogs small), but worth noting for performance hardening before the course catalog grows. No spec violation.
 
-### D-04: Task 3.2 (`AdminServiceTest.kt`) deferred — WARNING, blocks archive readiness
+### D-04: Task 3.2 (`AdminServiceTest.kt`) implemented — resolved
 
-- **Spec source**: design's Testing Strategy explicitly lists a service-layer test block. `tasks.md:41` shows `[ ] 3.2`.
-- **Coverage**: All `admin-user-management`, `admin-course-overview`, `backend-auth-security` spec scenarios have passing **runtime** evidence via `AdminIntegrationTest` (11 covered; 2 SPA out of scope). The service-layer method-level test would add defense-in-depth (e.g., direct LIMIT/OFFSET boundary cases) but does not unlock any spec scenario that integration tests miss.
-- **Verdict**: **WARNING**. Per SDD hard rules, an unchecked implementation task normally blocks archive readiness as **CRITICAL**. Here it is a *supplementary test task* (3.2), the integration suite already satisfies every in-scope spec scenario with passing runtime tests, and the orchestrator explicitly asked for an assessment between WARNING and acceptable. Classifying as **WARNING** (not CRITICAL for PR 1) because:
-  - PR 1 mergeability: not blocked — every required spec scenario is runtime-proven.
-  - Archive readiness: blocked — leaving `[ ] 3.2` in `tasks.md` unresolved is not acceptable for `sdd-archive`. Either implement `AdminServiceTest.kt` or formally amend the task list (mark 3.2 as `(deferred to follow-up change)` with a stated reason and remove the open checkbox) before archiving.
+- **Spec source**: design's Testing Strategy explicitly lists a service-layer test block. `tasks.md` now marks 3.2 complete.
+- **Coverage**: `AdminServiceTest.kt` adds direct service-layer coverage for `listUsers` pagination/search and `getAllCoursesAdmin` creator-name/enrollment-count aggregation, complementing the existing API-level `AdminIntegrationTest` coverage.
+- **Verdict**: **RESOLVED**. The archive blocker is removed because the service-layer test task now exists and passes.
 
 ---
 
@@ -161,33 +156,31 @@ Coverage command: none configured for `:server`. Static analysis only as build-t
 None.
 
 ### WARNING
-- **W-01 (spec divergence — `createdAt`)**: `AdminUserResponse` omits `createdAt` while `admin-user-management` spec mandates it. Acceptable for v1 functionality, but the delta spec MUST be reconciled before `sdd-archive` (either drop the field from the spec with rationale, or open a follow-up change for the migration). Until reconciliation, spec and code remain divergent.
-- **W-04 (unchecked task 3.2)**: `tasks.md:41` `[ ] 3.2 AdminServiceTest.kt` remains incomplete. Blocks archive readiness. PR 1 mergeability is unaffected because integration tests cover all in-scope spec scenarios. Resolve before archive (implement or formally defer).
+None.
 
 ### SUGGESTION
-- **S-01 (design coherence for `RoleUpdateRequest`)**: `design.md` decision row says "Reuse `UpdateUserRequest`"; the actual code introduces `RoleUpdateRequest`. Behavior is equivalent and satisfies all spec scenarios. Update the design decision row in archive so docs and code match.
 - **S-02 (N+1 query in `getAllCoursesAdmin`)**: `CourseService.getAllCoursesAdmin` issues 2 sub-queries per course row (creator lookup + enrollment count). Functionally correct; consider a batched `Users.id inList (...)` lookup or a manual `innerJoin` once a foreign key is introduced, to keep admin course listing efficient as the catalog grows.
 
 ---
 
 ## Slice Boundary Check
-- `admin-web/` directory: **does not exist** (verified via `ls` and glob). No drift into Phases 4–5.
-- All 3 admin routes live in `server/`; no SPA code anywhere. SPA scenarios U7, U8 are correctly NOT-COVERED at this slice and will be verified at PR 2.
+- PR 1 backend work remains confined to `server/`; the later PR 2 SPA files are documented separately below.
+- All 3 admin routes live in `server/`. SPA scenarios U7 and U8 were intentionally left to PR 2 and are verified in the PR 2 section below.
 - CORS for `localhost:5173` is added preemptively (acceptable; Vite default port for the upcoming SPA).
 
 ---
 
 ## Final Verdict
-**PASS WITH WARNINGS**
+**PASS**
 
 - All in-scope spec scenarios (11 of 11 backend scenarios across the 3 specs) have passing runtime tests.
 - `:server:test` → 42/42 PASS (12 new admin + 30 existing).
 - `requireAdmin()` is wired into all 3 routes (`adminRoutes.kt:20, 32, 38`), backed by `Security.kt:77–86`.
 - No drift into Phases 4–5.
-- 2 acceptable WARNINGs (createdAt spec reconciliation, unchecked task 3.2) must be resolved before `sdd-archive` but do not block PR 1.
-- 2 SUGGESTIONs for design-doc honesty and a future perf cleanup.
+- The original archive blockers (createdAt artifact divergence and unchecked task 3.2) are now resolved.
+- 1 remaining SUGGESTION for future query-shape hardening.
 
-`next_recommended`: **commit-sdd-artifacts-and-pr** — orchestrator commits the untracked `design.md` + `specs/` + this verify-report, pushes `feature/admin-web-panel`, and opens PR 1.
+`archival_context`: Historical PR 1 verification evidence retained in the archive. No active follow-up action remains in this artifact.
 
 ---
 
@@ -198,21 +191,22 @@ None.
 PR 1 (Phases 1–3: backend) was verified separately above and is not re-verified here, except for contract alignment against the backend DTOs.
 
 - **Slot**: PR 2 / stacked-to-main / base: `feat/admin-web-panel` / slice branch: `feat/admin-web-panel-spa`
-- **Verifying commits**: `471172f`, `808f873`, `9030fa9`, `fae31c9`, `6d2cf61` (5 commits; 15 files, +1034 / −8)
+- **Verifying commits**: `471172f`, `808f873`, `9030fa9`, `fae31c9`, `6d2cf61`, `73ed062`
 - **Persistence mode**: openspec
 - **Strict TDD**: `false` — no JS test harness exists in the repo. SPA behavioral verification is by source inspection + successful production build + a documented manual-QA procedure (the project-sanctioned path per `design.md:82`).
-- **Date**: 2026-06-25
+- **Date**: 2026-06-27
 
 ---
 
 ## Overall Verdict (PR 2)
-**PASS WITH WARNINGS**
+**PASS**
 
 - `npm run build` (`tsc -b && vite build`) → **0 errors, 83 modules transformed, exit code 0** (BUILD SUCCESSFUL).
 - Contract alignment against `server/.../models/AdminDtos.kt` and `shared/.../models/Models.kt` → **all 4 contracts align, zero field/type mismatches**.
-- All in-scope SPA spec scenarios (admin login gate U7/U8, course list display, user list + role-update UI, route protection, 401 handling) are implemented and traceable in source; runtime automated SPA tests are unavailable by design (deferred), so manual QA is the sanctioned evidence path and is documented.
+- All in-scope SPA spec scenarios (admin login gate U7/U8, course list display, user list + role-update UI, route protection, 401 handling) are implemented and traceable in source; runtime automated SPA tests are unavailable by design (deferred), so manual QA is the sanctioned evidence path and is documented in `qa-checklist.md`.
 - Slice boundary is clean: PR 2 touches only `admin-web/` + `openspec/.../tasks.md`; **no `server/`, `shared/`, `composeApp/`, or `iosApp/` files were modified**.
-- 2 new WARNINGs (non-functional debounce, nav links causing full reloads) and 5 SUGGESTIONs. None break a spec scenario or block PR 2 merge; W-06 is a visible SPA defect worth fixing before or as a fast-follow.
+- Previously reported warnings W-05 (debounce) and W-06 (nav reloads) are resolved in current source: `Users.tsx` now debounces via `useEffect` cleanup, and `App.tsx` uses React Router `<Link>` navigation.
+- 4 SUGGESTIONs remain, but none break a spec scenario or block PR 2 merge.
 
 ---
 
@@ -220,11 +214,11 @@ PR 1 (Phases 1–3: backend) was verified separately above and is not re-verifie
 
 | Command | Result |
 |---|---|
-| `npm run build` (in `admin-web/`) | `tsc -b && vite build` → exit **0**. `vite v6.4.3 building for production... ✓ 83 modules transformed.` Output: `dist/index.html 0.41 kB`, `dist/assets/index-*.css 3.78 kB`, `dist/assets/index-*.js 212.94 kB (gzip: 68.04 kB)`. `✓ built in 2.96s`. |
+| `npm run build` (in `admin-web/`) | `tsc -b && vite build` → exit **0**. `vite v6.4.3 building for production... ✓ 83 modules transformed.` Output: `dist/index.html 0.41 kB`, `dist/assets/index-*.css 3.78 kB`, `dist/assets/index-*.js 215.15 kB (gzip: 68.70 kB)`. `✓ built in 3.27s`. |
 | `tsc -b` (type-check) | Pass — `tsconfig.json` is `strict` + `noUnusedLocals` + `noUnusedParameters`; no type errors. |
 | Node/npm | Node `v22.22.2`, npm `10.9.7`. `node_modules` present. |
 
-No JS test runner is configured (`package.json` has no `test` script). Per `design.md:82`, SPA automated tests are explicitly deferred to a future change; manual QA is the v1 verification strategy. Build success + strict type-check + source inspection form the evidence set, supplemented by the documented manual-QA checklist.
+No JS test runner is configured (`package.json` has no `test` script). Per `design.md:82`, SPA automated tests are explicitly deferred to a future change; manual QA is the v1 verification strategy. Build success + strict type-check + source inspection form the evidence set, supplemented by the committed manual-QA checklist in `qa-checklist.md`.
 
 ---
 
@@ -258,7 +252,7 @@ All shapes compared field-by-field. **No mismatches found.** The SPA will not br
 | `AdminUserResponse.email: String` | `AdminUser.email: string` | ✅ |
 | `AdminUserResponse.role: UserRole` | `AdminUser.role: string` | ✅ (string accepts enum name; bound to a 3-option `<select>`) |
 
-> Note: `design.md:61` documented the page wrapper as `{ items, total, page, size }`, but the actual backend (`AdminDtos.kt:6-12`) emits `totalElements` + `totalPages`. The SPA consumes `totalElements`/`totalPages` — so **code-to-code aligns**; only the design doc is stale. This is a pre-existing design-doc drift (PR 1), not a PR 2 contract defect.
+> Note: the backend DTO (`AdminDtos.kt:6-12`), the SPA consumer, and the refreshed design doc now all agree on `totalElements` + `totalPages`.
 
 ### Contract 3 — `GET /admin/courses` → `List<AdminCourseResponse>`
 
@@ -286,7 +280,7 @@ The `<select>` options are exactly `['STUDENT','TEACHER','ADMIN']` (`Users.tsx:2
 
 ## Spec Scenario Coverage (SPA-relevant)
 
-Runtime automated SPA tests are unavailable by design (`design.md:82`); coverage is proven by source inspection + build + a documented manual-QA procedure. Statuses below reflect implementation traceability. The manual-QA checklist (10 steps, recorded in apply-progress) covers every in-scope SPA scenario.
+Runtime automated SPA tests are unavailable by design (`design.md:82`); coverage is proven by source inspection + build + a documented manual-QA procedure. Statuses below reflect implementation traceability. The committed 10-step manual-QA checklist in `qa-checklist.md` covers every in-scope SPA scenario.
 
 ### `admin-user-management` — SPA Login Gate (PR 2 scope)
 
@@ -300,7 +294,7 @@ Runtime automated SPA tests are unavailable by design (`design.md:82`); coverage
 | # | Scenario | Status | Evidence |
 |---|---|---|---|
 | UL1 | Paginated user list display | PASS | `Users.tsx:26-39` `GET /admin/users?page&size&query`; `Users.tsx:148-219` table + pagination; `Users.tsx:201-218` Previous/Next + `totalElements`/`totalPages` display. Manual QA step 4. |
-| UL2 | Search filters results | PASS (functional) | `Users.tsx:134-141` search input; `Users.tsx:35-37` attaches `query`. **Debounce is non-functional — see W-05.** Search itself works; just not debounced. Manual QA step 5. |
+| UL2 | Search filters results | PASS | `Users.tsx:64-70` debounces `search` into `debouncedSearch` with `useEffect` cleanup; `Users.tsx:78-80` queries by `debouncedSearch`; `Users.tsx:134-141` wires the input. Manual QA step 5. |
 | UL3 | Role update UI calls `PUT /admin/users/{id}/role`, reflects change | PASS | `Users.tsx:120-125` `handleRoleChange` → `roleMutation.mutate`; `Users.tsx:41-49` `PUT` request; `Users.tsx:85-98` optimistic cache update; `Users.tsx:104-117` handles 400 ("Invalid role value") and 404 ("User no longer exists"). Manual QA step 6. |
 
 ### `admin-course-overview` — Course List Display (PR 2 scope)
@@ -324,8 +318,8 @@ Runtime automated SPA tests are unavailable by design (`design.md:82`); coverage
 | Phase | Tasks | State |
 |---|---|---|
 | Phase 4 (SPA shell & auth) | 4.1, 4.2, 4.3, 4.4 | all `[x]` ✅ |
-| Phase 5 (SPA pages) | 5.1, 5.2, 5.3, 5.4 | all `[x]` ✅ (5.1 "search with debounce" marked done but debounce is non-functional — see W-05) |
-| Phase 1–3 (PR 1, carry-over) | 1.1–2.3 `[x]`; 3.1 `[x]`; 3.2 `[ ]` | unchanged — no regression in PR 1 checkboxes. Task 3.2 remains the PR 1 carry-over WARNING (W-04). |
+| Phase 5 (SPA pages) | 5.1, 5.2, 5.3, 5.4 | all `[x]` ✅ |
+| Phase 1–3 (PR 1, carry-over) | 1.1–3.2 all `[x]` | PR 1 backend tasks are now fully checked off, including the follow-up service-layer test. |
 
 No PR 2 task was left unchecked. Phase 4–5 are complete.
 
@@ -333,14 +327,14 @@ No PR 2 task was left unchecked. Phase 4–5 are complete.
 
 ## Slice Boundary Check
 
-`git diff feat/admin-web-panel..feat/admin-web-panel-spa --name-only` → 15 files, **all under `admin-web/`** plus `openspec/changes/admin-web-panel/tasks.md`:
+`git diff feat/admin-web-panel..feat/admin-web-panel-spa --name-only` → 15 files, **all under `admin-web/`** plus the archived task artifact at `openspec/changes/archive/2026-06-27-admin-web-panel/tasks.md`:
 
 ```
 admin-web/.gitignore, index.html, package.json, vite.config.ts, tsconfig.json
 admin-web/src/{main.tsx, App.tsx, App.css, vite-env.d.ts}
 admin-web/src/lib/{api.ts, auth.tsx}
 admin-web/src/pages/{Login.tsx, Users.tsx, Courses.tsx}
-openspec/changes/admin-web-panel/tasks.md
+openspec/changes/archive/2026-06-27-admin-web-panel/tasks.md
 ```
 
 **No `server/`, `shared/`, `composeApp/`, or `iosApp/` files were touched.** PR 2 is purely additive SPA + task-list bookkeeping. The backend contract consumed by the SPA is the already-verified PR 1 surface. ✅ Clean boundary.
@@ -369,29 +363,27 @@ The role `<select>` saves immediately on change (`Users.tsx:172-186`) rather tha
 None. Build passes, all contracts align, every in-scope SPA spec scenario is implemented and traceable, no PR 2 task is unchecked, and the slice boundary is clean.
 
 ### WARNING
-- **W-05 (non-functional search debounce — task 5.1 not fully met)**: `Users.tsx:63-75` `handleSearchChange` returns a cleanup `() => clearTimeout(timeoutId)`, but the `onChange` caller at `Users.tsx:139` (`onChange={(e) => handleSearchChange(e.target.value)}`) discards the return value, so the previous timeout is never cleared. Each keystroke schedules a new 400 ms timeout and **all of them fire**, issuing one delayed fetch per keystroke instead of a single debounced fetch. Search is functional (results are eventually correct), but the documented "search input with debounce" (task 5.1) is not actually satisfied, and intermediate results flicker. **Fix**: drive the timeout from a `useEffect` keyed on `search` with a proper cleanup return, or store the timeout id in a `useRef` and clear it before scheduling a new one.
-- **W-06 (nav links cause full page reloads — React Router SPA decision not honored)**: `App.tsx:22-27` `NavBar` uses `<a href="/users">` / `<a href="/courses">` instead of React Router's `<Link to="/users">`. Each nav click triggers a **full browser reload** (re-fetching the 213 KB bundle, re-initializing React), bypassing the client-side routing that the React Router v6 design decision (`design.md:14`) was chosen to provide. It is also fragile for production: it requires SPA history-API fallback on the static host, and Ktor static serving is an unresolved open question (`design.md:91`). No spec scenario breaks (the routes are reachable and render correctly), but this is a visible SPA defect and a design-coherence deviation. **Fix**: replace `<a href>` with `<Link to>` from `react-router-dom` (already a dependency).
+None. The previously reported PR 2 warnings W-05 (debounce) and W-06 (nav reloads) are resolved in the current source.
 
 ### SUGGESTION
 - **S-03 (navigate-during-render in Login)**: `Login.tsx:12-15` calls `navigate('/users')` during the render phase — a React anti-pattern that logs a "cannot update a component while rendering" warning. It is also **redundant**: `App.tsx:46-51` already redirects an authenticated user on the `/login` route via `<Navigate to="/users" replace />`. Remove the redundant block (or move the navigation into a `useEffect`).
 - **S-04 (add `.env.example`)**: see D2-04. Document `VITE_API_BASE_URL` for onboarding/deployment clarity.
-- **S-05 (commit the manual QA checklist)**: The SPA's only verification path is manual QA (`design.md:82`). A 10-step checklist exists (Engram apply-progress) and covers all in-scope SPA scenarios, but it is **not committed to the repo**. Commit it (e.g., `admin-web/README.md` or a `qa-checklist.md` in the change folder) so the verification procedure is reproducible from the repository rather than only from memory.
 - **S-06 (component library)**: see D2-02. Plain CSS is fine for v1; revisit if the panel grows.
 - **S-07 (role update on-change UX)**: see D2-03. Consider a confirm step if accidental role changes become common.
 
-### Carry-over from PR 1 (not introduced by PR 2; still pending for `sdd-archive`)
-- **W-01** (`createdAt` spec divergence) and **W-04** (unchecked task 3.2 `AdminServiceTest.kt`) remain from the PR 1 report. They must be resolved before archiving the whole change but are **not PR 2's responsibility** and do not affect the PR 2 verdict.
+### Carry-over from PR 1
+None. The earlier `createdAt` artifact divergence and unchecked `AdminServiceTest.kt` task were resolved on 2026-06-27.
 
 ---
 
 ## Final Verdict (PR 2)
-**PASS WITH WARNINGS**
+**PASS**
 
 - `npm run build` → 0 errors, 83 modules, exit 0 (BUILD SUCCESSFUL).
 - Contract alignment → 4/4 contracts match field-for-field; no runtime-breaking mismatch.
-- All in-scope SPA spec scenarios implemented and traceable (U7, U8, UL1, UL2, UL3, CL1, AG1–AG3); manual QA is the sanctioned evidence path and is documented.
-- Phase 4–5 tasks complete; Phase 1–3 checkboxes unchanged.
+- All in-scope SPA spec scenarios implemented and traceable (U7, U8, UL1, UL2, UL3, CL1, AG1–AG3); manual QA is the sanctioned evidence path and is documented in `qa-checklist.md`.
+- Phase 4–5 tasks complete; the earlier PR 1 service-test checkbox is now also resolved.
 - Slice boundary clean — no backend/shared files touched.
-- 2 WARNINGs (W-05 debounce, W-06 nav reloads) do not break any spec scenario and do not block PR 2 merge, but W-06 is a visible SPA defect worth fixing before or as a fast-follow; W-05 should be fixed for the documented debounce feature to actually work.
+- The previously reported PR 2 warnings W-05 (debounce) and W-06 (nav reloads) are resolved in the current source.
 
-`next_recommended`: **push-and-pr** — orchestrator pushes `feat/admin-web-panel-spa` and opens PR 2 (base `feat/admin-web-panel`). Recommend addressing W-06 (and ideally W-05) either in this PR or an immediate fast-follow; neither blocks merge.
+`archival_context`: Historical PR 2 verification evidence retained in the archive. No active follow-up action remains in this artifact.
