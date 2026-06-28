@@ -11,6 +11,9 @@ import com.example.proyectofinal.db.createTestDriver
 import com.example.proyectofinal.di.appModule
 import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.domain.CourseRepository
+import com.example.proyectofinal.domain.LearnerProfile
+import com.example.proyectofinal.domain.LearnerProfileRepository
+import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
@@ -88,6 +91,7 @@ class CourseViewModelTest {
 
     @Test
     fun `view model transitions from loading to success`() = runTest(dispatcher) {
+        val expectedSchoolYear = 7
         val expectedCourses = listOf(
             Course(
                 id = "course-1",
@@ -98,7 +102,14 @@ class CourseViewModelTest {
             )
         )
         val emittedStates = mutableListOf<CourseUiState>()
-        val viewModel = CourseViewModel(FakeCourseRepository { expectedCourses })
+        val fakeCourseRepository = FakeCourseRepository { schoolYear ->
+            assertEquals(expectedSchoolYear, schoolYear)
+            expectedCourses
+        }
+        val viewModel = CourseViewModel(
+            fakeCourseRepository,
+            FakeLearnerProfileRepository(expectedSchoolYear)
+        )
 
         val collectionJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.take(2).toList(emittedStates)
@@ -116,7 +127,10 @@ class CourseViewModelTest {
     @Test
     fun `view model transitions from loading to error`() = runTest(dispatcher) {
         val emittedStates = mutableListOf<CourseUiState>()
-        val viewModel = CourseViewModel(FakeCourseRepository { throw IllegalStateException("Network unavailable") })
+        val viewModel = CourseViewModel(
+            FakeCourseRepository { throw IllegalStateException("Network unavailable") },
+            FakeLearnerProfileRepository(null)
+        )
 
         val collectionJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.take(2).toList(emittedStates)
@@ -131,9 +145,9 @@ class CourseViewModelTest {
 }
 
 private class FakeCourseRepository(
-    private val officialCoursesProvider: suspend () -> List<Course>
+    private val officialCoursesProvider: suspend (Int?) -> List<Course>
 ) : CourseRepository {
-    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> = officialCoursesProvider()
+    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> = officialCoursesProvider(schoolYear)
 
     override suspend fun getCourseById(id: String): Course? = null
 
@@ -148,6 +162,25 @@ private class FakeCourseRepository(
     override suspend fun deleteCourse(id: String) = Unit
 
     override suspend fun joinCourseByCode(userId: String, code: String): Course? = null
+}
+
+private class FakeLearnerProfileRepository(
+    schoolYear: Int?
+) : LearnerProfileRepository {
+    private val profile = schoolYear?.let { year ->
+        LearnerProfile(
+            province = "Buenos Aires",
+            schoolYear = year,
+            studentTrack = StudentTrack.SECONDARY,
+            onboardingComplete = true
+        )
+    }
+
+    override suspend fun getProfile(): LearnerProfile? = profile
+
+    override suspend fun isOnboardingComplete(): Boolean = profile?.onboardingComplete == true
+
+    override suspend fun upsertProfile(profile: LearnerProfile) = Unit
 }
 
 private fun createTestAppDatabase(): AppDatabase {

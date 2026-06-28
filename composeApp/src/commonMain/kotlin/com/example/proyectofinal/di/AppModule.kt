@@ -11,6 +11,7 @@ import com.example.proyectofinal.data.KtorExerciseRepository
 import com.example.proyectofinal.data.KtorLessonRepository
 import com.example.proyectofinal.data.KtorUserRepository
 import com.example.proyectofinal.data.LessonApi
+import com.example.proyectofinal.data.SqlDelightLearnerProfileRepository
 import com.example.proyectofinal.data.UserApi
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.db.CourseEntity
@@ -20,11 +21,13 @@ import com.example.proyectofinal.db.UserProgressEntity
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.ExerciseRepository
+import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.LoginViewModel
+import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -45,9 +48,11 @@ val appModule = module {
     single<LessonRepository> { KtorLessonRepository(get(), get()) }
     single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
     single<UserRepository> { KtorUserRepository(get(), get()) }
+    single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
 
     viewModelOf(::CourseViewModel)
     viewModelOf(::LoginViewModel)
+    viewModelOf(::OnboardingViewModel)
     viewModelOf(::RegisterViewModel)
 }
 

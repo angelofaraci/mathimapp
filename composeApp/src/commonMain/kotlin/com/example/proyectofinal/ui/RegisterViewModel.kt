@@ -65,8 +65,9 @@ class RegisterViewModel(
             }
 
             // On success the AuthRepository flips its session StateFlow, which App.kt
-            // observes to replace this screen with CourseScreen. Reset loading state
-            // here so a failed-then-retry path keeps the UI consistent.
+            // observes to replace this screen with onboarding or courses depending on
+            // learner-profile completion. Reset loading state here so a failed-then-retry
+            // path keeps the UI consistent.
             result.onSuccess {
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
             }

@@ -57,6 +57,15 @@ CREATE TABLE UserProgressEntity (
     FOREIGN KEY(userId) REFERENCES UserEntity(id) ON DELETE CASCADE
 );
 
+-- Learner profile table
+CREATE TABLE LearnerProfileEntity (
+    profileId INTEGER NOT NULL PRIMARY KEY CHECK (profileId = 1),
+    province TEXT NOT NULL,
+    schoolYear INTEGER NOT NULL,
+    studentTrack TEXT NOT NULL,
+    onboardingComplete INTEGER AS Boolean NOT NULL DEFAULT 0
+);
+
 -- Many-to-Many: Completed Lessons
 CREATE TABLE CompletedLesson (
     userId TEXT NOT NULL,
@@ -136,6 +145,18 @@ SELECT * FROM UserProgressEntity WHERE userId = ?;
 insertProgress:
 INSERT OR REPLACE INTO UserProgressEntity(userId, totalScore)
 VALUES (?, ?);
+
+selectProfile:
+SELECT province, schoolYear, studentTrack, onboardingComplete
+FROM LearnerProfileEntity
+WHERE profileId = 1;
+
+upsertProfile:
+INSERT OR REPLACE INTO LearnerProfileEntity(profileId, province, schoolYear, studentTrack, onboardingComplete)
+VALUES (1, ?, ?, ?, ?);
+
+clearProfile:
+DELETE FROM LearnerProfileEntity WHERE profileId = 1;
 
 selectCompletedLessonsByUserId:
 SELECT lessonId FROM CompletedLesson WHERE userId = ?;

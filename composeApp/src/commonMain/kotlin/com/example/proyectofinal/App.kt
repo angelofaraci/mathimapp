@@ -13,13 +13,16 @@ import com.example.proyectofinal.data.MockCourseRepository
 import com.example.proyectofinal.di.appModule
 import com.example.proyectofinal.di.rememberPlatformModule
 import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.models.Course
-import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.AuthGateRouter
 import com.example.proyectofinal.ui.AuthView
+import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.LoginScreen
 import com.example.proyectofinal.ui.LoginViewModel
+import com.example.proyectofinal.ui.OnboardingScreen
+import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.RegisterScreen
 import com.example.proyectofinal.ui.RegisterViewModel
 import com.example.proyectofinal.ui.resolveAuthView
@@ -48,11 +51,30 @@ fun App() {
 @Composable
 private fun AuthGate() {
     val authRepository = koinInject<AuthRepository>()
+    val learnerProfileRepository = koinInject<LearnerProfileRepository>()
     val session by authRepository.session.collectAsState()
     val router = remember { AuthGateRouter() }
     val target by router.target.collectAsState()
+    var onboardingRefreshKey by remember(session.token) { mutableStateOf(0) }
+    val onboardingComplete by produceState<Boolean?>(
+        initialValue = if (session.isAuthenticated) null else false,
+        key1 = session.isAuthenticated,
+        key2 = session.token,
+        key3 = onboardingRefreshKey
+    ) {
+        value =
+            if (session.isAuthenticated) learnerProfileRepository.isOnboardingComplete()
+            else false
+    }
 
-    when (resolveAuthView(session, target)) {
+    if (session.isAuthenticated && onboardingComplete == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    when (resolveAuthView(session, target, onboardingComplete = onboardingComplete ?: false)) {
         AuthView.COURSE -> CourseScreen(
             onLogout = { authRepository.logout() }
         )
@@ -65,6 +87,12 @@ private fun AuthGate() {
         AuthView.REGISTER -> RegisterScreen(
             viewModel = koinViewModel<RegisterViewModel>(),
             onSwitchToLogin = router::switchToLogin
+        )
+
+        AuthView.ONBOARDING -> OnboardingScreen(
+            viewModel = koinViewModel<OnboardingViewModel>(),
+            onCompleted = { onboardingRefreshKey += 1 },
+            onLogout = authRepository::logout
         )
     }
 }
@@ -101,7 +129,16 @@ private fun CourseContent(uiState: CourseUiState, onLogout: () -> Unit = {}) {
 fun PreviewAppContent() {
     MaterialTheme {
         val repository = remember { MockCourseRepository() }
-        val viewModel = remember { CourseViewModel(repository) }
+        val learnerProfileRepository = remember {
+            object : LearnerProfileRepository {
+                override suspend fun getProfile() = null
+
+                override suspend fun isOnboardingComplete(): Boolean = false
+
+                override suspend fun upsertProfile(profile: com.example.proyectofinal.domain.LearnerProfile) = Unit
+            }
+        }
+        val viewModel = remember { CourseViewModel(repository, learnerProfileRepository) }
         val uiState by viewModel.uiState.collectAsState()
         CourseContent(uiState)
     }

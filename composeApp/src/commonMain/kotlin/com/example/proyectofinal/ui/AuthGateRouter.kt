@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 enum class AuthScreenTarget { LOGIN, REGISTER }
 
 /**
- * Fully resolved view for the top-level auth gate. [COURSE] takes precedence
- * over the form targets once an [AuthSession] is authenticated, so neither
- * Login nor Register is shown in that case.
+ * Fully resolved view for the top-level auth gate. [ONBOARDING] and [COURSE]
+ * take precedence over the form targets once an [AuthSession] is authenticated,
+ * so neither Login nor Register is shown in that case.
  */
-enum class AuthView { COURSE, LOGIN, REGISTER }
+enum class AuthView { COURSE, LOGIN, REGISTER, ONBOARDING }
 
 /**
  * Pure, framework-agnostic state holder for the auth-gate routing decision.
@@ -50,14 +50,23 @@ class AuthGateRouter {
 }
 
 /**
- * Resolves the top-level view from the current session and form target.
+ * Resolves the top-level view from the current session, onboarding completion,
+ * and form target.
  *
- * When the session is authenticated the auth area is not shown (returns
- * [AuthView.COURSE]); otherwise the selected form target is rendered. This is
- * a pure function so the gate side of "Default state is login" is testable.
+ * When the session is authenticated the auth area is not shown. Users with a
+ * completed learner profile go to [AuthView.COURSE]; otherwise they are gated
+ * into [AuthView.ONBOARDING]. When the session is anonymous, the selected form
+ * target is rendered. This is a pure function so the gate side of the routing
+ * behavior is testable.
  */
-fun resolveAuthView(session: AuthSession, target: AuthScreenTarget): AuthView =
-    if (session.isAuthenticated) AuthView.COURSE
+fun resolveAuthView(
+    session: AuthSession,
+    target: AuthScreenTarget,
+    onboardingComplete: Boolean
+): AuthView =
+    if (session.isAuthenticated) {
+        if (onboardingComplete) AuthView.COURSE else AuthView.ONBOARDING
+    }
     else when (target) {
         AuthScreenTarget.LOGIN -> AuthView.LOGIN
         AuthScreenTarget.REGISTER -> AuthView.REGISTER

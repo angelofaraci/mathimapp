@@ -29,7 +29,7 @@ class AuthGateRoutingTest {
         val anonymous = AuthSession()
         val router = AuthGateRouter()
 
-        val view = resolveAuthView(anonymous, router.target.value)
+        val view = resolveAuthView(anonymous, router.target.value, onboardingComplete = false)
 
         assertEquals(AuthView.LOGIN, view)
     }
@@ -39,24 +39,36 @@ class AuthGateRoutingTest {
     @Test
     fun `selecting register link switches from login to register`() {
         val router = AuthGateRouter()
-        assertEquals(AuthView.LOGIN, resolveAuthView(AuthSession(), router.target.value))
+        assertEquals(
+            AuthView.LOGIN,
+            resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
+        )
 
         router.switchToRegister()
 
         assertEquals(AuthScreenTarget.REGISTER, router.target.value)
-        assertEquals(AuthView.REGISTER, resolveAuthView(AuthSession(), router.target.value))
+        assertEquals(
+            AuthView.REGISTER,
+            resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
+        )
     }
 
     // Scenario: "Text links switch forms" — the reverse direction (Register link back to Login).
     @Test
     fun `selecting login link switches back from register to login`() {
         val router = AuthGateRouter().apply { switchToRegister() }
-        assertEquals(AuthView.REGISTER, resolveAuthView(AuthSession(), router.target.value))
+        assertEquals(
+            AuthView.REGISTER,
+            resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
+        )
 
         router.switchToLogin()
 
         assertEquals(AuthScreenTarget.LOGIN, router.target.value)
-        assertEquals(AuthView.LOGIN, resolveAuthView(AuthSession(), router.target.value))
+        assertEquals(
+            AuthView.LOGIN,
+            resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
+        )
     }
 
     @Test
@@ -70,16 +82,31 @@ class AuthGateRoutingTest {
         assertEquals(AuthScreenTarget.LOGIN, router.target.value)
     }
 
-    // Gate side of "Default state is login": once authenticated, the auth area
-    // (Login or Register) is not shown regardless of the selected form target.
     @Test
-    fun `authenticated session hides the auth area regardless of target`() {
+    fun `authenticated session with completed onboarding routes to course`() {
         val authenticated = AuthSession(
             token = "token-123",
             user = User("1", "Alice", "alice@example.com", UserRole.STUDENT)
         )
         val router = AuthGateRouter().apply { switchToRegister() }
 
-        assertEquals(AuthView.COURSE, resolveAuthView(authenticated, router.target.value))
+        assertEquals(
+            AuthView.COURSE,
+            resolveAuthView(authenticated, router.target.value, onboardingComplete = true)
+        )
+    }
+
+    @Test
+    fun `authenticated session with incomplete onboarding routes to onboarding`() {
+        val authenticated = AuthSession(
+            token = "token-123",
+            user = User("1", "Alice", "alice@example.com", UserRole.STUDENT)
+        )
+        val router = AuthGateRouter().apply { switchToRegister() }
+
+        assertEquals(
+            AuthView.ONBOARDING,
+            resolveAuthView(authenticated, router.target.value, onboardingComplete = false)
+        )
     }
 }
