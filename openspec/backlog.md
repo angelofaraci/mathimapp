@@ -9,6 +9,22 @@
 - Allow teachers to view student progress only for courses they own.
 - Clarify enrollment, ownership transfer, and admin override rules.
 
+### Learning paths
+
+- Reference brief: `openspec/learning-paths-brief.md`
+- Introduce platform-curated learning paths as the default learner experience; do not treat them as teacher-created private courses.
+- Use school year as the primary axis, with one default platform path per year.
+- During onboarding, automatically recommend/assign the default path for the selected year with no extra confirmation.
+- If the learner changes school year later, recalculate the recommended path but ask for confirmation before switching.
+- Let learners manually switch paths, remember the last opened path, and keep access to other paths lightweight.
+- Keep progression linear lesson-by-lesson without hard-locking future lessons; show the full ordered lesson list from the start and visually emphasize the next recommended lesson.
+- Reuse the existing lesson/exercise completion model: lesson completion still derives from exercises, path progress is percentage-based, and completed lessons count across every path that includes them.
+- Avoid special migration when switching paths; shared completed lessons should simply count.
+- Model each path with a name, description, visible objective, and structured objective label; v1 structured objective type is only `grade-level`.
+- Open a path on a summary screen first, then use a primary CTA such as "Start" to focus the path view on the first incomplete lesson instead of deep-linking straight into lesson content.
+- Keep completed lessons accessible for review.
+- Defer 100% completion rewards to `gamification-rewards`, not `learning-paths` v1.
+
 ### Production backend readiness
 
 - Add basic observability for server runtime failures.

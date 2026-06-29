@@ -8,7 +8,8 @@
 1. ✅ `role-naming-cleanup` — completed.
 2. ✅ `versioned-db-migrations` — completed and archived.
 3. ✅ `lesson-read-access-control` — completed and archived.
-4. Pick the next product track: learner-first (`onboarding-school-year`) or classroom-first (`teacher-course-ownership`).
+4. ✅ `onboarding-school-year` — completed and archived.
+5. Pick the next product track: learner-first (`exercise-practice-ui`) or classroom-first (`teacher-course-ownership`).
 
 ## Completed Slices
 
@@ -21,20 +22,13 @@
 | `role-naming-cleanup` | OpenSpec archived | Rename `LEARNER` → `STUDENT` in shared models, server, compose app, and specs with backward-compatible parser | 64 tests, 0 failures — `:server:test`, `:composeApp:jvmTest` |
 | `versioned-db-migrations` | OpenSpec archived | Flyway-based versioned migrations with baseline + guarded school-year follow-up migration | 30 tests, 0 failures — `:server:test` |
 | `lesson-read-access-control` | OpenSpec archived | Canonical lesson-read visibility and answer-masking reconciliation; theory read-access spec synced to existing backend behavior | 42 tests, 0 failures — `:server:test` |
+| `onboarding-school-year` | OpenSpec archived | Province-aware learner onboarding, school-year capture, onboarding gate routing, and course filtering foundations | `:composeApp:jvmTest` + `:composeApp:assembleDebug` |
 
 ## Next Slices (Ordered)
 
 ### Phase 1 — Learner Experience
 
-#### 1. `onboarding-school-year`
-- **Scope**: Collect learner type and school year during onboarding; recommend the initial curriculum path.
-- **Rationale**: First learner-facing feature from the umbrella `learning` spec; unlocks the curriculum map.
-- **Dependencies**: `school-year-filtering` (delivered).
-- **Affected modules**: `composeApp`.
-- **Expected verification**: `:composeApp:jvmTest`; manual onboarding flow validation.
-- **Review-size risk**: **Medium** (~200–300 lines).
-
-#### 2. `exercise-practice-ui`
+#### 1. `exercise-practice-ui`
 - **Scope**: Build the interactive exercise screen where learners answer, submit, and receive immediate feedback; wire to `POST /exercises/{id}/complete`.
 - **Rationale**: Completes the end-to-end exercise-completion flow that currently exists only at the API/repository layer.
 - **Dependencies**: `exercise-completion` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year`.
@@ -42,13 +36,33 @@
 - **Expected verification**: `:composeApp:jvmTest`; manual end-to-end flow.
 - **Review-size risk**: **Medium-High** (~300–400 lines). Consider chained PRs: PR 1 = UI components, PR 2 = wiring + ViewModel.
 
-#### 3. `gamification-rewards`
+#### 2. `gamification-rewards`
 - **Scope**: Streaks and reward feedback after exercise completion; derive from cumulative progress already synced.
 - **Rationale**: Gamified practice from the umbrella `learning` spec; depends on stable progress tracking.
 - **Dependencies**: `exercise-practice-ui`, `progress-sync` (delivered).
 - **Affected modules**: `composeApp`.
 - **Expected verification**: `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~200–300 lines).
+
+#### 3. `learning-paths`
+- **Scope**: Introduce platform-curated learning paths as the default learner experience, organized primarily by school year and built from ordered lessons.
+- **Reference brief**: `openspec/learning-paths-brief.md`
+- **Rationale**: Gives product a guided progression layer above standalone lesson access while keeping progress compatible with the existing lesson/exercise model.
+- **V1 decisions**:
+  - Platform-curated only; explicitly separate from teacher-created private courses.
+  - One default path per school year; onboarding auto-assigns the matching path with no extra confirmation.
+  - If school year changes later, recalculate the recommended path but require confirmation before switching.
+  - Learners can manually switch paths, access other paths with low friction, and resume the last opened path.
+  - Path flow stays linear lesson-by-lesson, but future lessons remain visible and accessible; the next recommended lesson is visually emphasized.
+  - Progress is percentage-based from completed lessons, and lesson completion continues to derive from exercise completion.
+  - Lessons may appear in multiple paths; completed lessons reuse progress across paths with no special migration.
+  - Each path needs `name`, `description`, `visible objective`, and a structured objective label; v1 supports only `grade-level`.
+  - Entering a path shows a path summary first; the primary CTA opens the path view positioned on the first incomplete lesson rather than deep-linking into a lesson.
+  - Completion rewards after 100% path progress belong to `gamification-rewards`, not `learning-paths` v1.
+- **Dependencies**: `exercise-practice-ui`, `lesson-progress-tracking` (delivered), `onboarding-school-year` (delivered).
+- **Affected modules**: `shared`, `server`, `composeApp`.
+- **Expected verification**: `:server:test`, `:composeApp:jvmTest`; manual onboarding, path switching, and progress-reuse validation.
+- **Review-size risk**: **High** (>400 lines). Plan as chained PRs if promoted.
 
 ### Phase 2 — Teacher & Classroom
 
@@ -80,10 +94,10 @@
 
 ## Recommended Next Slice
 
-**`onboarding-school-year`**
-- Foundation reconciliation is complete, so the smallest dependency-clean product slice is now the learner onboarding flow.
-- It unlocks the learner track (`exercise-practice-ui` → `gamification-rewards`) without reopening any backend access-control ambiguity.
-- Alternative: `teacher-course-ownership` if product wants to switch immediately to the classroom-management track now that `lesson-read-access-control` is archived.
+**`exercise-practice-ui`**
+- `onboarding-school-year` is already archived, so the smallest learner-track continuation is now the exercise interaction flow.
+- It unlocks the rest of the learner progression track (`gamification-rewards` and later `learning-paths`) without reopening backend ownership rules yet.
+- Alternative: `teacher-course-ownership` if product wants to switch immediately to the classroom-management track.
 
 ## Deferred / Non-Goals
 
@@ -97,6 +111,7 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 | Rich math formula rendering | Markdown-only for MVP; LaTeX/MathML later if needed. |
 | Progressive hints, photo submissions | Backlog item; not required for core loop. |
 | Full badges/achievements system | `gamification-rewards` covers streaks; badges are follow-up. |
+| Rich learning-path authoring and analytics | `learning-paths` should start with curated path delivery first; advanced authoring/analytics remain follow-up work. |
 | Topic-scoped chatbot | High complexity; requires AI backend integration. Not in MVP. |
 | Teacher theory overrides for official topics | Teacher can create custom content in own courses; overriding official content deferred. |
 | Production observability (`CallLogging`, `StatusPages`, health checks) | Valuable but can be a standalone infrastructure slice after foundation. |
@@ -122,7 +137,7 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 
 ```
 lesson-read-access-control (archived) ──► teacher-course-ownership ──► classroom-join-codes ──► teacher-content-assignment
-onboarding-school-year ────────────────► exercise-practice-ui ───────► gamification-rewards
+onboarding-school-year (archived) ─────► exercise-practice-ui ───────► gamification-rewards ─────► learning-paths
 ```
 
 ## Maintenance
