@@ -352,6 +352,45 @@ class ServerIntegrationTest {
     }
 
     @Test
+    fun `official courses include discovery metadata in responses`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val token = registerUserAndGetToken(client, email = "catalog@example.com")
+        seedOfficialCourse(
+            courseId = "official-with-discovery",
+            title = "Discovery Course",
+            schoolYear = 3,
+            topic = "Fracciones",
+            difficulty = "Fácil",
+            durationMinutes = 15,
+            xpReward = 50
+        )
+
+        val response = client.get("/courses/official?schoolYear=3") {
+            bearerAuth(token)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val course = response.body<List<Course>>().single()
+        assertEquals("official-with-discovery", course.id)
+        assertEquals("Fracciones", course.topic)
+        assertEquals("Fácil", course.difficulty)
+        assertEquals(15, course.durationMinutes)
+        assertEquals(50, course.xpReward)
+    }
+
+    @Test
     fun `exercise completion uses authenticated learner identity and updates progress`() = testApplication {
         setupTestDatabase()
 
@@ -914,7 +953,11 @@ class ServerIntegrationTest {
     private fun seedOfficialCourse(
         courseId: String = "course-1",
         title: String = "Official Test Course",
-        schoolYear: Int = 3
+        schoolYear: Int = 3,
+        topic: String? = null,
+        difficulty: String? = null,
+        durationMinutes: Int? = null,
+        xpReward: Int? = null
     ) {
         transaction {
             if (Users.selectAll().where { Users.id eq "admin-test" }.firstOrNull() == null) {
@@ -935,6 +978,10 @@ class ServerIntegrationTest {
                 it[isOfficial] = true
                 it[Courses.schoolYear] = schoolYear
                 it[joinCode] = "JOIN123"
+                it[Courses.topic] = topic
+                it[Courses.difficulty] = difficulty
+                it[Courses.durationMinutes] = durationMinutes
+                it[Courses.xpReward] = xpReward
             }
         }
     }

@@ -77,7 +77,11 @@ class KtorCourseRepository(
             creatorId = course.creatorId,
             isOfficial = course.isOfficial,
             schoolYear = course.schoolYear,
-            joinCode = course.joinCode
+            joinCode = course.joinCode,
+            topic = course.topic,
+            difficulty = course.difficulty,
+            durationMinutes = course.durationMinutes,
+            xpReward = course.xpReward
         )
     }
 }

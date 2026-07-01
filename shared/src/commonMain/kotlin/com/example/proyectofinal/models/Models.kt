@@ -54,7 +54,11 @@ data class Course(
     val isOfficial: Boolean = false,
     val joinCode: String? = null,
     val lessons: List<Lesson> = emptyList(),
-    val schoolYear: Int = 0
+    val schoolYear: Int = 0,
+    val topic: String? = null,
+    val difficulty: String? = null,
+    val durationMinutes: Int? = null,
+    val xpReward: Int? = null
 )
 
 @Serializable

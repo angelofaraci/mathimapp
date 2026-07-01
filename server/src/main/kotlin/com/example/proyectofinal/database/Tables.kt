@@ -20,6 +20,10 @@ object Courses : Table("courses") {
     val isOfficial = bool("is_official").default(false)
     val schoolYear = integer("school_year").default(0)
     val joinCode = varchar("join_code", 20).nullable()
+    val topic = varchar("topic", 100).nullable()
+    val difficulty = varchar("difficulty", 50).nullable()
+    val durationMinutes = integer("duration_minutes").nullable()
+    val xpReward = integer("xp_reward").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

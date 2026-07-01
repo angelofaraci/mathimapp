@@ -1,0 +1,11 @@
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS topic VARCHAR(100);
+
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS difficulty VARCHAR(50);
+
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
+
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS xp_reward INTEGER;

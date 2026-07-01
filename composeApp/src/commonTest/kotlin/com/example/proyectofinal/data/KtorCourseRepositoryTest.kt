@@ -35,7 +35,9 @@ class KtorCourseRepositoryTest {
         database = AppDatabase(
             driver = driver,
             CourseEntityAdapter = CourseEntity.Adapter(
-                schoolYearAdapter = intAdapter
+                schoolYearAdapter = intAdapter,
+                durationMinutesAdapter = intAdapter,
+                xpRewardAdapter = intAdapter
             ),
             ExerciseEntityAdapter = ExerciseEntity.Adapter(
                 typeAdapter = EnumColumnAdapter()
@@ -88,6 +90,53 @@ class KtorCourseRepositoryTest {
         assertEquals("Test Course", dbCourse.title)
         assertEquals(true, dbCourse.isOfficial)
         assertEquals(3, dbCourse.schoolYear)
+    }
+
+    @Test
+    fun `getOfficialCourses caches discovery fields in SQLDelight`() = runTest {
+        val mockCourse = Course(
+            id = "discovery-1",
+            title = "Fractions Basics",
+            description = "Learn equivalent fractions",
+            creatorId = "admin",
+            isOfficial = true,
+            schoolYear = 4,
+            topic = "Fracciones",
+            difficulty = "Fácil",
+            durationMinutes = 15,
+            xpReward = 50
+        )
+
+        val mockEngine = MockEngine { request ->
+            assertEquals("4", request.url.parameters["schoolYear"])
+            respond(
+                content = json.encodeToString(listOf(mockCourse)),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val httpClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(json)
+            }
+        }
+
+        val api = CourseApi(httpClient, apiConfig)
+        val repository = KtorCourseRepository(api, database)
+
+        val courses = repository.getOfficialCourses(4)
+
+        assertEquals("Fracciones", courses.single().topic)
+        assertEquals("Fácil", courses.single().difficulty)
+        assertEquals(15, courses.single().durationMinutes)
+        assertEquals(50, courses.single().xpReward)
+
+        val dbCourse = database.appDatabaseQueries.selectCourseById("discovery-1").executeAsOne()
+        assertEquals("Fracciones", dbCourse.topic)
+        assertEquals("Fácil", dbCourse.difficulty)
+        assertEquals(15, dbCourse.durationMinutes)
+        assertEquals(50, dbCourse.xpReward)
     }
 
     @Test
@@ -254,7 +303,11 @@ class KtorCourseRepositoryTest {
             creatorId = existingCourse.creatorId,
             isOfficial = existingCourse.isOfficial,
             schoolYear = existingCourse.schoolYear,
-            joinCode = existingCourse.joinCode
+            joinCode = existingCourse.joinCode,
+            topic = existingCourse.topic,
+            difficulty = existingCourse.difficulty,
+            durationMinutes = existingCourse.durationMinutes,
+            xpReward = existingCourse.xpReward
         )
 
         val updatedCourse = existingCourse.copy(title = "Updated Title")
@@ -296,7 +349,11 @@ class KtorCourseRepositoryTest {
             creatorId = "user-123",
             isOfficial = false,
             schoolYear = 0,
-            joinCode = null
+            joinCode = null,
+            topic = null,
+            difficulty = null,
+            durationMinutes = null,
+            xpReward = null
         )
 
         var deleteCalled = false

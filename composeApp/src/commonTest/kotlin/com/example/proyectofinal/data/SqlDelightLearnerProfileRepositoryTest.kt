@@ -100,7 +100,9 @@ private fun createTestAppDatabase(): AppDatabase {
     return AppDatabase(
         driver = createTestDriver(),
         CourseEntityAdapter = CourseEntity.Adapter(
-            schoolYearAdapter = intAdapter
+            schoolYearAdapter = intAdapter,
+            durationMinutesAdapter = intAdapter,
+            xpRewardAdapter = intAdapter
         ),
         ExerciseEntityAdapter = ExerciseEntity.Adapter(
             typeAdapter = EnumColumnAdapter()

@@ -21,7 +21,11 @@ internal fun ResultRow.toCourse(lessons: List<Lesson> = emptyList()): Course =
         isOfficial = this[Courses.isOfficial],
         joinCode = this[Courses.joinCode],
         lessons = lessons,
-        schoolYear = this[Courses.schoolYear]
+        schoolYear = this[Courses.schoolYear],
+        topic = this[Courses.topic],
+        difficulty = this[Courses.difficulty],
+        durationMinutes = this[Courses.durationMinutes],
+        xpReward = this[Courses.xpReward]
     )
 
 internal fun ResultRow.toLesson(exercises: List<Exercise> = emptyList()): Lesson =

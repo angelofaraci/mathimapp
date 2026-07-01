@@ -10,7 +10,11 @@ data class CreateCourseRequest(
     val creatorId: String,
     val isOfficial: Boolean = false,
     val joinCode: String? = null,
-    val schoolYear: Int = 0
+    val schoolYear: Int = 0,
+    val topic: String? = null,
+    val difficulty: String? = null,
+    val durationMinutes: Int? = null,
+    val xpReward: Int? = null
 )
 
 @Serializable
@@ -18,7 +22,11 @@ data class UpdateCourseRequest(
     val title: String? = null,
     val description: String? = null,
     val joinCode: String? = null,
-    val schoolYear: Int? = null
+    val schoolYear: Int? = null,
+    val topic: String? = null,
+    val difficulty: String? = null,
+    val durationMinutes: Int? = null,
+    val xpReward: Int? = null
 )
 
 @Serializable

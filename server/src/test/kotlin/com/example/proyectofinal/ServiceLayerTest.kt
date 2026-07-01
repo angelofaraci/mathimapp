@@ -99,12 +99,20 @@ class CourseServiceTest {
                 description = "Created description",
                 creatorId = "teacher-1",
                 joinCode = "JOIN123",
-                schoolYear = 5
+                schoolYear = 5,
+                topic = "Álgebra",
+                difficulty = "Intermedio",
+                durationMinutes = 30,
+                xpReward = 80
             )
         )
 
         assertEquals("created-course", created.id)
         assertEquals(5, created.schoolYear)
+        assertEquals("Álgebra", created.topic)
+        assertEquals("Intermedio", created.difficulty)
+        assertEquals(30, created.durationMinutes)
+        assertEquals(80, created.xpReward)
 
         val updated = service.updateCourse(
             id = "created-course",
@@ -112,12 +120,20 @@ class CourseServiceTest {
                 title = "Updated Course",
                 description = "Updated description",
                 joinCode = "NEWCODE",
-                schoolYear = 6
+                schoolYear = 6,
+                topic = "Geometría",
+                difficulty = "Avanzado",
+                durationMinutes = 45,
+                xpReward = 120
             )
         )
         assertEquals("Updated Course", updated?.title)
         assertEquals("Updated description", updated?.description)
         assertEquals(6, updated?.schoolYear)
+        assertEquals("Geometría", updated?.topic)
+        assertEquals("Avanzado", updated?.difficulty)
+        assertEquals(45, updated?.durationMinutes)
+        assertEquals(120, updated?.xpReward)
 
         val joined = service.joinCourse(userId = "student-1", code = "NEWCODE")
         assertEquals("created-course", joined?.id)

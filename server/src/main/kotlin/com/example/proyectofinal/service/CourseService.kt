@@ -129,6 +129,10 @@ class CourseService {
             it[Courses.isOfficial] = request.isOfficial
             it[Courses.schoolYear] = request.schoolYear
             it[Courses.joinCode] = request.joinCode
+            it[Courses.topic] = request.topic
+            it[Courses.difficulty] = request.difficulty
+            it[Courses.durationMinutes] = request.durationMinutes
+            it[Courses.xpReward] = request.xpReward
         }
 
         Course(
@@ -138,7 +142,11 @@ class CourseService {
             creatorId = request.creatorId,
             isOfficial = request.isOfficial,
             joinCode = request.joinCode,
-            schoolYear = request.schoolYear
+            schoolYear = request.schoolYear,
+            topic = request.topic,
+            difficulty = request.difficulty,
+            durationMinutes = request.durationMinutes,
+            xpReward = request.xpReward
         )
     }
 
@@ -149,6 +157,10 @@ class CourseService {
                 request.description?.let { row[Courses.description] = it }
                 request.joinCode?.let { row[Courses.joinCode] = it }
                 request.schoolYear?.let { row[Courses.schoolYear] = it }
+                request.topic?.let { row[Courses.topic] = it }
+                request.difficulty?.let { row[Courses.difficulty] = it }
+                request.durationMinutes?.let { row[Courses.durationMinutes] = it }
+                request.xpReward?.let { row[Courses.xpReward] = it }
             }
         }
 

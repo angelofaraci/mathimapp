@@ -30,6 +30,7 @@ import com.example.proyectofinal.ui.LoginViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
+import com.example.proyectofinal.ui.catalog.CourseCatalogViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -51,6 +52,7 @@ val appModule = module {
     single<UserRepository> { KtorUserRepository(get(), get()) }
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
 
+    viewModelOf(::CourseCatalogViewModel)
     viewModelOf(::CourseViewModel)
     viewModelOf(::LoginViewModel)
     viewModelOf(::OnboardingViewModel)
@@ -73,10 +75,14 @@ private fun createAppDatabase(driverFactory: DatabaseDriverFactory): AppDatabase
         override fun encode(value: Int): Long = value.toLong()
     }
 
+    val driver = driverFactory.createDriver().applyPendingLocalSchemaFixes()
+
     return AppDatabase(
-        driver = driverFactory.createDriver(),
+        driver = driver,
         CourseEntityAdapter = CourseEntity.Adapter(
-            schoolYearAdapter = intAdapter
+            schoolYearAdapter = intAdapter,
+            durationMinutesAdapter = intAdapter,
+            xpRewardAdapter = intAdapter
         ),
         ExerciseEntityAdapter = ExerciseEntity.Adapter(
             typeAdapter = EnumColumnAdapter()

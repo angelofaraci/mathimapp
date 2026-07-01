@@ -27,7 +27,11 @@ CREATE TABLE CourseEntity (
     creatorId TEXT NOT NULL,
     isOfficial INTEGER AS Boolean NOT NULL DEFAULT 0,
     schoolYear INTEGER AS Int NOT NULL DEFAULT 0,
-    joinCode TEXT
+    joinCode TEXT,
+    topic TEXT,
+    difficulty TEXT,
+    durationMinutes INTEGER AS Int,
+    xpReward INTEGER AS Int
 );
 
 -- Lesson table
@@ -104,8 +108,8 @@ selectCoursesByCreatorId:
 SELECT * FROM CourseEntity WHERE creatorId = ?;
 
 insertCourse:
-INSERT OR REPLACE INTO CourseEntity(id, title, description, creatorId, isOfficial, schoolYear, joinCode)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO CourseEntity(id, title, description, creatorId, isOfficial, schoolYear, joinCode, topic, difficulty, durationMinutes, xpReward)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteCourse:
 DELETE FROM CourseEntity WHERE id = ?;

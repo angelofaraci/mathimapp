@@ -60,6 +60,10 @@ object SeedData {
                 it[Courses.isOfficial] = true
                 it[Courses.schoolYear] = 3
                 it[Courses.joinCode] = "ARITH101"
+                it[Courses.topic] = "Fracciones"
+                it[Courses.difficulty] = "Fácil"
+                it[Courses.durationMinutes] = 20
+                it[Courses.xpReward] = 50
             }
 
             val additionLessonId = "lesson-addition"
