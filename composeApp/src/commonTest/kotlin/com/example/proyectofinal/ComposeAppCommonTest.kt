@@ -17,6 +17,7 @@ import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
+import com.example.proyectofinal.ui.ProfileViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.take
@@ -69,6 +70,7 @@ class AppModuleTest {
             assertNotNull(koin.get<HttpClient>())
             assertNotNull(koin.get<CourseRepository>())
             assertNotNull(koin.get<CourseViewModel>())
+            assertNotNull(koin.get<ProfileViewModel>())
         } finally {
             koinApp.close()
         }

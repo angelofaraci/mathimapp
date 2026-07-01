@@ -15,6 +15,7 @@ import com.example.proyectofinal.di.rememberPlatformModule
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.ui.AuthenticatedHomeScaffold
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.AuthGateRouter
 import com.example.proyectofinal.ui.AuthView
@@ -75,9 +76,7 @@ private fun AuthGate() {
     }
 
     when (resolveAuthView(session, target, onboardingComplete = onboardingComplete ?: false)) {
-        AuthView.COURSE -> CourseScreen(
-            onLogout = { authRepository.logout() }
-        )
+        AuthView.COURSE -> AuthenticatedHomeScaffold(onLogout = authRepository::logout)
 
         AuthView.LOGIN -> LoginScreen(
             viewModel = koinViewModel<LoginViewModel>(),
@@ -98,7 +97,7 @@ private fun AuthGate() {
 }
 
 @Composable
-private fun CourseScreen(
+internal fun CourseScreen(
     onLogout: () -> Unit,
     viewModel: CourseViewModel = koinViewModel<CourseViewModel>()
 ) {

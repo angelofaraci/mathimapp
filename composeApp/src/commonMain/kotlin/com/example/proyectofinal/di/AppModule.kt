@@ -28,6 +28,7 @@ import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.LoginViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
+import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -53,6 +54,7 @@ val appModule = module {
     viewModelOf(::CourseViewModel)
     viewModelOf(::LoginViewModel)
     viewModelOf(::OnboardingViewModel)
+    viewModelOf(::ProfileViewModel)
     viewModelOf(::RegisterViewModel)
 }
 
