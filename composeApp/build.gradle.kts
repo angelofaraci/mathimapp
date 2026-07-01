@@ -1,6 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-val apiBaseUrl = providers.gradleProperty("apiBaseUrl").orElse("http://10.0.2.2:8080").get()
+// Reminder: update this default if the active backend base URL changes.
+val currentDefaultApiBaseUrl = "http://10.0.2.2:8080"
+val physicalDeviceApiBaseUrl = providers.gradleProperty("apiBaseUrl").orElse(currentDefaultApiBaseUrl).get()
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -105,7 +107,8 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "EMULATOR_API_BASE_URL", "\"$currentDefaultApiBaseUrl\"")
+        buildConfigField("String", "PHYSICAL_DEVICE_API_BASE_URL", "\"$physicalDeviceApiBaseUrl\"")
     }
     buildFeatures {
         buildConfig = true
