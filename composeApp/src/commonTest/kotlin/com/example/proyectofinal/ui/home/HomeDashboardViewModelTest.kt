@@ -1,0 +1,164 @@
+package com.example.proyectofinal.ui.home
+
+import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.AuthSession
+import com.example.proyectofinal.domain.LearnerProfile
+import com.example.proyectofinal.domain.LearnerProfileRepository
+import com.example.proyectofinal.domain.StudentTrack
+import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserProgress
+import com.example.proyectofinal.models.UserRole
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class HomeDashboardViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @BeforeTest fun setUp() { Dispatchers.setMain(dispatcher) }
+    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+
+    @Test
+    fun `salutation changes with the hour of day`() {
+        assertEquals("Buenos días", salutation(hour = 8))
+        assertEquals("Buenas tardes", salutation(hour = 14))
+        assertEquals("Buenas noches", salutation(hour = 21))
+    }
+
+    @Test
+    fun `view model falls back to a generic greeting when display name is blank`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser.copy(name = "   ")),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(userId = testUser.id, completedLessonIds = setOf("lesson-1"), totalScore = 50)
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertFalse(isLoading)
+            assertTrue(greeting in setOf("Buenos días", "Buenas tardes", "Buenas noches"))
+            assertEquals("Year 7 • Secondary", schoolYearLabel)
+        }
+    }
+
+    @Test
+    fun `view model derives level math and caps activity at seven`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(
+                    userId = testUser.id,
+                    completedLessonIds = (1..12).map { "lesson-$it" }.toSet(),
+                    totalScore = 350
+                )
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertTrue(greeting.endsWith("Alice Student"))
+            assertEquals(3, level)
+            assertEquals(7, activityCount)
+            assertEquals(12, completedLessons)
+        }
+    }
+
+    @Test
+    fun `view model keeps the progress chip state at zero when progress is empty`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(
+                    userId = testUser.id,
+                    completedLessonIds = emptySet(),
+                    totalScore = 0
+                )
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertFalse(isLoading)
+            assertEquals(0, level)
+            assertEquals(0, activityCount)
+            assertEquals(0, completedLessons)
+            assertTrue(greeting.endsWith("Alice Student"))
+        }
+    }
+
+    @Test
+    fun `view model exposes error state when progress loading fails`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser),
+            userRepository = FakeHomeDashboardUserRepository(errorMessage = "Progress unavailable"),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertFalse(isLoading)
+            assertEquals("Progress unavailable", errorMessage)
+            assertTrue(greeting.endsWith("Alice Student"))
+        }
+    }
+}
+
+private val testUser = User(
+    id = "user-1",
+    name = "Alice Student",
+    email = "alice@example.com",
+    role = UserRole.STUDENT
+)
+
+private class HomeDashboardFakeAuthRepository(user: User) : AuthRepository {
+    private val state = MutableStateFlow(AuthSession(token = "token-123", user = user))
+    override val session: StateFlow<AuthSession> = state
+    override suspend fun login(email: String, password: String): Result<User> = Result.success(testUser)
+    override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(testUser)
+    override fun logout() = Unit
+}
+
+private class FakeHomeDashboardUserRepository(
+    private val progress: UserProgress? = null,
+    private val errorMessage: String? = null
+) : UserRepository {
+    override suspend fun getCurrentUser(): User? = testUser
+    override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
+    override suspend fun updateUser(user: User) = Unit
+
+    override suspend fun getUserProgress(userId: String): UserProgress {
+        errorMessage?.let { throw IllegalStateException(it) }
+        return requireNotNull(progress)
+    }
+
+    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse = error("Not used in these tests")
+}
+
+private class HomeDashboardFakeLearnerProfileRepository : LearnerProfileRepository {
+    override suspend fun getProfile(): LearnerProfile = LearnerProfile("Buenos Aires", 7, StudentTrack.SECONDARY, true)
+    override suspend fun isOnboardingComplete(): Boolean = true
+    override suspend fun upsertProfile(profile: LearnerProfile) = Unit
+}

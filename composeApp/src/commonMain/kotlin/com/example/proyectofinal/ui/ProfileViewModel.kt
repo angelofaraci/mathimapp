@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-private const val XpPerLevel = 100
-private const val ActivityStreakCap = 7
+internal const val XpPerLevel = 100
+internal const val ActivityStreakCap = 7
 private const val FirstLessonThreshold = 1
 private const val Score100Threshold = 100
 private const val Lessons5Threshold = 5

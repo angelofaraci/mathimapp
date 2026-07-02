@@ -9,8 +9,9 @@ import kotlin.test.assertEquals
 /**
  * Runtime coverage for the `frontend-auth` "Auth Entry Flow" scenarios that the
  * verify gate flagged as untested. The routing decision lives in the pure
- * [AuthGateRouter] / [resolveAuthView] construct, so these are plain kotlin.test
- * + StateFlow assertions and need no Compose UI test harness.
+ * [AuthGateRouter] / [resolveAuthView] construct, including the authenticated
+ * dashboard landing path, so these are plain kotlin.test + StateFlow
+ * assertions and need no Compose UI test harness.
  */
 class AuthGateRoutingTest {
 
@@ -83,7 +84,7 @@ class AuthGateRoutingTest {
     }
 
     @Test
-    fun `authenticated session with completed onboarding routes to course`() {
+    fun `authenticated session with completed onboarding routes to dashboard landing`() {
         val authenticated = AuthSession(
             token = "token-123",
             user = User("1", "Alice", "alice@example.com", UserRole.STUDENT)

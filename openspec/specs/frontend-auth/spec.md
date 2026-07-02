@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide login/register entry points for public users, keep the active session in memory, and route authenticated users to `CourseScreen`.
+Provide login/register entry points for public users, keep the active session in memory, and route authenticated users to `HomeDashboardScreen`.
 
 ## Requirements
 
@@ -42,8 +42,8 @@ The system MUST NOT expose role selection during public registration and MUST cr
 
 ### Requirement: Successful Authentication Enters the App
 
-The system MUST send login and registration requests through the auth API, MUST store the returned token in memory for the current app process, and MUST show the onboarding flow after registration if onboarding is not complete, or `CourseScreen` if onboarding is already complete.
-(Previously: After successful authentication, the system always showed `CourseScreen` directly.)
+The system MUST send login and registration requests through the auth API, MUST store the returned token in memory for the current app process, and MUST show the onboarding flow after registration if onboarding is not complete, or `HomeDashboardScreen` if onboarding is already complete.
+(Previously: After successful authentication, the system showed `CourseScreen` directly if onboarding was complete.)
 
 #### Scenario: New user registers and must complete onboarding
 
@@ -52,14 +52,14 @@ The system MUST send login and registration requests through the auth API, MUST 
 - THEN the system SHALL store the token in memory
 - AND the system SHALL check if onboarding is complete
 - AND if onboarding is NOT complete, the system SHALL show the onboarding flow
-- AND the system SHALL NOT show `CourseScreen` until onboarding completes
+- AND the system SHALL NOT show `HomeDashboardScreen` until onboarding completes
 
-#### Scenario: Returning user with completed onboarding resumes course view
+#### Scenario: Returning user with completed onboarding enters dashboard
 
 - GIVEN the user has a valid auth session
 - AND onboarding was previously completed
 - WHEN the app resolves the post-auth view
-- THEN the system SHALL show `CourseScreen` directly
+- THEN the system SHALL show `HomeDashboardScreen` directly
 - AND the system SHALL NOT show the onboarding flow
 
 #### Scenario: Login success with incomplete onboarding

@@ -57,8 +57,9 @@ class LoginViewModel(
             }
 
             // On success the AuthRepository flips its session StateFlow, which App.kt
-            // observes to replace this screen with CourseScreen. Reset loading state
-            // here so a failed-then-retry path keeps the UI consistent.
+            // observes to replace this screen with the authenticated dashboard
+            // landing. Reset loading state here so a failed-then-retry path keeps
+            // the UI consistent.
             result.onSuccess {
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
             }

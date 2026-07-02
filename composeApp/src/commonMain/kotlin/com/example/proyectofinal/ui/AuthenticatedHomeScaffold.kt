@@ -13,8 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.example.proyectofinal.CourseScreen
 import com.example.proyectofinal.ui.catalog.CourseCatalogScreen
+import com.example.proyectofinal.ui.home.HomeDashboardScreen
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import proyectofinal.composeapp.generated.resources.Res
@@ -55,7 +55,7 @@ fun AuthenticatedHomeScaffold(
                 .padding(innerPadding)
         ) {
             when (selectedTab) {
-                MainTab.HOME -> CourseScreen(onLogout = onLogout)
+                MainTab.HOME -> HomeDashboardScreen(router = router, onLogout = onLogout)
                 MainTab.ACTIVITIES -> CourseCatalogScreen()
                 MainTab.PROGRESS -> PlaceholderScreen(title = "Progreso")
                 MainTab.PROFILE -> ProfileScreen(onLogout = onLogout)

@@ -26,6 +26,7 @@ import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseViewModel
+import com.example.proyectofinal.ui.home.HomeDashboardViewModel
 import com.example.proyectofinal.ui.LoginViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
@@ -54,6 +55,7 @@ val appModule = module {
 
     viewModelOf(::CourseCatalogViewModel)
     viewModelOf(::CourseViewModel)
+    viewModelOf(::HomeDashboardViewModel)
     viewModelOf(::LoginViewModel)
     viewModelOf(::OnboardingViewModel)
     viewModelOf(::ProfileViewModel)

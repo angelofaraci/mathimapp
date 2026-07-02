@@ -54,10 +54,11 @@ class AuthGateRouter {
  * and form target.
  *
  * When the session is authenticated the auth area is not shown. Users with a
- * completed learner profile go to [AuthView.COURSE]; otherwise they are gated
- * into [AuthView.ONBOARDING]. When the session is anonymous, the selected form
- * target is rendered. This is a pure function so the gate side of the routing
- * behavior is testable.
+ * completed learner profile go to [AuthView.COURSE], which renders the
+ * authenticated scaffold hosting the dashboard landing. Otherwise they are
+ * gated into [AuthView.ONBOARDING]. When the session is anonymous, the
+ * selected form target is rendered. This is a pure function so the gate side
+ * of the routing behavior is testable.
  */
 fun resolveAuthView(
     session: AuthSession,
