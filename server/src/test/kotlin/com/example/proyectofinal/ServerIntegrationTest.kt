@@ -27,6 +27,7 @@ import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.Security
 import io.ktor.client.call.body
@@ -287,6 +288,31 @@ class ServerIntegrationTest {
     }
 
     @Test
+    fun `current-user alias resolves authenticated user profile`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val email = "hydrate-me@example.com"
+        val token = registerUserAndGetToken(client, email = email)
+
+        val response = client.get("/users/current-user-id") {
+            bearerAuth(token)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(email, response.body<User>().email)
+    }
+
+    @Test
     fun `authorized user can fetch official courses`() = testApplication {
         setupTestDatabase()
 
@@ -388,6 +414,137 @@ class ServerIntegrationTest {
         assertEquals("Fácil", course.difficulty)
         assertEquals(15, course.durationMinutes)
         assertEquals(50, course.xpReward)
+    }
+
+    @Test
+    fun `official enrollment route handles success auth errors and idempotency`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val token = registerUserAndGetToken(client, email = "enroll@example.com")
+        val userId = transaction {
+            Users.selectAll().where { Users.email eq "enroll@example.com" }.single()[Users.id]
+        }
+
+        seedOfficialCourse(courseId = "official-enroll", title = "Official Enroll", schoolYear = 3)
+        seedOwnedCourseWithLesson(
+            courseId = "private-enroll",
+            creatorId = "teacher-owner",
+            lessonId = "private-enroll-lesson"
+        )
+
+        val unauthorized = client.post("/courses/official-enroll/enroll")
+        val notFound = client.post("/courses/missing-enroll/enroll") {
+            bearerAuth(token)
+        }
+        val nonOfficial = client.post("/courses/private-enroll/enroll") {
+            bearerAuth(token)
+        }
+        val firstEnrollment = client.post("/courses/official-enroll/enroll") {
+            bearerAuth(token)
+        }
+        val secondEnrollment = client.post("/courses/official-enroll/enroll") {
+            bearerAuth(token)
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, unauthorized.status)
+        assertEquals(HttpStatusCode.NotFound, notFound.status)
+        assertEquals(HttpStatusCode.BadRequest, nonOfficial.status)
+        assertEquals(HttpStatusCode.OK, firstEnrollment.status)
+        assertEquals(HttpStatusCode.OK, secondEnrollment.status)
+
+        val firstProgress = firstEnrollment.body<UserProgress>()
+        val secondProgress = secondEnrollment.body<UserProgress>()
+
+        assertEquals(userId, firstProgress.userId)
+        assertTrue("official-enroll" in firstProgress.enrolledCourseIds)
+        assertEquals(firstProgress.enrolledCourseIds, secondProgress.enrolledCourseIds)
+
+        transaction {
+            assertEquals(
+                1L,
+                EnrolledCourses.selectAll()
+                    .where {
+                        (EnrolledCourses.userId eq userId) and
+                            (EnrolledCourses.courseId eq "official-enroll")
+                    }
+                    .count()
+            )
+        }
+    }
+
+    @Test
+    fun `course detail route includes lesson exercise counts`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val token = registerUserAndGetToken(client, email = "exercise-counts@example.com")
+        seedOfficialCourse(courseId = "official-counts", title = "Official Counts", schoolYear = 3)
+
+        transaction {
+            Lessons.insert {
+                it[id] = "lesson-zero"
+                it[courseId] = "official-counts"
+                it[title] = "Lesson Zero"
+                it[theoryContent] = "Theory Zero"
+                it[orderIndex] = 0
+            }
+
+            Lessons.insert {
+                it[id] = "lesson-two"
+                it[courseId] = "official-counts"
+                it[title] = "Lesson Two"
+                it[theoryContent] = "Theory Two"
+                it[orderIndex] = 1
+            }
+
+            Exercises.insert {
+                it[id] = "exercise-1"
+                it[lessonId] = "lesson-two"
+                it[question] = "1 + 1 = ?"
+                it[options] = "1,2"
+                it[correctAnswer] = "2"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+
+            Exercises.insert {
+                it[id] = "exercise-2"
+                it[lessonId] = "lesson-two"
+                it[question] = "2 + 2 = ?"
+                it[options] = "3,4"
+                it[correctAnswer] = "4"
+                it[type] = "MULTIPLE_CHOICE"
+            }
+        }
+
+        val response = client.get("/courses/official-counts") {
+            bearerAuth(token)
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val course = response.body<Course>()
+        assertEquals(listOf("lesson-zero", "lesson-two"), course.lessons.map { it.id })
+        assertEquals(0, course.lessons[0].exerciseCount)
+        assertEquals(2, course.lessons[1].exerciseCount)
     }
 
     @Test

@@ -49,7 +49,7 @@ fun Application.module(
 
     val authService = AuthService()
     val userService = UserService()
-    val courseService = CourseService()
+    val courseService = CourseService(userService)
     val lessonService = LessonService()
     val exerciseService = ExerciseService()
 

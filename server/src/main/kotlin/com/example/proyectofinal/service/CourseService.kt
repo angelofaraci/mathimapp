@@ -2,6 +2,7 @@ package com.example.proyectofinal.service
 
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.EnrolledCourses
+import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
@@ -9,10 +10,9 @@ import com.example.proyectofinal.models.AdminCourseResponse
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.UpdateCourseRequest
+import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -25,7 +25,15 @@ sealed interface CourseReadResult {
     object NotFound : CourseReadResult
 }
 
-class CourseService {
+sealed interface CourseEnrollmentResult {
+    data class Success(val progress: UserProgress) : CourseEnrollmentResult
+    object NonOfficial : CourseEnrollmentResult
+    object NotFound : CourseEnrollmentResult
+}
+
+class CourseService(
+    private val userService: UserService = UserService()
+) {
     fun getOfficialCourses(schoolYear: Int? = null): List<Course> = dbQuery {
         val filter = if (schoolYear == null) {
             Courses.isOfficial eq true
@@ -69,10 +77,28 @@ class CourseService {
             .firstOrNull()
             ?: return@dbQuery null
 
-        val lessons = Lessons.selectAll()
+        val exerciseCount = Exercises.id.count()
+        val lessons = (Lessons leftJoin Exercises)
+            .select(
+                Lessons.id,
+                Lessons.courseId,
+                Lessons.title,
+                Lessons.theoryContent,
+                Lessons.orderIndex,
+                exerciseCount
+            )
             .where { Lessons.courseId eq id }
+            .groupBy(
+                Lessons.id,
+                Lessons.courseId,
+                Lessons.title,
+                Lessons.theoryContent,
+                Lessons.orderIndex
+            )
             .orderBy(Lessons.orderIndex)
-            .map { it.toLesson() }
+            .map { lessonRow ->
+                lessonRow.toLesson(exerciseCount = lessonRow[exerciseCount].toInt())
+            }
 
         course.toCourse(lessons)
     }
@@ -192,6 +218,33 @@ class CourseService {
         }
 
         course.toCourse()
+    }
+
+    fun enrollOfficialCourse(userId: String, courseId: String): CourseEnrollmentResult = dbQuery {
+        val course = Courses.select(Courses.id, Courses.isOfficial)
+            .where { Courses.id eq courseId }
+            .firstOrNull()
+            ?: return@dbQuery CourseEnrollmentResult.NotFound
+
+        if (!course[Courses.isOfficial]) {
+            return@dbQuery CourseEnrollmentResult.NonOfficial
+        }
+
+        val existingEnrollment = EnrolledCourses.selectAll()
+            .where {
+                (EnrolledCourses.userId eq userId) and
+                    (EnrolledCourses.courseId eq courseId)
+            }
+            .firstOrNull()
+
+        if (existingEnrollment == null) {
+            EnrolledCourses.insert {
+                it[EnrolledCourses.userId] = userId
+                it[EnrolledCourses.courseId] = courseId
+            }
+        }
+
+        CourseEnrollmentResult.Success(userService.readUserProgress(userId))
     }
 
     fun getCreatorId(id: String): String? = dbQuery {

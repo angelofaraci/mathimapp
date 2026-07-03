@@ -6,6 +6,7 @@ import com.example.proyectofinal.models.UpdateCourseRequest
 import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
+import com.example.proyectofinal.service.CourseEnrollmentResult
 import com.example.proyectofinal.service.CourseReadResult
 import com.example.proyectofinal.service.CourseService
 import io.ktor.http.HttpStatusCode
@@ -45,6 +46,21 @@ fun Application.courseRoutes(service: CourseService) {
                     is CourseReadResult.Success -> call.respond(result.course)
                     CourseReadResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
                     CourseReadResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
+            }
+
+            post("/courses/{id}/enroll") {
+                val courseId = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+                val userId = call.currentUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+
+                when (val result = service.enrollOfficialCourse(userId, courseId)) {
+                    is CourseEnrollmentResult.Success -> call.respond(result.progress)
+                    CourseEnrollmentResult.NonOfficial -> call.respond(
+                        HttpStatusCode.BadRequest,
+                        "Non-official courses require a join code"
+                    )
+                    CourseEnrollmentResult.NotFound -> call.respond(HttpStatusCode.NotFound)
                 }
             }
 

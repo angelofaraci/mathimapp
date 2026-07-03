@@ -184,7 +184,7 @@ class UserService {
         )
     }
 
-    private fun readUserProgress(userId: String): UserProgress {
+    internal fun readUserProgress(userId: String): UserProgress {
         val progressRow = UserProgressTable.selectAll()
             .where { UserProgressTable.userId eq userId }
             .firstOrNull()

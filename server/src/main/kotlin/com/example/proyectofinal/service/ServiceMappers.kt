@@ -28,13 +28,17 @@ internal fun ResultRow.toCourse(lessons: List<Lesson> = emptyList()): Course =
         xpReward = this[Courses.xpReward]
     )
 
-internal fun ResultRow.toLesson(exercises: List<Exercise> = emptyList()): Lesson =
+internal fun ResultRow.toLesson(
+    exercises: List<Exercise> = emptyList(),
+    exerciseCount: Int = exercises.size
+): Lesson =
     Lesson(
         id = this[Lessons.id],
         courseId = this[Lessons.courseId],
         title = this[Lessons.title],
         theoryContent = this[Lessons.theoryContent],
-        exercises = exercises
+        exercises = exercises,
+        exerciseCount = exerciseCount
     )
 
 internal fun ResultRow.toExercise(hideAnswers: Boolean = false): Exercise =
