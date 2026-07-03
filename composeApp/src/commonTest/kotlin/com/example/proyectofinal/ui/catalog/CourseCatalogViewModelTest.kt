@@ -5,6 +5,7 @@ import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.UserProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -17,6 +18,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CourseCatalogViewModelTest {
@@ -81,12 +83,60 @@ class CourseCatalogViewModelTest {
         assertEquals(null, viewModel.uiState.value.selectedTopic)
         assertEquals(sampleCourses.map(Course::title), viewModel.uiState.value.visibleCourses.map(Course::title))
     }
+
+    @Test
+    fun `enroll updates local state and emits navigation target`() = runTest(dispatcher) {
+        val repository = FakeCourseCatalogRepository(sampleCourses).apply {
+            enrollResponse = UserProgress(
+                userId = "catalog-user",
+                enrolledCourseIds = setOf("course-2")
+            )
+        }
+        val viewModel = CourseCatalogViewModel(
+            courseRepository = repository,
+            learnerProfileRepository = FakeCourseCatalogLearnerProfileRepository(7)
+        )
+
+        advanceUntilIdle()
+        viewModel.enroll("course-2")
+        advanceUntilIdle()
+
+        assertEquals(listOf("course-2"), repository.enrolledCourseIds)
+        assertEquals(setOf("course-2"), viewModel.uiState.value.enrolledCourseIds)
+        assertEquals("course-2", viewModel.uiState.value.navigationCourseId)
+
+        viewModel.consumeNavigation()
+
+        assertNull(viewModel.uiState.value.navigationCourseId)
+    }
+
+    @Test
+    fun `enroll failure surfaces error and does not request navigation`() = runTest(dispatcher) {
+        val repository = FakeCourseCatalogRepository(sampleCourses).apply {
+            enrollError = IllegalStateException("Enrollment failed")
+        }
+        val viewModel = CourseCatalogViewModel(
+            courseRepository = repository,
+            learnerProfileRepository = FakeCourseCatalogLearnerProfileRepository(7)
+        )
+
+        advanceUntilIdle()
+        viewModel.enroll("course-3")
+        advanceUntilIdle()
+
+        assertEquals("course-3", viewModel.uiState.value.enrollmentErrorCourseId)
+        assertEquals("Enrollment failed", viewModel.uiState.value.enrollmentErrorMessage)
+        assertNull(viewModel.uiState.value.navigationCourseId)
+    }
 }
 
 private class FakeCourseCatalogRepository(
     private val courses: List<Course>
 ) : CourseRepository {
     val requestedSchoolYears = mutableListOf<Int?>()
+    val enrolledCourseIds = mutableListOf<String>()
+    var enrollResponse: UserProgress = UserProgress(userId = "catalog-user")
+    var enrollError: Exception? = null
 
     override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> {
         requestedSchoolYears += schoolYear
@@ -106,6 +156,12 @@ private class FakeCourseCatalogRepository(
     override suspend fun deleteCourse(id: String) = Unit
 
     override suspend fun joinCourseByCode(userId: String, code: String): Course? = null
+
+    override suspend fun enroll(courseId: String): UserProgress {
+        enrollError?.let { throw it }
+        enrolledCourseIds += courseId
+        return enrollResponse
+    }
 }
 
 private class FakeCourseCatalogLearnerProfileRepository(

@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,15 +25,25 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun CourseCatalogScreen(
+    onNavigateToDetail: (String) -> Unit = {},
     viewModel: CourseCatalogViewModel = koinViewModel<CourseCatalogViewModel>()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.navigationCourseId) {
+        uiState.navigationCourseId?.let { courseId ->
+            onNavigateToDetail(courseId)
+            viewModel.consumeNavigation()
+        }
+    }
 
     CourseCatalogContent(
         uiState = uiState,
         onQueryChange = viewModel::updateQuery,
         onTopicSelected = viewModel::toggleTopic,
-        onRetry = viewModel::retry
+        onRetry = viewModel::retry,
+        onCourseSelected = onNavigateToDetail,
+        onEnrollCourse = viewModel::enroll
     )
 }
 
@@ -42,6 +53,8 @@ internal fun CourseCatalogContent(
     onQueryChange: (String) -> Unit,
     onTopicSelected: (String) -> Unit,
     onRetry: () -> Unit,
+    onCourseSelected: (String) -> Unit,
+    onEnrollCourse: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -118,12 +131,26 @@ internal fun CourseCatalogContent(
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(items = uiState.visibleCourses, key = Course::id) { course ->
-                                CourseCatalogCard(course = course)
+                                CourseCatalogCard(
+                                    course = course,
+                                    isEnrolled = course.id in uiState.enrolledCourseIds,
+                                    isEnrolling = uiState.enrollingCourseId == course.id,
+                                    onOpenCourse = onCourseSelected,
+                                    onEnrollCourse = onEnrollCourse
+                                )
                             }
                         }
                     }
                 }
             }
+        }
+
+        uiState.enrollmentErrorMessage?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
@@ -136,8 +163,17 @@ private fun CatalogCenteredState(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun CourseCatalogCard(course: Course) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun CourseCatalogCard(
+    course: Course,
+    isEnrolled: Boolean,
+    isEnrolling: Boolean,
+    onOpenCourse: (String) -> Unit,
+    onEnrollCourse: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { onOpenCourse(course.id) }
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -164,10 +200,23 @@ private fun CourseCatalogCard(course: Course) {
             }
 
             Button(
-                onClick = {},
+                onClick = {
+                    if (isEnrolled) {
+                        onOpenCourse(course.id)
+                    } else {
+                        onEnrollCourse(course.id)
+                    }
+                },
+                enabled = !isEnrolling,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Inscribirse")
+                Text(
+                    when {
+                        isEnrolling -> "Inscribiendo..."
+                        isEnrolled -> "Ver curso"
+                        else -> "Inscribirse"
+                    }
+                )
             }
         }
     }

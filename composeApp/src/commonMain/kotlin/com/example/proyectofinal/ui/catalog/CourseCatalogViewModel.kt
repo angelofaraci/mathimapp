@@ -39,6 +39,44 @@ class CourseCatalogViewModel(
         fetchCourses()
     }
 
+    fun enroll(courseId: String, navigateOnSuccess: Boolean = true) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    enrollingCourseId = courseId,
+                    enrollmentErrorMessage = null,
+                    enrollmentErrorCourseId = null
+                )
+            }
+
+            try {
+                val progress = courseRepository.enroll(courseId)
+                _uiState.update {
+                    it.copy(
+                        enrolledCourseIds = progress.enrolledCourseIds + it.enrolledCourseIds,
+                        enrollingCourseId = null,
+                        navigationCourseId = if (navigateOnSuccess) courseId else null,
+                        enrollmentErrorMessage = null,
+                        enrollmentErrorCourseId = null
+                    )
+                }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        enrollingCourseId = null,
+                        navigationCourseId = null,
+                        enrollmentErrorMessage = exception.message ?: "Unknown error",
+                        enrollmentErrorCourseId = courseId
+                    )
+                }
+            }
+        }
+    }
+
+    fun consumeNavigation() {
+        _uiState.update { it.copy(navigationCourseId = null) }
+    }
+
     private fun fetchCourses() {
         viewModelScope.launch {
             _uiState.update { it.copy(remoteState = CourseCatalogRemoteState.Loading) }
@@ -64,7 +102,12 @@ data class CourseCatalogUiState(
     val remoteState: CourseCatalogRemoteState = CourseCatalogRemoteState.Loading,
     val query: String = "",
     val selectedTopic: String? = null,
-    val topics: List<String> = defaultCatalogTopics
+    val topics: List<String> = defaultCatalogTopics,
+    val enrolledCourseIds: Set<String> = emptySet(),
+    val enrollingCourseId: String? = null,
+    val enrollmentErrorMessage: String? = null,
+    val enrollmentErrorCourseId: String? = null,
+    val navigationCourseId: String? = null
 ) {
     val visibleCourses: List<Course>
         get() = (remoteState as? CourseCatalogRemoteState.Success)
