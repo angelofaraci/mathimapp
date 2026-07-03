@@ -1,6 +1,7 @@
 package com.example.proyectofinal.domain
 
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.UserProgress
 
 interface CourseRepository {
     /**
@@ -42,4 +43,9 @@ interface CourseRepository {
      * Joins a course using a code.
      */
     suspend fun joinCourseByCode(userId: String, code: String): Course?
+
+    /**
+     * Enrolls the authenticated learner in an official course.
+     */
+    suspend fun enroll(courseId: String): UserProgress
 }

@@ -3,9 +3,11 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.UserProgress
 import kotlin.random.Random
 
 class MockCourseRepository : CourseRepository {
+    private val enrolledCourseIds = mutableSetOf<String>()
     private val mockCourses = mutableListOf(
         Course(
             id = "math-101",
@@ -64,6 +66,18 @@ class MockCourseRepository : CourseRepository {
 
     override suspend fun joinCourseByCode(userId: String, code: String): Course? {
         return mockCourses.find { it.joinCode == code }
+    }
+
+    override suspend fun enroll(courseId: String): UserProgress {
+        val course = mockCourses.find { it.id == courseId && it.isOfficial }
+            ?: error("Course not found")
+
+        enrolledCourseIds += course.id
+
+        return UserProgress(
+            userId = "mock-user",
+            enrolledCourseIds = enrolledCourseIds.toSet()
+        )
     }
 
     private fun generateJoinCode(): String {

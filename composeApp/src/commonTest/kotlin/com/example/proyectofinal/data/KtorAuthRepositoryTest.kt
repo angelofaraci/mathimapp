@@ -2,8 +2,11 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.InMemoryTokenStore
+import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.AuthResponse
+import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -14,18 +17,37 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class KtorAuthRepositoryTest {
     private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
+    private val dispatcher = StandardTestDispatcher()
+
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `login posts shared payload and stores authenticated session`() = runTest {
@@ -196,7 +218,7 @@ class KtorAuthRepositoryTest {
         val api = AuthApi(client, apiConfig)
 
         return AuthRepositoryFixture(
-            repository = KtorAuthRepository(api, tokenStore),
+            repository = KtorAuthRepository(api, tokenStore, FakeUserRepository()),
             tokenStore = tokenStore
         )
     }
@@ -205,4 +227,18 @@ class KtorAuthRepositoryTest {
         val repository: KtorAuthRepository,
         val tokenStore: InMemoryTokenStore
     )
+
+    private class FakeUserRepository : UserRepository {
+        override suspend fun getCurrentUser(): User? = null
+
+        override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
+
+        override suspend fun updateUser(user: User) = Unit
+
+        override suspend fun getUserProgress(userId: String): UserProgress = UserProgress(userId = userId)
+
+        override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse {
+            error("Not used in auth tests")
+        }
+    }
 }

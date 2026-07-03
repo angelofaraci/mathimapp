@@ -3,27 +3,40 @@ package com.example.proyectofinal.data
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import com.example.proyectofinal.db.*
+import com.example.proyectofinal.di.InMemoryTokenStore
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.userRoleColumnAdapter
+import com.example.proyectofinal.createHttpClient
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.UserProgress
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class KtorCourseRepositoryTest {
     private lateinit var database: AppDatabase
     private val apiConfig = ApiConfig("https://example.test")
     private val json = Json { ignoreUnknownKeys = true }
+    private val dispatcher = StandardTestDispatcher()
 
     @BeforeTest
     fun setup() {
+        Dispatchers.setMain(dispatcher)
         val driver = createTestDriver()
         
         // Adapter for Int fields (SQLDelight INTEGER defaults to Long)
@@ -49,6 +62,11 @@ class KtorCourseRepositoryTest {
                 roleAdapter = userRoleColumnAdapter
             )
         )
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -425,5 +443,71 @@ class KtorCourseRepositoryTest {
         assertEquals("Joined Course", result?.title)
         val dbCourse = database.appDatabaseQueries.selectCourseById("joined-course").executeAsOne()
         assertEquals("KOTLIN123", dbCourse.joinCode)
+    }
+
+    @Test
+    fun `enroll posts to enrollment endpoint with bearer token and syncs progress locally`() = runTest {
+        val expectedProgress = UserProgress(
+            userId = "student-1",
+            totalScore = 25,
+            enrolledCourseIds = setOf("official-course"),
+            completedLessonIds = setOf("lesson-1"),
+            completedExerciseIds = setOf("exercise-1")
+        )
+        var capturedAuthorization: String? = null
+        var capturedMethod: HttpMethod? = null
+        var capturedPath: String? = null
+
+        val mockEngine = MockEngine { request ->
+            capturedAuthorization = request.headers[HttpHeaders.Authorization]
+            capturedMethod = request.method
+            capturedPath = request.url.encodedPath
+
+            respond(
+                content = json.encodeToString(expectedProgress),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val httpClient = createHttpClient(
+            tokenStore = InMemoryTokenStore().apply { accessToken = "token-123" },
+            engine = mockEngine
+        )
+
+        val api = CourseApi(httpClient, apiConfig)
+        val repository = KtorCourseRepository(api, database)
+
+        val result = repository.enroll("official-course")
+
+        assertEquals(expectedProgress, result)
+        assertEquals("Bearer token-123", capturedAuthorization)
+        assertEquals(HttpMethod.Post, capturedMethod)
+        assertEquals("/courses/official-course/enroll", capturedPath)
+        assertEquals(
+            listOf("official-course"),
+            database.appDatabaseQueries.selectEnrolledCoursesByUserId("student-1").executeAsList()
+        )
+        assertEquals(
+            expectedProgress.totalScore,
+            database.appDatabaseQueries.selectProgressByUserId("student-1").executeAsOneOrNull()?.totalScore
+        )
+    }
+
+    @Test
+    fun `enroll propagates remote failures`() = runTest {
+        val mockEngine = MockEngine { error("Network unavailable") }
+        val httpClient = createHttpClient(
+            tokenStore = InMemoryTokenStore().apply { accessToken = "token-123" },
+            engine = mockEngine
+        )
+        val api = CourseApi(httpClient, apiConfig)
+        val repository = KtorCourseRepository(api, database)
+
+        val error = assertFailsWith<IllegalStateException> {
+            repository.enroll("official-course")
+        }
+
+        assertEquals("Network unavailable", error.message)
     }
 }

@@ -2,6 +2,7 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.UserProgress
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -55,5 +56,9 @@ class CourseApi(
             contentType(ContentType.Application.Json)
             setBody(mapOf("userId" to userId, "code" to code))
         }.body()
+    }
+
+    suspend fun enroll(courseId: String): UserProgress {
+        return client.post("$baseUrl/courses/$courseId/enroll").body()
     }
 }

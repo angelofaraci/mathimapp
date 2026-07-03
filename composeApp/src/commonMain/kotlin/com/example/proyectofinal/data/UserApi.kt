@@ -8,7 +8,12 @@ import com.example.proyectofinal.models.UserProgress
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
+
+class UnauthorizedSessionException : Exception("Invalid or expired token")
+
+private const val CurrentUserAlias = "current-user-id"
 
 class UserApi(
     private val client: HttpClient,
@@ -16,6 +21,18 @@ class UserApi(
 ) {
 
     private val baseUrl: String = apiConfig.baseUrl
+
+    suspend fun fetchCurrentUser(): User {
+        val response = client.get("$baseUrl/users/$CurrentUserAlias")
+
+        return when (response.status) {
+            HttpStatusCode.OK -> response.body()
+            HttpStatusCode.Unauthorized -> throw UnauthorizedSessionException()
+            else -> throw IllegalStateException(
+                response.bodyAsText().ifBlank { "Failed to fetch current user" }
+            )
+        }
+    }
 
     suspend fun fetchUser(userId: String): User {
         return client.get("$baseUrl/users/$userId").body()

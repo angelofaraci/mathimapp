@@ -16,13 +16,9 @@ class KtorUserRepository(
 ) : UserRepository {
 
     override suspend fun getCurrentUser(): User? = withContext(Dispatchers.IO) {
-        try {
-            val remote = api.fetchUser("current-user-id")
-            insertUserToLocal(remote)
-            remote
-        } catch (e: Exception) {
-            null
-        }
+        val remote = api.fetchCurrentUser()
+        insertUserToLocal(remote)
+        remote
     }
 
     override suspend fun getUserRole(userId: String): UserRole = withContext(Dispatchers.IO) {

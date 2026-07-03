@@ -15,11 +15,20 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+
+private const val CurrentUserAlias = "current-user-id"
+
 fun Application.userRoutes(service: UserService) {
     routing {
         authenticate("auth-jwt") {
             get("/users/{id}") {
-                val userId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val requestedUserId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val userId = if (requestedUserId == CurrentUserAlias) {
+                    call.currentUserId() ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                } else {
+                    requestedUserId
+                }
+
                 if (!call.requireSelfOrAdmin(userId)) return@get
 
                 val user = service.getUserById(userId) ?: return@get call.respond(HttpStatusCode.NotFound)

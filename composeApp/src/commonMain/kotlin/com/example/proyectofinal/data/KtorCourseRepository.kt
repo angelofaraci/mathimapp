@@ -3,6 +3,7 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.UserProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -69,6 +70,12 @@ class KtorCourseRepository(
         }
     }
 
+    override suspend fun enroll(courseId: String): UserProgress = withContext(Dispatchers.IO) {
+        val progress = api.enroll(courseId)
+        syncUserProgressToLocal(progress)
+        progress
+    }
+
     private fun insertCourseToLocal(course: Course) {
         database.appDatabaseQueries.insertCourse(
             id = course.id,
@@ -83,5 +90,30 @@ class KtorCourseRepository(
             durationMinutes = course.durationMinutes,
             xpReward = course.xpReward
         )
+    }
+
+    private fun syncUserProgressToLocal(progress: UserProgress) {
+        database.appDatabaseQueries.insertProgress(
+            userId = progress.userId,
+            totalScore = progress.totalScore
+        )
+        progress.completedLessonIds.forEach { lessonId ->
+            database.appDatabaseQueries.insertCompletedLesson(
+                userId = progress.userId,
+                lessonId = lessonId
+            )
+        }
+        progress.completedExerciseIds.forEach { exerciseId ->
+            database.appDatabaseQueries.insertCompletedExercise(
+                userId = progress.userId,
+                exerciseId = exerciseId
+            )
+        }
+        progress.enrolledCourseIds.forEach { enrolledCourseId ->
+            database.appDatabaseQueries.insertEnrolledCourse(
+                userId = progress.userId,
+                courseId = enrolledCourseId
+            )
+        }
     }
 }
