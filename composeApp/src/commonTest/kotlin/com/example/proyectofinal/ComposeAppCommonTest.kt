@@ -10,16 +10,27 @@ import com.example.proyectofinal.db.UserProgressEntity
 import com.example.proyectofinal.db.createTestDriver
 import com.example.proyectofinal.di.appModule
 import com.example.proyectofinal.di.userRoleColumnAdapter
+import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
+import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.domain.auth.SessionHydrationResult
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserProgress
+import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
+import com.example.proyectofinal.ui.catalog.CourseDetailViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -53,13 +64,17 @@ class AppModuleTest {
     }
 
     @Test
-    fun `app module resolves http client course repository and course view model`() = runTest(dispatcher) {
+    fun `app module resolves http client and course detail view model registration`() = runTest(dispatcher) {
         val koinApp = koinApplication {
             allowOverride(true)
             modules(
                 appModule,
                 module {
                     single { createTestAppDatabase() }
+                    single<CourseRepository> { FakeCourseRepository { emptyList() } }
+                    single<UserRepository> { FakeResolvedUserRepository() }
+                    single<AuthRepository> { FakeResolvedAuthRepository() }
+                    single<LearnerProfileRepository> { FakeLearnerProfileRepository(7) }
                 }
             )
         }
@@ -70,6 +85,7 @@ class AppModuleTest {
             assertNotNull(koin.get<HttpClient>())
             assertNotNull(koin.get<CourseRepository>())
             assertNotNull(koin.get<CourseViewModel>())
+            assertNotNull(koin.get<CourseDetailViewModel>())
             assertNotNull(koin.get<ProfileViewModel>())
         } finally {
             koinApp.close()
@@ -164,6 +180,8 @@ private class FakeCourseRepository(
     override suspend fun deleteCourse(id: String) = Unit
 
     override suspend fun joinCourseByCode(userId: String, code: String): Course? = null
+
+    override suspend fun enroll(courseId: String): UserProgress = UserProgress(userId = "test-user")
 }
 
 private class FakeLearnerProfileRepository(
@@ -183,6 +201,43 @@ private class FakeLearnerProfileRepository(
     override suspend fun isOnboardingComplete(): Boolean = profile?.onboardingComplete == true
 
     override suspend fun upsertProfile(profile: LearnerProfile) = Unit
+}
+
+private class FakeResolvedAuthRepository : AuthRepository {
+    private val sessionState = MutableStateFlow(
+        AuthSession(
+            token = "token-123",
+            user = User("student-1", "Ada", "ada@example.com", UserRole.STUDENT)
+        )
+    )
+
+    override val session: StateFlow<AuthSession> = sessionState
+
+    override suspend fun login(email: String, password: String): Result<User> = Result.failure(NotImplementedError())
+
+    override suspend fun register(name: String, email: String, password: String): Result<User> = Result.failure(NotImplementedError())
+
+    override suspend fun hydrateSessionIfNeeded(): SessionHydrationResult = SessionHydrationResult.Skipped
+
+    override fun logout() = Unit
+}
+
+private class FakeResolvedUserRepository : UserRepository {
+    override suspend fun getCurrentUser(): User? = User("student-1", "Ada", "ada@example.com", UserRole.STUDENT)
+
+    override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
+
+    override suspend fun updateUser(user: User) = Unit
+
+    override suspend fun getUserProgress(userId: String): UserProgress = UserProgress(userId = userId)
+
+    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse =
+        ExerciseCompletionResponse(
+            exerciseId = exerciseId,
+            lessonId = "lesson-1",
+            lessonCompleted = false,
+            progress = UserProgress(userId = "student-1")
+        )
 }
 
 private fun createTestAppDatabase(): AppDatabase {
