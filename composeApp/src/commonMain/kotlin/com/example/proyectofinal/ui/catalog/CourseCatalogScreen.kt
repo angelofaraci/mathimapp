@@ -1,5 +1,6 @@
 package com.example.proyectofinal.ui.catalog
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -24,6 +26,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun CourseCatalogScreen(
+    onCourseSelected: (String) -> Unit,
     viewModel: CourseCatalogViewModel = koinViewModel<CourseCatalogViewModel>()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -32,7 +35,8 @@ fun CourseCatalogScreen(
         uiState = uiState,
         onQueryChange = viewModel::updateQuery,
         onTopicSelected = viewModel::toggleTopic,
-        onRetry = viewModel::retry
+        onRetry = viewModel::retry,
+        onCourseSelected = onCourseSelected
     )
 }
 
@@ -42,6 +46,7 @@ internal fun CourseCatalogContent(
     onQueryChange: (String) -> Unit,
     onTopicSelected: (String) -> Unit,
     onRetry: () -> Unit,
+    onCourseSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -118,7 +123,10 @@ internal fun CourseCatalogContent(
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(items = uiState.visibleCourses, key = Course::id) { course ->
-                                CourseCatalogCard(course = course)
+                                CourseCatalogCard(
+                                    course = course,
+                                    onClick = { onCourseSelected(course.id) }
+                                )
                             }
                         }
                     }
@@ -136,8 +144,13 @@ private fun CatalogCenteredState(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun CourseCatalogCard(course: Course) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun CourseCatalogCard(course: Course, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("course-card-${course.id}")
+            .clickable(onClick = onClick)
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -161,13 +174,6 @@ private fun CourseCatalogCard(course: Course) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            Button(
-                onClick = {},
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Inscribirse")
             }
         }
     }

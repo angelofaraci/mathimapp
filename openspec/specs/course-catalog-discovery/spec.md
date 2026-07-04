@@ -46,7 +46,7 @@ The system MUST provide horizontal topic chips for `Fracciones`, `Álgebra`, and
 
 ### Requirement: Course Card Display
 
-The system MUST display each course as a card showing the course name, topic, difficulty, duration, and XP reward.
+The system MUST display each course as a card showing the course name, topic, difficulty, duration, and XP reward. Tapping the entire card SHALL navigate to the course detail screen.
 
 #### Scenario: Card displays all discovery metadata
 
@@ -59,6 +59,12 @@ The system MUST display each course as a card showing the course name, topic, di
 - GIVEN a course with name and topic but no duration or XP
 - WHEN the card is rendered
 - THEN the system SHALL display available fields and omit or show defaults for missing ones
+
+#### Scenario: Tapping card navigates to detail
+
+- GIVEN the catalog displays course cards
+- WHEN the user taps any course card
+- THEN the system SHALL navigate to the course detail screen for that course
 
 ### Requirement: Search Bar Filtering
 
@@ -75,19 +81,3 @@ The system MUST provide a search bar that filters courses by name using client-s
 - GIVEN a topic filter is active showing 3 courses
 - WHEN the user clears the search bar
 - THEN the system SHALL show all 3 courses matching the active topic filter
-
-### Requirement: Visual-Only Enrollment Button
-
-The system MUST display an "Inscribirse" button on each course card. In v1, this button SHALL be visual-only and SHALL NOT trigger any backend enrollment call.
-
-#### Scenario: Button is visible on every card
-
-- GIVEN the catalog displays course cards
-- WHEN a card is rendered
-- THEN the system SHALL show an "Inscribirse" button on that card
-
-#### Scenario: Button tap produces no network call in v1
-
-- GIVEN the user taps "Inscribirse" on a course card
-- WHEN the tap is processed
-- THEN the system SHALL NOT make any HTTP request to an enrollment endpoint

@@ -11,9 +11,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.proyectofinal.ui.catalog.CourseCatalogScreen
+import com.example.proyectofinal.ui.catalog.CourseDetailScreen
 import com.example.proyectofinal.ui.home.HomeDashboardScreen
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -29,6 +33,7 @@ fun AuthenticatedHomeScaffold(
     router: MainRouter = remember { MainRouter() }
 ) {
     val selectedTab by router.target.collectAsState()
+    var selectedCourseId by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -56,7 +61,18 @@ fun AuthenticatedHomeScaffold(
         ) {
             when (selectedTab) {
                 MainTab.HOME -> HomeDashboardScreen(router = router, onLogout = onLogout)
-                MainTab.ACTIVITIES -> CourseCatalogScreen()
+                MainTab.ACTIVITIES -> {
+                    val courseId = selectedCourseId
+
+                    if (courseId == null) {
+                        CourseCatalogScreen(onCourseSelected = { selectedCourseId = it })
+                    } else {
+                        CourseDetailScreen(
+                            courseId = courseId,
+                            onBack = { selectedCourseId = null }
+                        )
+                    }
+                }
                 MainTab.PROGRESS -> PlaceholderScreen(title = "Progreso")
                 MainTab.PROFILE -> ProfileScreen(onLogout = onLogout)
             }

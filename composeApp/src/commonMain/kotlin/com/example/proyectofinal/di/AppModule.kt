@@ -32,6 +32,7 @@ import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
 import com.example.proyectofinal.ui.catalog.CourseCatalogViewModel
+import com.example.proyectofinal.ui.catalog.CourseDetailViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -54,6 +55,7 @@ val appModule = module {
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
 
     viewModelOf(::CourseCatalogViewModel)
+    viewModelOf(::CourseDetailViewModel)
     viewModelOf(::CourseViewModel)
     viewModelOf(::HomeDashboardViewModel)
     viewModelOf(::LoginViewModel)
