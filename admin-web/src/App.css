@@ -142,6 +142,108 @@ body {
   color: #1a1a2e;
 }
 
+.page h3 {
+  font-size: 1rem;
+  margin-bottom: 0.85rem;
+  color: #1a1a2e;
+}
+
+.content-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.panel {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+
+.panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.entity-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.entity-form label,
+.panel-header label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  color: #555;
+}
+
+.entity-form input,
+.entity-form textarea,
+.entity-form select,
+.panel-header select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.entity-form textarea {
+  resize: vertical;
+}
+
+.entity-form input:focus,
+.entity-form textarea:focus,
+.entity-form select:focus,
+.panel-header select:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
+}
+
+.checkbox-row {
+  display: flex !important;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 600;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
+.form-actions,
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.form-actions button,
+.table-actions button {
+  padding: 0.55rem 0.85rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.secondary-btn {
+  background: #eef2ff;
+  color: #3149b8;
+}
+
+.danger-btn {
+  background: #fff0f0;
+  color: #c0392b;
+}
+
 /* ---- Banners ---- */
 .error-banner {
   background: #fff0f0;

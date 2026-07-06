@@ -58,3 +58,18 @@ export async function apiFetch<T>(
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
 }
+
+export function getErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}

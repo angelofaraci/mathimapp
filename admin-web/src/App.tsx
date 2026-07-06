@@ -3,6 +3,8 @@ import { useAuth } from './lib/auth';
 import Login from './pages/Login';
 import Users from './pages/Users';
 import Courses from './pages/Courses';
+import Lessons from './pages/Lessons';
+import Exercises from './pages/Exercises';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuth();
@@ -24,6 +26,12 @@ function NavBar() {
       </Link>
       <Link to="/courses" className="nav-link">
         Courses
+      </Link>
+      <Link to="/lessons" className="nav-link">
+        Lessons
+      </Link>
+      <Link to="/exercises" className="nav-link">
+        Exercises
       </Link>
       <button className="logout-btn" onClick={logout}>
         Log out
@@ -63,6 +71,22 @@ export default function App() {
             element={
               <AuthGuard>
                 <Courses />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/lessons"
+            element={
+              <AuthGuard>
+                <Lessons />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/exercises"
+            element={
+              <AuthGuard>
+                <Exercises />
               </AuthGuard>
             }
           />
