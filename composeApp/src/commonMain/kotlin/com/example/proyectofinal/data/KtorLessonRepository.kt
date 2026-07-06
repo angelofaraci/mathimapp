@@ -58,6 +58,7 @@ class KtorLessonRepository(
         database.appDatabaseQueries.insertLesson(
             id = lesson.id,
             courseId = lesson.courseId,
+            creatorId = lesson.creatorId,
             title = lesson.title,
             theoryContent = lesson.theoryContent
         )

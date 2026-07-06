@@ -30,7 +30,8 @@ object Courses : Table("courses") {
 
 object Lessons : Table("lessons") {
     val id = varchar("id", 50)
-    val courseId = reference("course_id", Courses.id, onDelete = ReferenceOption.CASCADE)
+    val courseId = reference("course_id", Courses.id, onDelete = ReferenceOption.CASCADE).nullable()
+    val creatorId = varchar("creator_id", 50).nullable()
     val title = varchar("title", 200)
     val theoryContent = text("theory_content")
     val orderIndex = integer("order_index").default(0)

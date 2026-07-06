@@ -64,7 +64,8 @@ data class Course(
 @Serializable
 data class Lesson(
     val id: String,
-    val courseId: String,
+    val courseId: String?,
+    val creatorId: String? = null,
     val title: String,
     val theoryContent: String,
     val exercises: List<Exercise> = emptyList()

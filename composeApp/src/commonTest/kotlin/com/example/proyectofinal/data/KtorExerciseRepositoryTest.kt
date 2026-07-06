@@ -67,6 +67,7 @@ class KtorExerciseRepositoryTest {
         database.appDatabaseQueries.insertLesson(
             id = "lesson-1",
             courseId = "course-1",
+            creatorId = null,
             title = "Test Lesson",
             theoryContent = "Theory content"
         )

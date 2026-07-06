@@ -5,9 +5,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateLessonRequest(
     val id: String,
-    val courseId: String,
+    val courseId: String?,
     val title: String,
-    val theoryContent: String
+    val theoryContent: String,
+    val creatorId: String? = null
 )
 
 @Serializable

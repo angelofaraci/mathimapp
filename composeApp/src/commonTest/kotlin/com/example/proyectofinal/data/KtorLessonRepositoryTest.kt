@@ -204,6 +204,7 @@ class KtorLessonRepositoryTest {
         database.appDatabaseQueries.insertLesson(
             id = existingLesson.id,
             courseId = existingLesson.courseId,
+            creatorId = existingLesson.creatorId,
             title = existingLesson.title,
             theoryContent = existingLesson.theoryContent
         )
@@ -248,6 +249,7 @@ class KtorLessonRepositoryTest {
         database.appDatabaseQueries.insertLesson(
             id = lessonId,
             courseId = "course-1",
+            creatorId = null,
             title = "Lesson to Delete",
             theoryContent = "Content"
         )
@@ -295,6 +297,7 @@ class KtorLessonRepositoryTest {
         database.appDatabaseQueries.insertLesson(
             id = existingLesson.id,
             courseId = existingLesson.courseId,
+            creatorId = existingLesson.creatorId,
             title = existingLesson.title,
             theoryContent = existingLesson.theoryContent
         )

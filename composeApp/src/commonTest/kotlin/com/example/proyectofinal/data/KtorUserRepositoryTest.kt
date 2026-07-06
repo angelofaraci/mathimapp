@@ -319,6 +319,7 @@ class KtorUserRepositoryTest {
         database.appDatabaseQueries.insertLesson(
             id = "lesson-1",
             courseId = "course-1",
+            creatorId = null,
             title = "Lesson",
             theoryContent = "Theory"
         )
@@ -398,6 +399,7 @@ class KtorUserRepositoryTest {
         database.appDatabaseQueries.insertLesson(
             id = "lesson-1",
             courseId = "course-1",
+            creatorId = null,
             title = "Lesson",
             theoryContent = "Theory"
         )

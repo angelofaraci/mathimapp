@@ -37,7 +37,8 @@ CREATE TABLE CourseEntity (
 -- Lesson table
 CREATE TABLE LessonEntity (
     id TEXT NOT NULL PRIMARY KEY,
-    courseId TEXT NOT NULL,
+    courseId TEXT,
+    creatorId TEXT,
     title TEXT NOT NULL,
     theoryContent TEXT NOT NULL,
     FOREIGN KEY(courseId) REFERENCES CourseEntity(id) ON DELETE CASCADE
@@ -122,8 +123,8 @@ selectLessonById:
 SELECT * FROM LessonEntity WHERE id = ?;
 
 insertLesson:
-INSERT OR REPLACE INTO LessonEntity(id, courseId, title, theoryContent)
-VALUES (?, ?, ?, ?);
+INSERT OR REPLACE INTO LessonEntity(id, courseId, creatorId, title, theoryContent)
+VALUES (?, ?, ?, ?, ?);
 
 deleteLesson:
 DELETE FROM LessonEntity WHERE id = ?;
