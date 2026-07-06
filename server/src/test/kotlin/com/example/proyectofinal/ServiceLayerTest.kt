@@ -19,11 +19,14 @@ import com.example.proyectofinal.models.UpdateCourseRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.service.AdminLessonMutationResult
+import com.example.proyectofinal.service.AdminLessonPatchRequest
 import com.example.proyectofinal.service.AuthService
 import com.example.proyectofinal.service.CourseReadResult
 import com.example.proyectofinal.service.CourseService
 import com.example.proyectofinal.service.ExerciseCompletionResult
 import com.example.proyectofinal.service.ExerciseService
+import com.example.proyectofinal.service.FieldPatch
 import com.example.proyectofinal.service.LessonListReadResult
 import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
@@ -291,6 +294,115 @@ class LessonExerciseServiceTest {
     }
 
     @Test
+    fun `standalone lessons are visible only to admin or creator and theory updates follow ownership`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "teacher-owner", role = UserRole.TEACHER)
+        insertUser(id = "teacher-other", role = UserRole.TEACHER)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
+
+        insertLesson(
+            id = "standalone-lesson",
+            courseId = null,
+            creatorId = "teacher-owner",
+            theoryContent = "Standalone theory"
+        )
+        insertExercise(id = "standalone-exercise", lessonId = "standalone-lesson", correctAnswer = "42")
+
+        val service = LessonService()
+
+        val adminLesson = assertIs<LessonReadResult.Success>(
+            service.getLessonByIdForUser("standalone-lesson", "admin-1", UserRole.ADMIN)
+        ).lesson
+        val ownerLesson = assertIs<LessonReadResult.Success>(
+            service.getLessonByIdForUser("standalone-lesson", "teacher-owner", UserRole.TEACHER)
+        ).lesson
+
+        assertEquals("", adminLesson.exercises.single().correctAnswer)
+        assertEquals("42", ownerLesson.exercises.single().correctAnswer)
+        assertEquals(listOf("standalone-lesson"), service.listStandaloneLessons().map { it.id })
+        assertEquals(
+            LessonReadResult.Forbidden,
+            service.getLessonByIdForUser("standalone-lesson", "teacher-other", UserRole.TEACHER)
+        )
+        assertEquals(
+            LessonReadResult.Forbidden,
+            service.getLessonByIdForUser("standalone-lesson", "learner-1", UserRole.STUDENT)
+        )
+
+        assertIs<TheoryUpdateResult.Success>(
+            service.updateTheoryContent(
+                lessonId = "standalone-lesson",
+                content = "Updated by creator",
+                userId = "teacher-owner",
+                role = UserRole.TEACHER
+            )
+        )
+        assertIs<TheoryUpdateResult.Success>(
+            service.updateTheoryContent(
+                lessonId = "standalone-lesson",
+                content = "Updated by admin",
+                userId = "admin-1",
+                role = UserRole.ADMIN
+            )
+        )
+        assertEquals(
+            TheoryUpdateResult.Forbidden,
+            service.updateTheoryContent(
+                lessonId = "standalone-lesson",
+                content = "Rejected",
+                userId = "teacher-other",
+                role = UserRole.TEACHER
+            )
+        )
+    }
+
+    @Test
+    fun `admin lesson patch unassigns with fallback creator and rejects creator clears`() {
+        insertUser(id = "teacher-owner", role = UserRole.TEACHER)
+        insertUser(id = "teacher-other", role = UserRole.TEACHER)
+        insertCourse(id = "course-1", creatorId = "teacher-owner")
+        insertCourse(id = "course-2", creatorId = "teacher-other")
+        insertLesson(id = "course-lesson", courseId = "course-1", creatorId = null)
+
+        val service = LessonService()
+
+        val detachedLesson = assertIs<AdminLessonMutationResult.Success>(
+            service.adminUpdateLesson(
+                id = "course-lesson",
+                request = AdminLessonPatchRequest(
+                    courseId = FieldPatch.Present<String?>(null)
+                )
+            )
+        ).lesson
+
+        assertEquals(null, detachedLesson.courseId)
+        assertEquals("teacher-owner", detachedLesson.creatorId)
+        assertEquals("teacher-owner", service.getCreatorId("course-lesson"))
+
+        val reassignedLesson = assertIs<AdminLessonMutationResult.Success>(
+            service.adminUpdateLesson(
+                id = "course-lesson",
+                request = AdminLessonPatchRequest(
+                    courseId = FieldPatch.Present("course-2")
+                )
+            )
+        ).lesson
+
+        assertEquals("course-2", reassignedLesson.courseId)
+        assertEquals("teacher-owner", reassignedLesson.creatorId)
+
+        val clearResult = assertIs<AdminLessonMutationResult.InvalidRequest>(
+            service.adminUpdateLesson(
+                id = "course-lesson",
+                request = AdminLessonPatchRequest(
+                    creatorId = FieldPatch.Present<String?>(null)
+                )
+            )
+        )
+        assertTrue(clearResult.message.contains("cannot be cleared"))
+    }
+
+    @Test
     fun `course read access blocks private course details for outsiders`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "teacher-owner", role = UserRole.TEACHER)
@@ -416,6 +528,35 @@ class LessonExerciseServiceTest {
 
         assertTrue(service.deleteExercise("exercise-1"))
         assertTrue(service.getExercisesByLessonId("lesson-1", hideAnswers = false).isEmpty())
+    }
+
+    @Test
+    fun `exercise ownership fallback and course delete keep standalone content intact`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "teacher-owner", role = UserRole.TEACHER)
+        insertCourse(id = "course-1", creatorId = "teacher-owner")
+        insertLesson(id = "course-lesson", courseId = "course-1", creatorId = "admin-1")
+        insertLesson(id = "standalone-lesson", courseId = null, creatorId = "teacher-owner")
+        insertExercise(id = "course-exercise", lessonId = "course-lesson")
+        insertExercise(id = "standalone-exercise", lessonId = "standalone-lesson")
+
+        val exerciseService = ExerciseService()
+        val courseService = CourseService()
+
+        assertEquals("teacher-owner", exerciseService.getLessonCreatorId("course-lesson"))
+        assertEquals("teacher-owner", exerciseService.getLessonCreatorId("standalone-lesson"))
+        assertEquals("teacher-owner", exerciseService.getCreatorId("course-exercise"))
+        assertEquals("teacher-owner", exerciseService.getCreatorId("standalone-exercise"))
+
+        assertTrue(courseService.adminDeleteCourse("course-1"))
+
+        transaction {
+            assertEquals(0L, Courses.selectAll().where { Courses.id eq "course-1" }.count())
+            assertEquals(0L, Lessons.selectAll().where { Lessons.id eq "course-lesson" }.count())
+            assertEquals(0L, Exercises.selectAll().where { Exercises.id eq "course-exercise" }.count())
+            assertEquals(1L, Lessons.selectAll().where { Lessons.id eq "standalone-lesson" }.count())
+            assertEquals(1L, Exercises.selectAll().where { Exercises.id eq "standalone-exercise" }.count())
+        }
     }
 
     @Test
@@ -688,6 +829,48 @@ class UserServiceTest {
             assertEquals(0L, UserProgressTable.selectAll().count())
         }
     }
+
+    @Test
+    fun `complete exercise allows standalone exercise for lesson creator`() {
+        insertUser(id = "learner-owner", role = UserRole.STUDENT)
+        insertLesson(id = "standalone-lesson", courseId = null, creatorId = "learner-owner")
+        insertExercise(id = "standalone-exercise", lessonId = "standalone-lesson")
+
+        val result = UserService().completeExercise(
+            userId = "learner-owner",
+            role = UserRole.STUDENT,
+            request = CompleteExerciseRequest(exerciseId = "standalone-exercise", score = 7)
+        )
+
+        val success = assertIs<ExerciseCompletionResult.Success>(result)
+        assertEquals("standalone-exercise", success.response.exerciseId)
+        assertEquals("standalone-lesson", success.response.lessonId)
+        assertEquals(true, success.response.lessonCompleted)
+        assertEquals(7, success.response.progress.totalScore)
+        assertEquals(setOf("standalone-exercise"), success.response.progress.completedExerciseIds)
+        assertEquals(setOf("standalone-lesson"), success.response.progress.completedLessonIds)
+    }
+
+    @Test
+    fun `complete exercise rejects standalone exercise for non owner learner`() {
+        insertUser(id = "learner-owner", role = UserRole.STUDENT)
+        insertUser(id = "learner-other", role = UserRole.STUDENT)
+        insertLesson(id = "standalone-lesson", courseId = null, creatorId = "learner-owner")
+        insertExercise(id = "standalone-exercise", lessonId = "standalone-lesson")
+
+        val result = UserService().completeExercise(
+            userId = "learner-other",
+            role = UserRole.STUDENT,
+            request = CompleteExerciseRequest(exerciseId = "standalone-exercise", score = 7)
+        )
+
+        assertEquals(ExerciseCompletionResult.Forbidden, result)
+        transaction {
+            assertEquals(0L, CompletedExercises.selectAll().count())
+            assertEquals(0L, CompletedLessons.selectAll().count())
+            assertEquals(0L, UserProgressTable.selectAll().count())
+        }
+    }
 }
 
 private fun initServiceTestDatabase() {
@@ -741,7 +924,8 @@ private fun insertCourse(
 
 private fun insertLesson(
     id: String,
-    courseId: String,
+    courseId: String?,
+    creatorId: String? = null,
     orderIndex: Int = 0,
     title: String = id,
     theoryContent: String = id
@@ -750,6 +934,7 @@ private fun insertLesson(
         Lessons.insert {
             it[Lessons.id] = id
             it[Lessons.courseId] = courseId
+            it[Lessons.creatorId] = creatorId
             it[Lessons.title] = title
             it[Lessons.theoryContent] = theoryContent
             it[Lessons.orderIndex] = orderIndex

@@ -32,6 +32,7 @@ internal fun ResultRow.toLesson(exercises: List<Exercise> = emptyList()): Lesson
     Lesson(
         id = this[Lessons.id],
         courseId = this[Lessons.courseId],
+        creatorId = this[Lessons.creatorId],
         title = this[Lessons.title],
         theoryContent = this[Lessons.theoryContent],
         exercises = exercises

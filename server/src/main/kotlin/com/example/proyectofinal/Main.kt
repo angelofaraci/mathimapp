@@ -58,7 +58,7 @@ fun Application.module(
     courseRoutes(courseService)
     lessonRoutes(lessonService)
     exerciseRoutes(exerciseService, lessonService)
-    adminRoutes(userService, courseService)
+    adminRoutes(userService, courseService, lessonService, exerciseService)
 
     if (seedData) {
         SeedData.seedOfficialCourses()

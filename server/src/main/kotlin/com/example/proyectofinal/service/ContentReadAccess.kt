@@ -13,11 +13,31 @@ internal data class CourseContentAccess(
     val isOfficial: Boolean
 )
 
+internal sealed interface LessonContentAccess {
+    data class CourseLinked(val courseAccess: CourseContentAccess) : LessonContentAccess
+    data class Standalone(val creatorId: String) : LessonContentAccess
+}
+
 internal fun canReadCourseContent(access: CourseContentAccess, userId: String, role: UserRole): Boolean =
     when (role) {
         UserRole.ADMIN -> true
         UserRole.TEACHER -> access.creatorId == userId
         UserRole.STUDENT -> access.isOfficial || isUserEnrolledInCourse(userId, access.courseId)
+    }
+
+internal fun canReadLessonContent(access: LessonContentAccess, userId: String, role: UserRole): Boolean =
+    when (access) {
+        is LessonContentAccess.CourseLinked -> canReadCourseContent(access.courseAccess, userId, role)
+        is LessonContentAccess.Standalone -> when (role) {
+            UserRole.ADMIN -> true
+            UserRole.TEACHER, UserRole.STUDENT -> access.creatorId == userId
+        }
+    }
+
+internal fun shouldHideLessonAnswers(access: LessonContentAccess, role: UserRole): Boolean =
+    when (access) {
+        is LessonContentAccess.CourseLinked -> role == UserRole.STUDENT
+        is LessonContentAccess.Standalone -> role == UserRole.ADMIN
     }
 
 private fun isUserEnrolledInCourse(userId: String, courseId: String): Boolean = dbQuery {

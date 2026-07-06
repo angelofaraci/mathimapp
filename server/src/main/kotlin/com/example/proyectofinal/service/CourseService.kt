@@ -25,6 +25,12 @@ sealed interface CourseReadResult {
     object NotFound : CourseReadResult
 }
 
+sealed interface AdminCourseMutationResult {
+    data class Success(val course: Course) : AdminCourseMutationResult
+    data class InvalidRequest(val message: String) : AdminCourseMutationResult
+    object NotFound : AdminCourseMutationResult
+}
+
 class CourseService {
     fun getOfficialCourses(schoolYear: Int? = null): List<Course> = dbQuery {
         val filter = if (schoolYear == null) {
@@ -150,6 +156,37 @@ class CourseService {
         )
     }
 
+    fun adminCreateCourse(
+        request: com.example.proyectofinal.models.CreateAdminCourseRequest,
+        authenticatedUserId: String
+    ): AdminCourseMutationResult {
+        if (request.title.isBlank()) {
+            return AdminCourseMutationResult.InvalidRequest("title is required")
+        }
+
+        if (request.description.isBlank()) {
+            return AdminCourseMutationResult.InvalidRequest("description is required")
+        }
+
+        return AdminCourseMutationResult.Success(
+            createCourse(
+                CreateCourseRequest(
+                    id = request.id,
+                    title = request.title,
+                    description = request.description,
+                    creatorId = authenticatedUserId,
+                    isOfficial = request.isOfficial,
+                    joinCode = null,
+                    schoolYear = request.schoolYear,
+                    topic = request.topic,
+                    difficulty = request.difficulty,
+                    durationMinutes = request.durationMinutes,
+                    xpReward = request.xpReward
+                )
+            )
+        )
+    }
+
     fun updateCourse(id: String, request: UpdateCourseRequest): Course? {
         val updated = dbQuery {
             Courses.update({ Courses.id eq id }) { row ->
@@ -175,6 +212,47 @@ class CourseService {
                 .toCourse()
         }
     }
+
+    fun adminUpdateCourse(
+        id: String,
+        request: com.example.proyectofinal.models.UpdateAdminCourseRequest
+    ): AdminCourseMutationResult {
+        if (request.title != null && request.title.isBlank()) {
+            return AdminCourseMutationResult.InvalidRequest("title cannot be blank")
+        }
+
+        if (request.description != null && request.description.isBlank()) {
+            return AdminCourseMutationResult.InvalidRequest("description cannot be blank")
+        }
+
+        val updated = dbQuery {
+            Courses.update({ Courses.id eq id }) { row ->
+                request.title?.let { row[Courses.title] = it }
+                request.description?.let { row[Courses.description] = it }
+                request.isOfficial?.let { row[Courses.isOfficial] = it }
+                request.schoolYear?.let { row[Courses.schoolYear] = it }
+                request.topic?.let { row[Courses.topic] = it }
+                request.difficulty?.let { row[Courses.difficulty] = it }
+                request.durationMinutes?.let { row[Courses.durationMinutes] = it }
+                request.xpReward?.let { row[Courses.xpReward] = it }
+            }
+        }
+
+        if (updated == 0) {
+            return AdminCourseMutationResult.NotFound
+        }
+
+        val course = dbQuery {
+            Courses.selectAll()
+                .where { Courses.id eq id }
+                .firstOrNull()
+                ?.toCourse()
+        } ?: return AdminCourseMutationResult.NotFound
+
+        return AdminCourseMutationResult.Success(course)
+    }
+
+    fun adminDeleteCourse(id: String): Boolean = deleteCourse(id)
 
     fun deleteCourse(id: String): Boolean = dbQuery {
         Courses.deleteWhere { Courses.id eq id } > 0

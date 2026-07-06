@@ -23,6 +23,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
@@ -105,21 +106,21 @@ class UserService {
         if (role != UserRole.STUDENT) {
             return@dbQuery ExerciseCompletionResult.Forbidden
         }
-        val exerciseAccess = (Exercises innerJoin Lessons innerJoin Courses)
-            .selectAll()
+        val exerciseRow = (Exercises innerJoin Lessons)
+            .select(Exercises.id, Exercises.lessonId, Lessons.courseId, Lessons.creatorId)
             .where { Exercises.id eq request.exerciseId }
             .firstOrNull()
-            ?.let {
-                ExerciseCompletionAccess(
-                    exerciseId = it[Exercises.id],
-                    lessonId = it[Exercises.lessonId],
-                    courseId = it[Lessons.courseId],
-                    creatorId = it[Courses.creatorId],
-                    isOfficial = it[Courses.isOfficial]
-                )
-            }
             ?: return@dbQuery ExerciseCompletionResult.NotFound
-        if (!canReadCourseContent(exerciseAccess.toCourseContentAccess(), userId, role)) {
+        val lessonAccess = resolveLessonContentAccess(
+            courseId = exerciseRow[Lessons.courseId],
+            standaloneCreatorId = exerciseRow[Lessons.creatorId]
+        ) ?: return@dbQuery ExerciseCompletionResult.NotFound
+        val exerciseAccess = ExerciseCompletionAccess(
+            exerciseId = exerciseRow[Exercises.id],
+            lessonId = exerciseRow[Exercises.lessonId],
+            lessonAccess = lessonAccess
+        )
+        if (!canReadLessonContent(exerciseAccess.lessonAccess, userId, role)) {
             return@dbQuery ExerciseCompletionResult.Forbidden
         }
         val existingCompletion = CompletedExercises.selectAll()
@@ -236,15 +237,27 @@ class UserService {
     private data class ExerciseCompletionAccess(
         val exerciseId: String,
         val lessonId: String,
-        val courseId: String,
-        val creatorId: String,
-        val isOfficial: Boolean
-    ) {
-        fun toCourseContentAccess(): CourseContentAccess =
-            CourseContentAccess(
-                courseId = courseId,
-                creatorId = creatorId,
-                isOfficial = isOfficial
-            )
-    }
+        val lessonAccess: LessonContentAccess
+    )
+
+    private fun resolveLessonContentAccess(
+        courseId: String?,
+        standaloneCreatorId: String?
+    ): LessonContentAccess? =
+        if (courseId != null) {
+            Courses.select(Courses.creatorId, Courses.isOfficial)
+                .where { Courses.id eq courseId }
+                .firstOrNull()
+                ?.let {
+                    LessonContentAccess.CourseLinked(
+                        CourseContentAccess(
+                            courseId = courseId,
+                            creatorId = it[Courses.creatorId],
+                            isOfficial = it[Courses.isOfficial]
+                        )
+                    )
+                }
+        } else {
+            standaloneCreatorId?.let { LessonContentAccess.Standalone(it) }
+        }
 }

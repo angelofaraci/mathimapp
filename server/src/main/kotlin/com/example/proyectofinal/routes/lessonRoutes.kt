@@ -56,13 +56,35 @@ fun Application.lessonRoutes(service: LessonService) {
 
             post("/lessons") {
                 val request = call.receive<CreateLessonRequest>()
+                val userId = call.currentUserId()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
+                val role = call.currentRole()
+                    ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
 
-                val creatorId = service.getCourseCreatorId(request.courseId)
-                    ?: return@post call.respond(HttpStatusCode.NotFound)
+                if (role == UserRole.STUDENT) {
+                    return@post call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                }
 
-                if (!call.requireSelfOrAdmin(creatorId)) return@post
+                val normalizedCourseId = request.courseId?.takeIf { it.isNotBlank() }
+                    ?: request.courseId?.let {
+                        return@post call.respond(HttpStatusCode.BadRequest, "courseId cannot be blank")
+                    }
 
-                call.respond(service.createLesson(request))
+                if (normalizedCourseId != null) {
+                    val courseCreatorId = service.getCourseCreatorId(normalizedCourseId)
+                        ?: return@post call.respond(HttpStatusCode.NotFound)
+
+                    if (!call.requireSelfOrAdmin(courseCreatorId)) return@post
+                }
+
+                call.respond(
+                    service.createLesson(
+                        request.copy(
+                            courseId = normalizedCourseId,
+                            creatorId = userId
+                        )
+                    )
+                )
             }
 
             put("/lessons/{id}") {
