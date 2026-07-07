@@ -34,6 +34,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.splashscreen)
             implementation(libs.compose.preview)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.android.driver)

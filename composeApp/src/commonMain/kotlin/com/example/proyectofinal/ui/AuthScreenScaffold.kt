@@ -3,6 +3,7 @@ package com.example.proyectofinal.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -30,6 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.mathimapp_logo
 
 private val AuthPrimaryColor = Color(0xFF1F2937)
 private val AuthLogoBackground = Color(0xFFF3F4F6)
@@ -93,11 +97,10 @@ private fun AuthHero() {
                 .border(1.dp, AuthLogoBorder, RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "M",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = AuthPrimaryColor
+            Image(
+                painter = painterResource(Res.drawable.mathimapp_logo),
+                contentDescription = "MathimApp logo",
+                modifier = Modifier.size(82.dp)
             )
         }
 
@@ -106,7 +109,7 @@ private fun AuthHero() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "MathApp",
+                text = "MathimApp",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = AuthPrimaryColor

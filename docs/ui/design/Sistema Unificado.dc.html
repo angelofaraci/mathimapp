@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#E7E4DE; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  @keyframes glowPulse { 0%,100%{ box-shadow:0 0 0 0 var(--glow); } 50%{ box-shadow:0 0 0 12px transparent; } }
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="--font:'Sora',sans-serif; font-family:var(--font); padding:56px 64px 96px; color:#2B2721;">
+
+  <!-- HEADER -->
+  <div style="max-width:820px; margin-bottom:40px;">
+    <div style="font-size:13px; letter-spacing:0.18em; text-transform:uppercase; color:#8B857B; font-weight:700;">Sistema unificado · Marea</div>
+    <div style="font-size:42px; font-weight:800; color:#2B2721; margin-top:10px; letter-spacing:-0.02em;">Un sistema, modo claro y oscuro</div>
+    <div style="font-size:16px; color:#6C665C; margin-top:12px; line-height:1.6;">Fusión de <b style="color:#2B2721;">Marea</b> (claro) y <b style="color:#2B2721;">Carbón</b> (oscuro) en una sola identidad. El coral, el verde azulado y el rosa son idénticos en ambos modos — solo cambian los neutros y el brillo de los acentos para conservar el contraste. Tipografía <b style="color:#2B2721;">Sora</b> (cambiable a Nunito desde Tweaks).</div>
+  </div>
+
+  <!-- TWO MODE CARDS -->
+  <div style="display:flex; flex-wrap:wrap; gap:40px; align-items:flex-start;">
+
+    <!-- ===================== LIGHT MODE ===================== -->
+    <div style="--coral:#F2654B; --on-coral:#FFFFFF; --teal:#0E9E8E; --on-teal:#FFFFFF; --rose:#F0526A; --app-bg:#FBF6EF; --app-bg2:#F2E9DD; --surface:#FFFFFF; --surface2:#F6EFE6; --ink:#26333B; --muted:#7C8790; --line:#EBE3D7; --track:#EADFD1; --lock:#CBBEAE; --lock-icon:#FFFFFF; --stripe:#F2E9DD; --success-glow:rgba(14,158,142,0.45); --glow:rgba(242,101,75,0.42); --phone-shadow:0 30px 60px -30px rgba(40,30,20,0.35); background:var(--app-bg2); border:1px solid var(--line); border-radius:36px; padding:26px; display:flex; flex-direction:column; gap:20px;">
+      <div style="display:flex; align-items:center; gap:10px; color:var(--ink); padding:2px 4px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+        <span style="font-weight:700; font-size:17px;">Modo claro</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-left:4px;">— antes “Marea”</span>
+      </div>
+      <div style="display:flex; gap:24px;">
+
+        <!-- MAPA -->
+        <div data-screen-label="Mapa · Claro" style="width:300px; height:624px; border-radius:44px; background:linear-gradient(180deg,var(--app-bg),var(--app-bg2)); border:1px solid var(--line); box-shadow:var(--phone-shadow); overflow:hidden; position:relative; font-family:var(--font); color:var(--ink);">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 8px; font-size:14px; font-weight:700; color:var(--ink);"><span>9:41</span><span style="display:flex; gap:7px; align-items:center;"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.6" y="5" width="3" height="6" rx="1"/><rect x="9.2" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.8" y="0" width="3" height="11" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 4a10 10 0 0 1 14 0"/><path d="M3.6 6.6a6.4 6.4 0 0 1 8.8 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor"/><rect x="2" y="2" width="16.5" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.5" height="4" rx="1" fill="currentColor"/></svg></span></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:8px 20px 4px;">
+            <div style="width:38px; height:38px; border-radius:12px; background:var(--surface2); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5l-7 7 7 7M6 12h13"/></svg></div>
+            <div style="flex:1; text-align:center;"><div style="font-weight:700; font-size:17px;">Fundamentos</div><div style="font-size:12px; color:var(--muted); font-weight:500;">Unidad 2 · 8 Lecciones</div></div>
+            <div style="background:var(--coral); color:var(--on-coral); font-weight:700; font-size:12px; padding:9px 12px; border-radius:12px;">Ver teoría</div>
+          </div>
+          <div style="padding:6px 22px 0;"><div style="height:8px; border-radius:99px; background:var(--track); overflow:hidden;"><div style="width:45%; height:100%; background:var(--teal); border-radius:99px;"></div></div><div style="display:flex; justify-content:space-between; margin-top:7px; font-size:11px; font-weight:700;"><span style="color:var(--teal);">45% Completado</span><span style="color:var(--muted);">3/8 Lecciones</span></div></div>
+          <div style="position:relative; height:360px; margin-top:8px;">
+            <svg width="300" height="360" viewBox="0 0 300 360" style="position:absolute; inset:0;" fill="none"><polyline points="168,42 84,112 192,182 114,254" stroke="var(--teal)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><polyline points="114,254 54,324" stroke="var(--lock)" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 12"/></svg>
+            <div style="position:absolute; top:14px; left:56%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--teal); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px var(--success-glow);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--on-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></div>
+            <div style="position:absolute; top:84px; left:28%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--teal); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px var(--success-glow);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--on-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></div>
+            <div style="position:absolute; top:154px; left:64%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--teal); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px var(--success-glow);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--on-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></div>
+            <div style="position:absolute; top:226px; left:38%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--coral); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; animation:glowPulse 2s ease-out infinite;"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--on-coral)"><polygon points="8 5 19 12 8 19"/></svg></div>
+            <div style="position:absolute; top:296px; left:18%; transform:translateX(-50%); width:52px; height:52px; border-radius:50%; background:var(--lock); border:3px solid var(--surface); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lock-icon)" stroke-width="2.2" stroke-linecap="round"><rect x="6" y="11" width="12" height="9" rx="2" fill="var(--lock-icon)" stroke="none"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></div>
+          </div>
+          <div style="position:absolute; bottom:0; left:0; right:0; height:64px; background:var(--surface); border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-around; padding-bottom:6px;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span style="font-size:10px; font-weight:600;">Inicio</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--coral);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M10 8h4"/></svg><span style="font-size:10px; font-weight:700;">Actividades</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 20v-6M12 20V8M18 20v-4"/></svg><span style="font-size:10px; font-weight:600;">Progreso</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg><span style="font-size:10px; font-weight:600;">Perfil</span></div>
+          </div>
+        </div>
+
+        <!-- EJERCICIO -->
+        <div data-screen-label="Ejercicio · Claro" style="width:300px; height:624px; border-radius:44px; background:var(--app-bg); border:1px solid var(--line); box-shadow:var(--phone-shadow); overflow:hidden; position:relative; font-family:var(--font); color:var(--ink);">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 8px; font-size:14px; font-weight:700;"><span>9:41</span><span style="display:flex; gap:7px; align-items:center;"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.6" y="5" width="3" height="6" rx="1"/><rect x="9.2" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.8" y="0" width="3" height="11" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 4a10 10 0 0 1 14 0"/><path d="M3.6 6.6a6.4 6.4 0 0 1 8.8 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor"/><rect x="2" y="2" width="16.5" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.5" height="4" rx="1" fill="currentColor"/></svg></span></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:8px 22px 6px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            <div style="flex:1; font-weight:700; font-size:14px; text-align:center;">Fracciones – Pregunta 3/10</div>
+            <div style="display:flex; gap:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--rose)"><path d="M12 21s-6.7-4.35-9.5-8.5C0.5 9.5 2 5.5 5.5 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 4 3 7-2.8 4.15-9.5 8.5-9.5 8.5z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--rose)"><path d="M12 21s-6.7-4.35-9.5-8.5C0.5 9.5 2 5.5 5.5 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 4 3 7-2.8 4.15-9.5 8.5-9.5 8.5z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M12 21s-6.7-4.35-9.5-8.5C0.5 9.5 2 5.5 5.5 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 4 3 7-2.8 4.15-9.5 8.5-9.5 8.5z"/></svg></div>
+          </div>
+          <div style="padding:4px 22px 0;"><div style="height:8px; border-radius:99px; background:var(--track); overflow:hidden;"><div style="width:30%; height:100%; background:var(--coral); border-radius:99px;"></div></div></div>
+          <div style="margin:16px 20px 0; background:var(--surface); border:1px solid var(--line); border-radius:22px; padding:20px;">
+            <div style="font-size:20px; font-weight:700; letter-spacing:-0.01em;">¿Cuánto es 1/2 + 1/4?</div>
+            <div style="margin-top:16px; height:118px; border-radius:16px; background:repeating-linear-gradient(45deg,var(--surface2),var(--surface2) 9px,var(--stripe) 9px,var(--stripe) 18px); display:flex; align-items:center; justify-content:center;"><span style="background:var(--surface); color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; padding:5px 10px; border-radius:7px; border:1px solid var(--line);">DIAGRAMA VISUAL</span></div>
+          </div>
+          <div style="padding:18px 20px 0;">
+            <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; color:var(--muted); text-transform:uppercase;">Elige la respuesta correcta</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+              <div style="background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px; font-weight:600; font-size:15px;">A: 2/4</div>
+              <div style="background:var(--surface); border:2px solid var(--coral); border-radius:16px; padding:15px; font-weight:700; font-size:15px; color:var(--coral); box-shadow:0 6px 16px -8px var(--glow);">B: 3/4</div>
+              <div style="background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px; font-weight:600; font-size:15px;">C: 1/2</div>
+              <div style="background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px; font-weight:600; font-size:15px;">D: 1</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:16px; color:var(--muted); font-weight:600; font-size:13px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.3 1 2.5h6c0-1.2.2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Pista</div>
+          </div>
+          <div style="position:absolute; bottom:22px; left:20px; right:20px;"><div style="background:var(--coral); color:var(--on-coral); text-align:center; font-weight:700; font-size:16px; padding:17px; border-radius:18px; box-shadow:0 12px 24px -10px var(--glow);">Confirmar</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== DARK MODE ===================== -->
+    <div style="--coral:#FF6E5A; --on-coral:#2A0F0A; --teal:#2DD4BF; --on-teal:#05201C; --rose:#FF6F8A; --app-bg:#16181D; --app-bg2:#0E0F13; --surface:#1F232B; --surface2:#282D37; --ink:#EEF1F5; --muted:#8A93A3; --line:#2E333E; --track:#282D37; --lock:#3A414F; --lock-icon:#8A93A3; --stripe:#1F232B; --success-glow:rgba(45,212,191,0.55); --glow:rgba(255,110,90,0.5); --phone-shadow:0 30px 60px -28px rgba(6,7,10,0.72); background:var(--app-bg2); border:1px solid var(--line); border-radius:36px; padding:26px; display:flex; flex-direction:column; gap:20px;">
+      <div style="display:flex; align-items:center; gap:10px; color:var(--ink); padding:2px 4px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--coral)" stroke="none"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <span style="font-weight:700; font-size:17px;">Modo oscuro</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-left:4px;">— antes “Carbón”</span>
+      </div>
+      <div style="display:flex; gap:24px;">
+
+        <!-- MAPA -->
+        <div data-screen-label="Mapa · Oscuro" style="width:300px; height:624px; border-radius:44px; background:linear-gradient(180deg,var(--app-bg),var(--app-bg2)); border:1px solid var(--line); box-shadow:var(--phone-shadow); overflow:hidden; position:relative; font-family:var(--font); color:var(--ink);">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 8px; font-size:14px; font-weight:700; color:var(--ink);"><span>9:41</span><span style="display:flex; gap:7px; align-items:center;"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.6" y="5" width="3" height="6" rx="1"/><rect x="9.2" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.8" y="0" width="3" height="11" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 4a10 10 0 0 1 14 0"/><path d="M3.6 6.6a6.4 6.4 0 0 1 8.8 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor"/><rect x="2" y="2" width="16.5" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.5" height="4" rx="1" fill="currentColor"/></svg></span></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:8px 20px 4px;">
+            <div style="width:38px; height:38px; border-radius:12px; background:var(--surface2); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5l-7 7 7 7M6 12h13"/></svg></div>
+            <div style="flex:1; text-align:center;"><div style="font-weight:700; font-size:17px;">Fundamentos</div><div style="font-size:12px; color:var(--muted); font-weight:500;">Unidad 2 · 8 Lecciones</div></div>
+            <div style="background:var(--coral); color:var(--on-coral); font-weight:700; font-size:12px; padding:9px 12px; border-radius:12px;">Ver teoría</div>
+          </div>
+          <div style="padding:6px 22px 0;"><div style="height:8px; border-radius:99px; background:var(--track); overflow:hidden;"><div style="width:45%; height:100%; background:var(--teal); border-radius:99px;"></div></div><div style="display:flex; justify-content:space-between; margin-top:7px; font-size:11px; font-weight:700;"><span style="color:var(--teal);">45% Completado</span><span style="color:var(--muted);">3/8 Lecciones</span></div></div>
+          <div style="position:relative; height:360px; margin-top:8px;">
+            <svg width="300" height="360" viewBox="0 0 300 360" style="position:absolute; inset:0;" fill="none"><polyline points="168,42 84,112 192,182 114,254" stroke="var(--teal)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><polyline points="114,254 54,324" stroke="var(--lock)" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 12"/></svg>
+            <div style="position:absolute; top:14px; left:56%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--teal); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px var(--success-glow);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--on-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></div>
+            <div style="position:absolute; top:84px; left:28%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--teal); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px var(--success-glow);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--on-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></div>
+            <div style="position:absolute; top:154px; left:64%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--teal); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px var(--success-glow);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--on-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></div>
+            <div style="position:absolute; top:226px; left:38%; transform:translateX(-50%); width:56px; height:56px; border-radius:50%; background:var(--coral); border:4px solid var(--surface); display:flex; align-items:center; justify-content:center; animation:glowPulse 2s ease-out infinite;"><svg width="24" height="24" viewBox="0 0 24 24" fill="var(--on-coral)"><polygon points="8 5 19 12 8 19"/></svg></div>
+            <div style="position:absolute; top:296px; left:18%; transform:translateX(-50%); width:52px; height:52px; border-radius:50%; background:var(--lock); border:3px solid var(--surface); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lock-icon)" stroke-width="2.2" stroke-linecap="round"><rect x="6" y="11" width="12" height="9" rx="2" fill="var(--lock-icon)" stroke="none"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></div>
+          </div>
+          <div style="position:absolute; bottom:0; left:0; right:0; height:64px; background:var(--surface); border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-around; padding-bottom:6px;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span style="font-size:10px; font-weight:600;">Inicio</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--coral);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M10 8h4"/></svg><span style="font-size:10px; font-weight:700;">Actividades</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 20v-6M12 20V8M18 20v-4"/></svg><span style="font-size:10px; font-weight:600;">Progreso</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg><span style="font-size:10px; font-weight:600;">Perfil</span></div>
+          </div>
+        </div>
+
+        <!-- EJERCICIO -->
+        <div data-screen-label="Ejercicio · Oscuro" style="width:300px; height:624px; border-radius:44px; background:var(--app-bg); border:1px solid var(--line); box-shadow:var(--phone-shadow); overflow:hidden; position:relative; font-family:var(--font); color:var(--ink);">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 8px; font-size:14px; font-weight:700;"><span>9:41</span><span style="display:flex; gap:7px; align-items:center;"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.6" y="5" width="3" height="6" rx="1"/><rect x="9.2" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.8" y="0" width="3" height="11" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 4a10 10 0 0 1 14 0"/><path d="M3.6 6.6a6.4 6.4 0 0 1 8.8 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor"/><rect x="2" y="2" width="16.5" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.5" height="4" rx="1" fill="currentColor"/></svg></span></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:8px 22px 6px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            <div style="flex:1; font-weight:700; font-size:14px; text-align:center;">Fracciones – Pregunta 3/10</div>
+            <div style="display:flex; gap:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--rose)"><path d="M12 21s-6.7-4.35-9.5-8.5C0.5 9.5 2 5.5 5.5 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 4 3 7-2.8 4.15-9.5 8.5-9.5 8.5z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="var(--rose)"><path d="M12 21s-6.7-4.35-9.5-8.5C0.5 9.5 2 5.5 5.5 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 4 3 7-2.8 4.15-9.5 8.5-9.5 8.5z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M12 21s-6.7-4.35-9.5-8.5C0.5 9.5 2 5.5 5.5 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 4 3 7-2.8 4.15-9.5 8.5-9.5 8.5z"/></svg></div>
+          </div>
+          <div style="padding:4px 22px 0;"><div style="height:8px; border-radius:99px; background:var(--track); overflow:hidden;"><div style="width:30%; height:100%; background:var(--coral); border-radius:99px;"></div></div></div>
+          <div style="margin:16px 20px 0; background:var(--surface); border:1px solid var(--line); border-radius:22px; padding:20px;">
+            <div style="font-size:20px; font-weight:700; letter-spacing:-0.01em;">¿Cuánto es 1/2 + 1/4?</div>
+            <div style="margin-top:16px; height:118px; border-radius:16px; background:repeating-linear-gradient(45deg,var(--surface2),var(--surface2) 9px,var(--stripe) 9px,var(--stripe) 18px); display:flex; align-items:center; justify-content:center;"><span style="background:var(--surface2); color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; padding:5px 10px; border-radius:7px; border:1px solid var(--line);">DIAGRAMA VISUAL</span></div>
+          </div>
+          <div style="padding:18px 20px 0;">
+            <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; color:var(--muted); text-transform:uppercase;">Elige la respuesta correcta</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+              <div style="background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px; font-weight:600; font-size:15px;">A: 2/4</div>
+              <div style="background:var(--surface); border:2px solid var(--coral); border-radius:16px; padding:15px; font-weight:700; font-size:15px; color:var(--coral); box-shadow:0 6px 16px -8px var(--glow);">B: 3/4</div>
+              <div style="background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px; font-weight:600; font-size:15px;">C: 1/2</div>
+              <div style="background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:15px; font-weight:600; font-size:15px;">D: 1</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:16px; color:var(--muted); font-weight:600; font-size:13px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.3 1 2.5h6c0-1.2.2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Pista</div>
+          </div>
+          <div style="position:absolute; bottom:22px; left:20px; right:20px;"><div style="background:var(--coral); color:var(--on-coral); text-align:center; font-weight:700; font-size:16px; padding:17px; border-radius:18px; box-shadow:0 12px 24px -10px var(--glow);">Confirmar</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== UNIFIED STYLE GUIDE ===================== -->
+  <div style="background:#fff; border:1px solid #E7E1D6; border-radius:28px; padding:34px 38px; margin-top:44px; max-width:1360px;">
+    <div style="font-size:22px; font-weight:800; color:#2B2721; letter-spacing:-0.01em;">Tokens del sistema</div>
+    <div style="font-size:14px; color:#6C665C; margin-top:6px; max-width:720px; line-height:1.55;">La marca es constante; los neutros se invierten entre modos. Cada acento tiene un valor de modo claro y otro de modo oscuro (ajustado para mantener el contraste sobre su fondo).</div>
+
+    <!-- BRAND -->
+    <div style="font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:#9A9488; margin:26px 0 14px;">Marca compartida · claro / oscuro</div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:210px; border:1px solid #EFE9DE; border-radius:16px; padding:14px; display:flex; align-items:center; gap:14px;">
+        <div style="display:flex; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px -6px rgba(0,0,0,0.25);"><div style="width:34px; height:56px; background:#F2654B;"></div><div style="width:34px; height:56px; background:#FF6E5A;"></div></div>
+        <div><div style="font-weight:800; font-size:15px; color:#2B2721;">Coral · Primario</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6C665C; margin-top:3px;">#F2654B / #FF6E5A</div><div style="font-size:11px; color:#9A9488;">CTA, nodo activo, selección</div></div>
+      </div>
+      <div style="flex:1; min-width:210px; border:1px solid #EFE9DE; border-radius:16px; padding:14px; display:flex; align-items:center; gap:14px;">
+        <div style="display:flex; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px -6px rgba(0,0,0,0.25);"><div style="width:34px; height:56px; background:#0E9E8E;"></div><div style="width:34px; height:56px; background:#2DD4BF;"></div></div>
+        <div><div style="font-weight:800; font-size:15px; color:#2B2721;">Verde azulado · Correcto</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6C665C; margin-top:3px;">#0E9E8E / #2DD4BF</div><div style="font-size:11px; color:#9A9488;">Progreso, lección completada</div></div>
+      </div>
+      <div style="flex:1; min-width:210px; border:1px solid #EFE9DE; border-radius:16px; padding:14px; display:flex; align-items:center; gap:14px;">
+        <div style="display:flex; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px -6px rgba(0,0,0,0.25);"><div style="width:34px; height:56px; background:#F0526A;"></div><div style="width:34px; height:56px; background:#FF6F8A;"></div></div>
+        <div><div style="font-weight:800; font-size:15px; color:#2B2721;">Rosa · Vidas</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#6C665C; margin-top:3px;">#F0526A / #FF6F8A</div><div style="font-size:11px; color:#9A9488;">Corazones, errores</div></div>
+      </div>
+    </div>
+
+    <!-- NEUTRAL RAMPS -->
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:22px;">
+      <div style="flex:1; min-width:300px;">
+        <div style="font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:#9A9488; margin-bottom:12px;">Neutros · modo claro</div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#FBF6EF; border:1px solid #E7E1D6;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">FBF6EF</div><div style="font-size:10px; color:#9A9488;">Fondo</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#FFFFFF; border:1px solid #E7E1D6;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">FFFFFF</div><div style="font-size:10px; color:#9A9488;">Superficie</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#F6EFE6; border:1px solid #E7E1D6;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">F6EFE6</div><div style="font-size:10px; color:#9A9488;">Superf. 2</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#EBE3D7; border:1px solid #E7E1D6;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">EBE3D7</div><div style="font-size:10px; color:#9A9488;">Borde</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#26333B;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">26333B</div><div style="font-size:10px; color:#9A9488;">Tinta</div></div>
+        </div>
+      </div>
+      <div style="flex:1; min-width:300px;">
+        <div style="font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:#9A9488; margin-bottom:12px;">Neutros · modo oscuro</div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#16181D;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">16181D</div><div style="font-size:10px; color:#9A9488;">Fondo</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#1F232B;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">1F232B</div><div style="font-size:10px; color:#9A9488;">Superficie</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#282D37;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">282D37</div><div style="font-size:10px; color:#9A9488;">Superf. 2</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#2E333E;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">2E333E</div><div style="font-size:10px; color:#9A9488;">Borde</div></div>
+          <div style="flex:1;"><div style="height:46px; border-radius:10px; background:#EEF1F5; border:1px solid #E7E1D6;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#6C665C; margin-top:5px;">EEF1F5</div><div style="font-size:10px; color:#9A9488;">Tinta</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPONENTS + TYPE -->
+    <div style="height:1px; background:#EFE9DE; margin:26px 0;"></div>
+    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+      <div style="display:flex; gap:10px; align-items:center; background:#FBF6EF; border:1px solid #EBE3D7; border-radius:16px; padding:14px 16px;">
+        <div style="background:#F2654B; color:#fff; font-weight:700; font-size:13px; padding:10px 16px; border-radius:13px;">Confirmar</div>
+        <div style="background:#fff; color:#26333B; border:1.5px solid #EBE3D7; font-weight:700; font-size:13px; padding:10px 16px; border-radius:13px;">Saltar</div>
+        <span style="font-size:11px; color:#9A9488; font-family:'JetBrains Mono',monospace;">claro</span>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; background:#16181D; border:1px solid #2E333E; border-radius:16px; padding:14px 16px;">
+        <div style="background:#FF6E5A; color:#2A0F0A; font-weight:700; font-size:13px; padding:10px 16px; border-radius:13px;">Confirmar</div>
+        <div style="background:#1F232B; color:#EEF1F5; border:1.5px solid #2E333E; font-weight:700; font-size:13px; padding:10px 16px; border-radius:13px;">Saltar</div>
+        <span style="font-size:11px; color:#8A93A3; font-family:'JetBrains Mono',monospace;">oscuro</span>
+      </div>
+      <div style="margin-left:auto; text-align:right;">
+        <div style="font-size:26px; font-weight:800; color:#2B2721; letter-spacing:-0.01em;">Sora · Aa 0123 ½ ¾</div>
+        <div style="font-size:11px; color:#9A9488; margin-top:2px;">Títulos + cuerpo · alternativa Nunito (Tweaks)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;font&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Sora&quot;, &quot;options&quot;: [&quot;Sora&quot;, &quot;Nunito&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Tipografía&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.rootRef = React.createRef();
+  }
+  applyFont() {
+    const el = this.rootRef.current;
+    if (!el) return;
+    const f = (this.props.font === 'Nunito') ? "'Nunito', sans-serif" : "'Sora', sans-serif";
+    el.style.setProperty('--font', f);
+  }
+  componentDidMount() { this.applyFont(); }
+  componentDidUpdate() { this.applyFont(); }
+  renderVals() {
+    return { rootRef: this.rootRef };
+  }
+}
+</script>
+</body>
+</html>

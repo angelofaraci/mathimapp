@@ -49,7 +49,7 @@ private fun RegisterContent(
 ) {
     AuthScreenScaffold(
         formTitle = "Create your account",
-        formSubtitle = "Join MathApp and start building confidence with every lesson."
+        formSubtitle = "Join MathimApp and start building confidence with every lesson."
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             OutlinedTextField(
