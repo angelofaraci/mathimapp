@@ -1,6 +1,7 @@
 package com.example.proyectofinal.data
 
 import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.di.TokenStore
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.User
@@ -9,15 +10,24 @@ import com.example.proyectofinal.models.UserRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class KtorUserRepository(
     private val api: UserApi,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val tokenStore: TokenStore
 ) : UserRepository {
 
     override suspend fun getCurrentUser(): User? = withContext(Dispatchers.IO) {
+        val userId = tokenStore.accessToken?.let(::extractUserIdFromToken) ?: return@withContext null
+
         try {
-            val remote = api.fetchUser("current-user-id")
+            val remote = api.fetchUser(userId)
             insertUserToLocal(remote)
             remote
         } catch (e: Exception) {
@@ -112,5 +122,23 @@ class KtorUserRepository(
             totalScore = progress?.totalScore ?: 0,
             enrolledCourseIds = enrolledCourseIds
         )
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun extractUserIdFromToken(token: String): String? {
+        val payloadSegment = token.split('.').getOrNull(1) ?: return null
+        val normalizedPayload = payloadSegment.padEnd(
+            length = payloadSegment.length + (4 - payloadSegment.length % 4) % 4,
+            padChar = '='
+        )
+
+        return runCatching {
+            val payload = Base64.UrlSafe.decode(normalizedPayload).decodeToString()
+            Json.parseToJsonElement(payload)
+                .jsonObject["userId"]
+                ?.jsonPrimitive
+                ?.contentOrNull
+                ?.takeIf { it.isNotBlank() }
+        }.getOrNull()
     }
 }

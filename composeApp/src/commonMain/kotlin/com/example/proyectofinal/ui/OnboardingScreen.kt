@@ -1,22 +1,19 @@
 package com.example.proyectofinal.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,9 +21,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.data.SchoolYearOption
 import com.example.proyectofinal.domain.StudentTrack
+import com.example.proyectofinal.ui.primitives.MButton
+import com.example.proyectofinal.ui.primitives.MButtonStyle
+import com.example.proyectofinal.ui.primitives.MCard
+import com.example.proyectofinal.ui.theme.AppThemeDefaults
 
 @Composable
 fun OnboardingScreen(
@@ -78,7 +80,11 @@ private fun OnboardingContent(
                 text = "Complete your onboarding",
                 style = MaterialTheme.typography.headlineSmall
             )
-            OutlinedButton(onClick = onLogout, enabled = !state.isSaving) {
+            MButton(
+                onClick = onLogout,
+                enabled = !state.isSaving,
+                style = MButtonStyle.Outline
+            ) {
                 Text("Logout")
             }
         }
@@ -122,10 +128,11 @@ private fun OnboardingContent(
         }
 
         if (state.currentStep != OnboardingStep.PROVINCE) {
-            OutlinedButton(
+            MButton(
                 onClick = onBack,
                 enabled = !state.isSaving,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                style = MButtonStyle.Outline
             ) {
                 Text("Back")
             }
@@ -143,11 +150,17 @@ private fun StepSummary(state: OnboardingUiState) {
     }
 
     if (summary.isNotEmpty()) {
-        Text(
-            text = summary.joinToString(" • "),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Surface(
+            shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
+            color = MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Text(
+                text = summary.joinToString(" • "),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
     }
 }
 
@@ -244,7 +257,7 @@ private fun ConfirmationStep(
         description = "Review the selected province, school year, and category before continuing to courses."
     )
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    MCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -257,20 +270,12 @@ private fun ConfirmationStep(
         }
     }
 
-    Button(
+    MButton(
         onClick = onComplete,
         enabled = !state.isSaving,
         modifier = Modifier.fillMaxWidth()
     ) {
-        if (state.isSaving) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        } else {
-            Text("Continue to courses")
-        }
+        Text(if (state.isSaving) "Saving profile..." else "Continue to courses")
     }
 }
 
@@ -302,9 +307,14 @@ private fun SelectionCard(
         selected -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surface
     }
+    val borderColor = when {
+        selected -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.outlineVariant
+    }
 
-    Card(
+    MCard(
         modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick),
+        border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(

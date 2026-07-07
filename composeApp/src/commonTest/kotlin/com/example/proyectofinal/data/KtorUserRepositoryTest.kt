@@ -5,6 +5,7 @@ import app.cash.sqldelight.EnumColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
+import com.example.proyectofinal.di.TokenStore
 import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.models.CompleteExerciseRequest
 import com.example.proyectofinal.models.ExerciseCompletionResponse
@@ -15,10 +16,13 @@ import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
+import io.ktor.http.content.TextContent
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -96,7 +100,7 @@ class KtorUserRepositoryTest {
 
         val mockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
-                "/users/current-user-id" -> respond(
+                "/users/user-1" -> respond(
                     content = json.encodeToString(mockUser),
                     status = HttpStatusCode.OK,
                     headers = headersOf(HttpHeaders.ContentType, "application/json")
@@ -112,7 +116,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database)
+        val repository = KtorUserRepository(api, database, TestTokenStore(tokenForUser("user-1")))
 
         val user = repository.getCurrentUser()
 
@@ -153,7 +157,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database)
+        val repository = KtorUserRepository(api, database, TestTokenStore())
 
         val role = repository.getUserRole(userId)
 
@@ -179,7 +183,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database)
+        val repository = KtorUserRepository(api, database, TestTokenStore())
 
         val role = repository.getUserRole(userId)
 
@@ -226,7 +230,7 @@ class KtorUserRepositoryTest {
         }
 
         val api = UserApi(httpClient, apiConfig)
-        val repository = KtorUserRepository(api, database)
+        val repository = KtorUserRepository(api, database, TestTokenStore())
 
         repository.updateUser(updatedUser)
 
@@ -251,7 +255,7 @@ class KtorUserRepositoryTest {
         val mockEngine = MockEngine { request ->
             capturedPath = request.url.encodedPath
             capturedMethod = request.method
-            capturedRequest = json.decodeFromString(request.body.toByteArray().decodeToString())
+            capturedRequest = json.decodeFromString((request.body as TextContent).text)
 
             respond(
                 content = json.encodeToString(
@@ -349,7 +353,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database)
+        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore())
 
         val syncedProgress = repository.getUserProgress(userId)
 
@@ -429,7 +433,7 @@ class KtorUserRepositoryTest {
             }
         }
 
-        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database)
+        val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore())
 
         repository.completeExercise(exerciseId = exerciseId, score = 10)
         repository.completeExercise(exerciseId = exerciseId, score = 99)
@@ -437,4 +441,15 @@ class KtorUserRepositoryTest {
         assertEquals(listOf(exerciseId), database.appDatabaseQueries.selectCompletedExercisesByUserId(userId).executeAsList())
         assertEquals(10, database.appDatabaseQueries.selectProgressByUserId(userId).executeAsOne().totalScore)
     }
+}
+
+private class TestTokenStore(
+    override var accessToken: String? = null
+) : TokenStore
+
+@OptIn(ExperimentalEncodingApi::class)
+private fun tokenForUser(userId: String): String {
+    val header = Base64.UrlSafe.encode("{}".encodeToByteArray()).trimEnd('=')
+    val payload = Base64.UrlSafe.encode("{\"userId\":\"$userId\"}".encodeToByteArray()).trimEnd('=')
+    return "$header.$payload.signature"
 }

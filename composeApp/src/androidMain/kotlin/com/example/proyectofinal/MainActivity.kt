@@ -34,10 +34,12 @@ fun AppAndroidPreview() {
                 schoolYearLabel = "Year 7 • Secondary",
                 level = 2,
                 activityCount = 5,
-                completedLessons = 5
+                completedLessons = 5,
+                hasEnrolledCourse = true
             ),
             onContinueLearning = {},
-            onOpenCatalog = {},
+            onOpenLessonMap = {},
+            onJoinCourse = {},
             onLogout = {}
         )
     }

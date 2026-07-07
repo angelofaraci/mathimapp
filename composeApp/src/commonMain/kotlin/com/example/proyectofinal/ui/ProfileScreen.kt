@@ -1,12 +1,24 @@
 package com.example.proyectofinal.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,6 +28,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.proyectofinal.ui.primitives.MButton
+import com.example.proyectofinal.ui.primitives.MButtonStyle
+import com.example.proyectofinal.ui.primitives.MCard
+import com.example.proyectofinal.ui.primitives.MLinearProgressIndicator
+import com.example.proyectofinal.ui.primitives.MProgressIndicator
+import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.resources.painterResource
 import proyectofinal.composeapp.generated.resources.Res
@@ -30,7 +48,7 @@ fun ProfileScreen(onLogout: () -> Unit, viewModel: ProfileViewModel = koinViewMo
 @Composable
 internal fun ProfileContent(uiState: ProfileUiState, onLogout: () -> Unit) {
     when {
-        uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { MProgressIndicator() }
         uiState.errorMessage != null -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(uiState.errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
         }
@@ -45,7 +63,13 @@ internal fun ProfileContent(uiState: ProfileUiState, onLogout: () -> Unit) {
                 StatCard("Completed Lessons", uiState.completedLessons.toString(), Modifier.weight(1f))
             }
             AchievementSection(uiState.achievements)
-            Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) { Text("Logout") }
+            MButton(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth(),
+                style = MButtonStyle.Outline
+            ) {
+                Text("Logout")
+            }
         }
     }
 }
@@ -62,7 +86,10 @@ private fun ProfileHeader(displayName: String, schoolYearLabel: String?) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(displayName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             schoolYearLabel?.let {
-                Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+                Surface(
+                    shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
                     Text(it, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
             }
@@ -72,10 +99,16 @@ private fun ProfileHeader(displayName: String, schoolYearLabel: String?) {
 
 @Composable
 private fun LevelCard(level: Int, currentXp: Int, xpForNextLevel: Int) {
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    MCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Level $level", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            LinearProgressIndicator(progress = { currentXp / xpForNextLevel.toFloat() }, modifier = Modifier.fillMaxWidth())
+            MLinearProgressIndicator(
+                progress = { currentXp / xpForNextLevel.toFloat() },
+                modifier = Modifier.fillMaxWidth()
+            )
             Text("$currentXp / $xpForNextLevel XP", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -83,7 +116,7 @@ private fun LevelCard(level: Int, currentXp: Int, xpForNextLevel: Int) {
 
 @Composable
 private fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier) {
+    MCard(modifier = modifier) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -106,8 +139,8 @@ private fun AchievementSection(achievements: List<ProfileAchievement>) {
 
 @Composable
 private fun AchievementCard(achievement: ProfileAchievement, modifier: Modifier = Modifier) {
-    Card(
-        modifier,
+    MCard(
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = if (achievement.isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

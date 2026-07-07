@@ -6,11 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,6 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.example.proyectofinal.ui.primitives.MButton
+import com.example.proyectofinal.ui.primitives.MButtonStyle
+import com.example.proyectofinal.ui.primitives.MTextField
 
 @Composable
 fun LoginScreen(
@@ -50,24 +49,20 @@ private fun LoginContent(
         formSubtitle = "Sign in to continue learning with your personalized math journey."
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            OutlinedTextField(
+            MTextField(
                 value = state.email,
                 onValueChange = onEmailChange,
                 label = { Text("Email") },
                 singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                colors = authTextFieldColors(),
                 modifier = Modifier.fillMaxWidth()
             )
 
-            OutlinedTextField(
+            MTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
                 label = { Text("Password") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                shape = RoundedCornerShape(18.dp),
-                colors = authTextFieldColors(),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -79,26 +74,22 @@ private fun LoginContent(
                 )
             }
 
-            AuthPrimaryButton(
+            MButton(
                 onClick = onLogin,
-                enabled = !state.isLoading
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Login")
-                }
+                Text(if (state.isLoading) "Signing in..." else "Log in")
             }
 
-            AuthSecondaryButton(
-                text = "Create account",
+            MButton(
                 onClick = onSwitchToRegister,
-                enabled = !state.isLoading
-            )
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+                style = MButtonStyle.Outline
+            ) {
+                Text("Create account")
+            }
 
             Column(
                 modifier = Modifier.fillMaxWidth(),

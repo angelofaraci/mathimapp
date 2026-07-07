@@ -2,7 +2,6 @@ package com.example.proyectofinal
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -18,6 +17,8 @@ import com.example.proyectofinal.di.appModule
 import com.example.proyectofinal.di.rememberPlatformModule
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
+import com.example.proyectofinal.ui.primitives.MProgressIndicator
+import com.example.proyectofinal.ui.theme.AppTheme
 import com.example.proyectofinal.ui.AuthGateRouter
 import com.example.proyectofinal.ui.AuthView
 import com.example.proyectofinal.ui.AuthenticatedHomeScaffold
@@ -39,8 +40,11 @@ fun App() {
     KoinApplication(application = {
         modules(platformModule, appModule)
     }) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            MaterialTheme {
+        AppTheme {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
                 AuthGate()
             }
         }
@@ -68,7 +72,7 @@ private fun AuthGate() {
 
     if (session.isAuthenticated && onboardingComplete == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            MProgressIndicator()
         }
         return
     }

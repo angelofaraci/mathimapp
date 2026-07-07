@@ -10,24 +10,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.ui.MainRouter
+import com.example.proyectofinal.ui.primitives.MButton
+import com.example.proyectofinal.ui.primitives.MButtonStyle
+import com.example.proyectofinal.ui.primitives.MCard
+import com.example.proyectofinal.ui.primitives.MProgressIndicator
+import com.example.proyectofinal.ui.primitives.MTextField
+import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.resources.painterResource
 import proyectofinal.composeapp.generated.resources.Res
@@ -43,7 +49,8 @@ fun HomeDashboardScreen(
     HomeDashboardContent(
         uiState = uiState,
         onContinueLearning = { viewModel.openActivities(router::showActivities) },
-        onOpenCatalog = { viewModel.openActivities(router::showActivities) },
+        onOpenLessonMap = { viewModel.openActivities(router::showActivities) },
+        onJoinCourse = { code -> viewModel.joinCourse(code, router::showActivities) },
         onLogout = onLogout
     )
 }
@@ -52,13 +59,22 @@ fun HomeDashboardScreen(
 internal fun HomeDashboardContent(
     uiState: HomeDashboardUiState,
     onContinueLearning: () -> Unit,
-    onOpenCatalog: () -> Unit,
+    onOpenLessonMap: () -> Unit,
+    onJoinCourse: (String) -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var joinCode by remember { mutableStateOf("") }
+
+    LaunchedEffect(uiState.hasEnrolledCourse) {
+        if (uiState.hasEnrolledCourse) {
+            joinCode = ""
+        }
+    }
+
     when {
         uiState.isLoading -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            MProgressIndicator()
         }
 
         uiState.errorMessage != null -> Box(
@@ -81,14 +97,28 @@ internal fun HomeDashboardContent(
         ) {
             DashboardHeader(uiState.greeting, uiState.schoolYearLabel)
             ProgressSummaryCard(uiState.level, uiState.activityCount, uiState.completedLessons)
-            Text(
-                text = "Continuar aprendiendo",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            ContinueLearningCard(onContinueLearning)
-            OutlinedButton(onClick = onOpenCatalog, modifier = Modifier.fillMaxWidth()) {
-                Text("Ver catálogo")
+            if (uiState.hasEnrolledCourse) {
+                Text(
+                    text = "Continuar aprendiendo",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                ContinueLearningCard(onContinueLearning)
+                MButton(
+                    onClick = onOpenLessonMap,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MButtonStyle.Outline
+                ) {
+                    Text("Abrir mapa de lecciones")
+                }
+            } else {
+                JoinCourseCard(
+                    joinCode = joinCode,
+                    onJoinCodeChange = { joinCode = it },
+                    isJoiningCourse = uiState.isJoiningCourse,
+                    joinCourseMessage = uiState.joinCourseMessage,
+                    onJoinCourse = { onJoinCourse(joinCode) }
+                )
             }
         }
     }
@@ -104,7 +134,10 @@ private fun DashboardHeader(greeting: String, schoolYearLabel: String?) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         schoolYearLabel?.let {
-            Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+            Surface(
+                shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
                 Text(
                     text = it,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -118,13 +151,16 @@ private fun DashboardHeader(greeting: String, schoolYearLabel: String?) {
 
 @Composable
 private fun ProgressSummaryCard(level: Int, activityCount: Int, completedLessons: Int) {
-    Card(
+    MCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Resumen", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+            Surface(
+                shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
                 Text(
                     text = "Nivel $level • Actividad $activityCount",
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -143,7 +179,7 @@ private fun ProgressSummaryCard(level: Int, activityCount: Int, completedLessons
 
 @Composable
 private fun ContinueLearningCard(onContinueLearning: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    MCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -162,13 +198,61 @@ private fun ContinueLearningCard(onContinueLearning: () -> Unit) {
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Explora el catálogo para elegir tu próxima lección y seguir avanzando a tu ritmo.",
+                text = "Explora el mapa de lecciones para avanzar una actividad a la vez y repasar teoría cuando lo necesites.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Button(onClick = onContinueLearning, modifier = Modifier.fillMaxWidth()) {
-                Text("Ir a Actividades")
+            MButton(onClick = onContinueLearning, modifier = Modifier.fillMaxWidth()) {
+                Text("Ir al mapa")
+            }
+        }
+    }
+}
+
+@Composable
+private fun JoinCourseCard(
+    joinCode: String,
+    onJoinCodeChange: (String) -> Unit,
+    isJoiningCourse: Boolean,
+    joinCourseMessage: String?,
+    onJoinCourse: () -> Unit
+) {
+    MCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Join a course to unlock activities",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "Enter the code your teacher shared to start your lesson map.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            MTextField(
+                value = joinCode,
+                onValueChange = onJoinCodeChange,
+                singleLine = true,
+                label = { Text("Course code") },
+                placeholder = { Text("Example: FRACTIONS-7A") }
+            )
+            joinCourseMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            MButton(
+                onClick = onJoinCourse,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isJoiningCourse
+            ) {
+                Text(if (isJoiningCourse) "Joining course..." else "Join course")
             }
         }
     }

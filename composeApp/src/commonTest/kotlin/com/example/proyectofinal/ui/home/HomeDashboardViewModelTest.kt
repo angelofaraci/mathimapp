@@ -2,11 +2,13 @@ package com.example.proyectofinal.ui.home
 
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.AuthSession
+import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -44,6 +46,7 @@ class HomeDashboardViewModelTest {
     fun `view model falls back to a generic greeting when display name is blank`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser.copy(name = "   ")),
+            courseRepository = FakeHomeDashboardCourseRepository(),
             userRepository = FakeHomeDashboardUserRepository(
                 progress = UserProgress(userId = testUser.id, completedLessonIds = setOf("lesson-1"), totalScore = 50)
             ),
@@ -63,6 +66,7 @@ class HomeDashboardViewModelTest {
     fun `view model derives level math and caps activity at seven`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser),
+            courseRepository = FakeHomeDashboardCourseRepository(),
             userRepository = FakeHomeDashboardUserRepository(
                 progress = UserProgress(
                     userId = testUser.id,
@@ -87,6 +91,7 @@ class HomeDashboardViewModelTest {
     fun `view model keeps the progress chip state at zero when progress is empty`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser),
+            courseRepository = FakeHomeDashboardCourseRepository(),
             userRepository = FakeHomeDashboardUserRepository(
                 progress = UserProgress(
                     userId = testUser.id,
@@ -112,6 +117,7 @@ class HomeDashboardViewModelTest {
     fun `view model exposes error state when progress loading fails`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser),
+            courseRepository = FakeHomeDashboardCourseRepository(),
             userRepository = FakeHomeDashboardUserRepository(errorMessage = "Progress unavailable"),
             learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
         )
@@ -124,6 +130,66 @@ class HomeDashboardViewModelTest {
             assertTrue(greeting.endsWith("Alice Student"))
         }
     }
+
+    @Test
+    fun `view model restores the current user when token session has no embedded user`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(user = null),
+            courseRepository = FakeHomeDashboardCourseRepository(),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(userId = testUser.id, enrolledCourseIds = emptySet()),
+                currentUser = testUser
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertFalse(isLoading)
+            assertTrue(greeting.endsWith("Alice Student"))
+            assertFalse(hasEnrolledCourse)
+            assertEquals(null, errorMessage)
+        }
+    }
+
+    @Test
+    fun `join course updates the dashboard when the user was not enrolled`() = runTest(dispatcher) {
+        val courseRepository = FakeHomeDashboardCourseRepository(
+            joinedCourse = Course(
+                id = "course-1",
+                title = "Fractions",
+                description = "Learn fractions",
+                creatorId = "teacher-1",
+                joinCode = "FRACTIONS-7A"
+            )
+        )
+        val userRepository = FakeHomeDashboardUserRepository(
+            progress = UserProgress(userId = testUser.id, enrolledCourseIds = emptySet()),
+            currentUser = testUser,
+            progressProvider = {
+                if (courseRepository.joinCalls.isEmpty()) {
+                    UserProgress(userId = testUser.id, enrolledCourseIds = emptySet())
+                } else {
+                    UserProgress(userId = testUser.id, enrolledCourseIds = setOf("course-1"))
+                }
+            }
+        )
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(user = null),
+            courseRepository = courseRepository,
+            userRepository = userRepository,
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+        viewModel.joinCourse(" FRACTIONS-7A ")
+        advanceUntilIdle()
+
+        assertEquals(listOf("user-1:FRACTIONS-7A"), courseRepository.joinCalls)
+        assertTrue(viewModel.uiState.value.hasEnrolledCourse)
+        assertEquals(null, viewModel.uiState.value.joinCourseMessage)
+    }
 }
 
 private val testUser = User(
@@ -133,7 +199,7 @@ private val testUser = User(
     role = UserRole.STUDENT
 )
 
-private class HomeDashboardFakeAuthRepository(user: User) : AuthRepository {
+private class HomeDashboardFakeAuthRepository(user: User?) : AuthRepository {
     private val state = MutableStateFlow(AuthSession(token = "token-123", user = user))
     override val session: StateFlow<AuthSession> = state
     override suspend fun login(email: String, password: String): Result<User> = Result.success(testUser)
@@ -141,17 +207,44 @@ private class HomeDashboardFakeAuthRepository(user: User) : AuthRepository {
     override fun logout() = Unit
 }
 
+private class FakeHomeDashboardCourseRepository(
+    private val joinedCourse: Course? = null
+) : CourseRepository {
+    val joinCalls = mutableListOf<String>()
+
+    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> = emptyList()
+
+    override suspend fun getCourseById(id: String): Course? = null
+
+    override suspend fun getMyCreatedCourses(creatorId: String): List<Course> = emptyList()
+
+    override suspend fun getEnrolledCourses(userId: String): List<Course> = emptyList()
+
+    override suspend fun createCourse(course: Course): Course = course
+
+    override suspend fun updateCourse(course: Course): Course = course
+
+    override suspend fun deleteCourse(id: String) = Unit
+
+    override suspend fun joinCourseByCode(userId: String, code: String): Course? {
+        joinCalls += "$userId:$code"
+        return joinedCourse
+    }
+}
+
 private class FakeHomeDashboardUserRepository(
     private val progress: UserProgress? = null,
-    private val errorMessage: String? = null
+    private val errorMessage: String? = null,
+    private val currentUser: User? = testUser,
+    private val progressProvider: (() -> UserProgress)? = null
 ) : UserRepository {
-    override suspend fun getCurrentUser(): User? = testUser
+    override suspend fun getCurrentUser(): User? = currentUser
     override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
     override suspend fun updateUser(user: User) = Unit
 
     override suspend fun getUserProgress(userId: String): UserProgress {
         errorMessage?.let { throw IllegalStateException(it) }
-        return requireNotNull(progress)
+        return progressProvider?.invoke() ?: requireNotNull(progress)
     }
 
     override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse = error("Not used in these tests")

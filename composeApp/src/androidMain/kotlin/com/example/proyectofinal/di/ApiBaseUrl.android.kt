@@ -15,13 +15,13 @@ internal actual fun getApiBaseUrl(): String =
     }
 
 private fun isRunningOnEmulator(): Boolean {
-    val fingerprint = Build.FINGERPRINT
-    val model = Build.MODEL
-    val manufacturer = Build.MANUFACTURER
-    val brand = Build.BRAND
-    val device = Build.DEVICE
-    val product = Build.PRODUCT
-    val hardware = Build.HARDWARE
+    val fingerprint = Build.FINGERPRINT.orEmpty()
+    val model = Build.MODEL.orEmpty()
+    val manufacturer = Build.MANUFACTURER.orEmpty()
+    val brand = Build.BRAND.orEmpty()
+    val device = Build.DEVICE.orEmpty()
+    val product = Build.PRODUCT.orEmpty()
+    val hardware = Build.HARDWARE.orEmpty()
 
     return fingerprint.startsWith("generic") ||
         fingerprint.startsWith("unknown") ||

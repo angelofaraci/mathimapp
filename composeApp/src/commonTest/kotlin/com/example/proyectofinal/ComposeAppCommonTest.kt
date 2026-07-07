@@ -10,18 +10,31 @@ import com.example.proyectofinal.db.UserProgressEntity
 import com.example.proyectofinal.db.createTestDriver
 import com.example.proyectofinal.di.appModule
 import com.example.proyectofinal.di.userRoleColumnAdapter
+import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.domain.CourseRepository
+import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
+import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.StudentTrack
+import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserProgress
+import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseUiState
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
-import com.example.proyectofinal.ui.catalog.CourseDetailViewModel
+import com.example.proyectofinal.ui.activities.LessonMapViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,6 +74,11 @@ class AppModuleTest {
                 appModule,
                 module {
                     single { createTestAppDatabase() }
+                    single<AuthRepository> { AppModuleTestAuthRepository }
+                    single<UserRepository> { AppModuleTestUserRepository }
+                    single<LessonRepository> { AppModuleTestLessonRepository }
+                    single<ExerciseRepository> { AppModuleTestExerciseRepository }
+                    single<LearnerProfileRepository> { FakeLearnerProfileRepository(7) }
                 }
             )
         }
@@ -71,8 +89,9 @@ class AppModuleTest {
             assertNotNull(koin.get<HttpClient>())
             assertNotNull(koin.get<CourseRepository>())
             assertNotNull(koin.get<CourseViewModel>())
-            assertNotNull(koin.get<CourseDetailViewModel>())
+            assertNotNull(koin.get<LessonMapViewModel>())
             assertNotNull(koin.get<ProfileViewModel>())
+            advanceUntilIdle()
         } finally {
             koinApp.close()
         }
@@ -211,4 +230,83 @@ private fun createTestAppDatabase(): AppDatabase {
             roleAdapter = userRoleColumnAdapter
         )
     )
+}
+
+private val appModuleTestUser = User(
+    id = "user-1",
+    name = "Test Student",
+    email = "student@example.com",
+    role = UserRole.STUDENT
+)
+
+private object AppModuleTestAuthRepository : AuthRepository {
+    override val session = MutableStateFlow(AuthSession(token = "token-123", user = appModuleTestUser))
+
+    override suspend fun login(email: String, password: String): Result<User> = Result.success(appModuleTestUser)
+
+    override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(appModuleTestUser)
+
+    override fun logout() = Unit
+}
+
+private object AppModuleTestUserRepository : UserRepository {
+    override suspend fun getCurrentUser(): User? = appModuleTestUser
+
+    override suspend fun getUserRole(userId: String): UserRole = UserRole.STUDENT
+
+    override suspend fun updateUser(user: User) = Unit
+
+    override suspend fun getUserProgress(userId: String): UserProgress = UserProgress(
+        userId = userId,
+        enrolledCourseIds = setOf("course-1")
+    )
+
+    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse =
+        ExerciseCompletionResponse(
+            exerciseId = exerciseId,
+            lessonId = "lesson-1",
+            lessonCompleted = false,
+            progress = UserProgress(userId = appModuleTestUser.id, completedExerciseIds = setOf(exerciseId))
+        )
+}
+
+private object AppModuleTestLessonRepository : LessonRepository {
+    override suspend fun getLessonsByCourse(courseId: String): List<Lesson> = listOf(
+        Lesson(
+            id = "lesson-1",
+            courseId = courseId,
+            title = "Lesson 1",
+            theoryContent = "Theory"
+        )
+    )
+
+    override suspend fun getLessonById(id: String): Lesson? = null
+
+    override suspend fun createLesson(lesson: Lesson): Lesson = lesson
+
+    override suspend fun updateLesson(lesson: Lesson): Lesson = lesson
+
+    override suspend fun updateTheory(lessonId: String, content: String): Lesson =
+        Lesson(id = lessonId, courseId = "course-1", title = "Lesson 1", theoryContent = content)
+
+    override suspend fun deleteLesson(id: String) = Unit
+}
+
+private object AppModuleTestExerciseRepository : ExerciseRepository {
+    override suspend fun getExercisesByLesson(lessonId: String): List<Exercise> = listOf(
+        Exercise(
+            id = "exercise-1",
+            lessonId = lessonId,
+            question = "Question",
+            options = listOf("A", "B"),
+            correctAnswer = "A",
+            type = ExerciseType.MULTIPLE_CHOICE
+        )
+    )
+
+    override suspend fun createExercise(exercise: Exercise): Exercise = exercise
+
+    override suspend fun updateExercise(exercise: Exercise): Exercise = exercise
+
+    override suspend fun deleteExercise(id: String) = Unit
 }

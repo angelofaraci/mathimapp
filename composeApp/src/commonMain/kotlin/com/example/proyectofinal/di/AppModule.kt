@@ -26,13 +26,12 @@ import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.CourseViewModel
+import com.example.proyectofinal.ui.activities.LessonMapViewModel
 import com.example.proyectofinal.ui.home.HomeDashboardViewModel
 import com.example.proyectofinal.ui.LoginViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
-import com.example.proyectofinal.ui.catalog.CourseCatalogViewModel
-import com.example.proyectofinal.ui.catalog.CourseDetailViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -51,12 +50,11 @@ val appModule = module {
     single<AuthRepository> { KtorAuthRepository(get(), get()) }
     single<LessonRepository> { KtorLessonRepository(get(), get()) }
     single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
-    single<UserRepository> { KtorUserRepository(get(), get()) }
+    single<UserRepository> { KtorUserRepository(get(), get(), get()) }
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
 
-    viewModelOf(::CourseCatalogViewModel)
-    viewModelOf(::CourseDetailViewModel)
     viewModelOf(::CourseViewModel)
+    viewModelOf(::LessonMapViewModel)
     viewModelOf(::HomeDashboardViewModel)
     viewModelOf(::LoginViewModel)
     viewModelOf(::OnboardingViewModel)
