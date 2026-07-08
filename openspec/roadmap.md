@@ -29,7 +29,7 @@
 ### Phase 1 — Learner Experience
 
 #### 1. `exercise-practice-ui`
-- **Scope**: Build the interactive exercise screen where learners answer, submit, and receive immediate feedback; wire to `POST /exercises/{id}/complete`.
+- **Scope**: Build the interactive exercise screen where learners answer, submit, and receive immediate feedback; wire to `POST /exercises/{id}/attempt` while treating `POST /exercises/{id}/complete` as a deprecated `410 Gone` path.
 - **Rationale**: Completes the end-to-end exercise-completion flow that currently exists only at the API/repository layer.
 - **Dependencies**: `exercise-completion` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year`.
 - **Affected modules**: `composeApp`.

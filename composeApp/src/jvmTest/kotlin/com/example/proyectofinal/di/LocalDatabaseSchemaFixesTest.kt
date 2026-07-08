@@ -3,6 +3,7 @@ package com.example.proyectofinal.di
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.example.proyectofinal.data.ExercisePayloadJson
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.db.CourseEntity
 import com.example.proyectofinal.db.ExerciseEntity
@@ -173,5 +174,120 @@ class LocalDatabaseSchemaFixesTest {
         val insertedLesson = database.appDatabaseQueries.selectLessonById("lesson-2").executeAsOne()
         assertNull(insertedLesson.courseId)
         assertEquals("teacher-1", insertedLesson.creatorId)
+    }
+
+    @Test
+    fun `repair step upgrades persisted exercise rows to payload json before AppDatabase opens`() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE CourseEntity (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    creatorId TEXT NOT NULL,
+                    isOfficial INTEGER NOT NULL DEFAULT 0,
+                    schoolYear INTEGER NOT NULL DEFAULT 0,
+                    joinCode TEXT,
+                    topic TEXT,
+                    difficulty TEXT,
+                    durationMinutes INTEGER,
+                    xpReward INTEGER
+                )
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE LessonEntity (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    courseId TEXT,
+                    creatorId TEXT,
+                    title TEXT NOT NULL,
+                    theoryContent TEXT NOT NULL,
+                    FOREIGN KEY(courseId) REFERENCES CourseEntity(id) ON DELETE CASCADE
+                )
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE ExerciseEntity (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    lessonId TEXT NOT NULL,
+                    question TEXT NOT NULL,
+                    correctAnswer TEXT NOT NULL,
+                    type TEXT NOT NULL DEFAULT 'MULTIPLE_CHOICE',
+                    options TEXT NOT NULL,
+                    FOREIGN KEY(lessonId) REFERENCES LessonEntity(id) ON DELETE CASCADE
+                )
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                INSERT INTO CourseEntity(id, title, description, creatorId, isOfficial, schoolYear, joinCode, topic, difficulty, durationMinutes, xpReward)
+                VALUES ('course-1', 'Fractions Basics', 'Learn equivalent fractions', 'admin', 1, 4, NULL, 'Fractions', 'Easy', 15, 50)
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                INSERT INTO LessonEntity(id, courseId, creatorId, title, theoryContent)
+                VALUES ('lesson-1', 'course-1', NULL, 'Equivalent fractions', 'Theory')
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                INSERT INTO ExerciseEntity(id, lessonId, question, correctAnswer, type, options)
+                VALUES ('exercise-1', 'lesson-1', 'Which answer is correct?', 'B', 'MULTIPLE_CHOICE', 'A,B,C')
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+
+        driver.applyPendingLocalSchemaFixes()
+
+        val intAdapter = object : ColumnAdapter<Int, Long> {
+            override fun decode(databaseValue: Long): Int = databaseValue.toInt()
+
+            override fun encode(value: Int): Long = value.toLong()
+        }
+
+        val database = AppDatabase(
+            driver = driver,
+            CourseEntityAdapter = CourseEntity.Adapter(
+                schoolYearAdapter = intAdapter,
+                durationMinutesAdapter = intAdapter,
+                xpRewardAdapter = intAdapter,
+            ),
+            ExerciseEntityAdapter = ExerciseEntity.Adapter(
+                typeAdapter = EnumColumnAdapter(),
+            ),
+            UserProgressEntityAdapter = UserProgressEntity.Adapter(
+                totalScoreAdapter = intAdapter,
+            ),
+            UserEntityAdapter = UserEntity.Adapter(
+                roleAdapter = userRoleColumnAdapter,
+            ),
+        )
+
+        val upgradedExercise = database.appDatabaseQueries.selectExerciseById("exercise-1").executeAsOne()
+        assertEquals("Which answer is correct?", upgradedExercise.title)
+        assertEquals("MULTIPLE_CHOICE", upgradedExercise.type.name)
+        assertEquals(
+            ExercisePayloadJson.legacyPayloadJson(
+                typeName = "MULTIPLE_CHOICE",
+                optionsCsv = "A,B,C",
+                correctAnswer = "B"
+            ),
+            upgradedExercise.payload
+        )
     }
 }

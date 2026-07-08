@@ -6,7 +6,6 @@ import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.Exercise
-import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserRole
@@ -39,13 +38,15 @@ internal fun ResultRow.toLesson(exercises: List<Exercise> = emptyList()): Lesson
     )
 
 internal fun ResultRow.toExercise(hideAnswers: Boolean = false): Exercise =
-    Exercise(
+    ExercisePayloadSupport.toExercise(
         id = this[Exercises.id],
         lessonId = this[Exercises.lessonId],
-        question = this[Exercises.question],
-        options = this[Exercises.options].split(","),
-        correctAnswer = if (hideAnswers) "" else this[Exercises.correctAnswer],
-        type = ExerciseType.valueOf(this[Exercises.type])
+        title = this[Exercises.question],
+        persistedType = this[Exercises.type],
+        persistedPayload = this[Exercises.payload],
+        legacyOptions = this[Exercises.options],
+        legacyCorrectAnswer = this[Exercises.correctAnswer],
+        hideAnswers = hideAnswers
     )
 
 internal fun ResultRow.toUser(): User =

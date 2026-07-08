@@ -6,16 +6,14 @@ import kotlinx.serialization.Serializable
 data class CreateExerciseRequest(
     val id: String,
     val lessonId: String,
-    val question: String,
-    val options: List<String>,
-    val correctAnswer: String,
-    val type: ExerciseType = ExerciseType.MULTIPLE_CHOICE
+    val title: String,
+    val type: ExerciseType = ExerciseType.MULTIPLE_CHOICE,
+    val payload: ExercisePayload
 )
 
 @Serializable
 data class UpdateExerciseRequest(
-    val question: String? = null,
-    val options: List<String>? = null,
-    val correctAnswer: String? = null,
-    val type: ExerciseType? = null
+    val title: String? = null,
+    val type: ExerciseType? = null,
+    val payload: ExercisePayload? = null
 )

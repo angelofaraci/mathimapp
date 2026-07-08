@@ -76,8 +76,8 @@ data class UpdateAdminLessonRequest(
 @Serializable
 data class AdminLessonResponse(
     val id: String,
-    val courseId: String?,
-    val creatorId: String?,
+    val courseId: String? = null,
+    val creatorId: String? = null,
     val title: String,
     val theoryContent: String
 )
@@ -91,29 +91,26 @@ data class AdminLessonListResponse(
 data class CreateAdminExerciseRequest(
     val id: String,
     val lessonId: String,
-    val question: String,
-    val options: List<String>,
-    val correctAnswer: String,
-    val type: ExerciseType = ExerciseType.MULTIPLE_CHOICE
+    val title: String,
+    val type: ExerciseType = ExerciseType.MULTIPLE_CHOICE,
+    val payload: ExercisePayload
 )
 
 @Serializable
 data class UpdateAdminExerciseRequest(
     val lessonId: String? = null,
-    val question: String? = null,
-    val options: List<String>? = null,
-    val correctAnswer: String? = null,
-    val type: ExerciseType? = null
+    val title: String? = null,
+    val type: ExerciseType? = null,
+    val payload: ExercisePayload? = null
 )
 
 @Serializable
 data class AdminExerciseResponse(
     val id: String,
     val lessonId: String,
-    val question: String,
-    val options: List<String>,
-    val correctAnswer: String,
-    val type: ExerciseType
+    val title: String,
+    val type: ExerciseType,
+    val payload: ExercisePayload
 )
 
 @Serializable

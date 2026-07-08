@@ -38,25 +38,43 @@ fun Application.exerciseRoutes(service: ExerciseService, lessonService: LessonSe
             }
 
             post("/exercises") {
-                val request = call.receive<CreateExerciseRequest>()
+                val request = try {
+                    call.receive<CreateExerciseRequest>()
+                } catch (_: Exception) {
+                    return@post call.respond(HttpStatusCode.BadRequest, "Invalid request body")
+                }
 
                 val creatorId = service.getLessonCreatorId(request.lessonId)
                     ?: return@post call.respond(HttpStatusCode.NotFound)
 
                 if (!call.requireSelfOrAdmin(creatorId)) return@post
 
-                call.respond(service.createExercise(request))
+                val created = try {
+                    service.createExercise(request)
+                } catch (exception: IllegalArgumentException) {
+                    return@post call.respond(HttpStatusCode.BadRequest, exception.message ?: "Invalid exercise payload")
+                }
+
+                call.respond(created)
             }
 
             put("/exercises/{id}") {
                 val exerciseId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
-                val request = call.receive<UpdateExerciseRequest>()
+                val request = try {
+                    call.receive<UpdateExerciseRequest>()
+                } catch (_: Exception) {
+                    return@put call.respond(HttpStatusCode.BadRequest, "Invalid request body")
+                }
 
                 val creatorId = service.getCreatorId(exerciseId) ?: return@put call.respond(HttpStatusCode.NotFound)
 
                 if (!call.requireSelfOrAdmin(creatorId)) return@put
 
-                val exercise = service.updateExercise(exerciseId, request)
+                val exercise = try {
+                    service.updateExercise(exerciseId, request)
+                } catch (exception: IllegalArgumentException) {
+                    return@put call.respond(HttpStatusCode.BadRequest, exception.message ?: "Invalid exercise payload")
+                }
                     ?: return@put call.respond(HttpStatusCode.NotFound)
                 call.respond(exercise)
             }

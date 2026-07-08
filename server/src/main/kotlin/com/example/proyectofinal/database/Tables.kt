@@ -45,7 +45,8 @@ object Exercises : Table("exercises") {
     val question = varchar("question", 500)
     val options = varchar("options", 500)
     val correctAnswer = varchar("correct_answer", 255)
-    val type = varchar("type", 30).default("MULTIPLE_CHOICE")
+    val type = varchar("type", 50).default("MULTIPLE_CHOICE")
+    val payload = text("payload")
 
     override val primaryKey = PrimaryKey(id)
 }

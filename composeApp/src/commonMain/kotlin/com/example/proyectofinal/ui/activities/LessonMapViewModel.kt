@@ -7,6 +7,14 @@ import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.ExercisePayload
+import com.example.proyectofinal.models.ExerciseSubmission
+import com.example.proyectofinal.models.InputValuePayload
+import com.example.proyectofinal.models.InputValueSubmission
+import com.example.proyectofinal.models.MultiSelectPayload
+import com.example.proyectofinal.models.MultiSelectSubmission
+import com.example.proyectofinal.models.MultipleChoicePayload
+import com.example.proyectofinal.models.MultipleChoiceSubmission
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,8 +69,9 @@ class LessonMapViewModel(
             it.copy(
                 selectedExerciseId = exerciseId,
                 activeExerciseId = exerciseId,
-                selectedAnswer = null,
-                exerciseFeedbackMessage = null,
+                activeExerciseDraft = createDraft(node.exercise.payload),
+                activeExercisePhase = ActiveExercisePhase.Drafting,
+                exerciseFeedback = null,
                 nodes = buildLessonMapNodes(
                     exercises = lessonMap.exercises,
                     completedExerciseIds = completedExerciseIds,
@@ -76,18 +85,47 @@ class LessonMapViewModel(
         _uiState.update {
             it.copy(
                 activeExerciseId = null,
-                selectedAnswer = null,
-                isSubmittingAnswer = false,
-                exerciseFeedbackMessage = null
+                activeExerciseDraft = null,
+                activeExercisePhase = ActiveExercisePhase.Drafting,
+                exerciseFeedback = null
             )
         }
     }
 
-    fun selectAnswer(answer: String) {
+    fun selectMultipleChoiceAnswer(optionId: String) {
         _uiState.update {
             it.copy(
-                selectedAnswer = answer,
-                exerciseFeedbackMessage = null
+                activeExerciseDraft = ExerciseAnswerDraft.MultipleChoice(selectedOptionId = optionId),
+                activeExercisePhase = ActiveExercisePhase.Drafting,
+                exerciseFeedback = null
+            )
+        }
+    }
+
+    fun updateInputValueAnswer(value: String) {
+        _uiState.update {
+            it.copy(
+                activeExerciseDraft = ExerciseAnswerDraft.InputValue(value = value),
+                activeExercisePhase = ActiveExercisePhase.Drafting,
+                exerciseFeedback = null
+            )
+        }
+    }
+
+    fun toggleMultiSelectAnswer(optionId: String) {
+        _uiState.update { state ->
+            val draft = state.activeExerciseDraft as? ExerciseAnswerDraft.MultiSelect
+                ?: ExerciseAnswerDraft.MultiSelect()
+            val selectedIds = draft.selectedOptionIds.toMutableSet().apply {
+                if (!add(optionId)) {
+                    remove(optionId)
+                }
+            }
+
+            state.copy(
+                activeExerciseDraft = ExerciseAnswerDraft.MultiSelect(selectedOptionIds = selectedIds),
+                activeExercisePhase = ActiveExercisePhase.Drafting,
+                exerciseFeedback = null
             )
         }
     }
@@ -96,37 +134,67 @@ class LessonMapViewModel(
         val currentState = _uiState.value
         val lessonMap = currentState.lessonMap ?: return@launch
         val exercise = currentState.activeExercise ?: return@launch
-        val selectedAnswer = currentState.selectedAnswer ?: return@launch
 
         if (currentState.isSubmittingAnswer) {
             return@launch
         }
 
-        if (selectedAnswer != exercise.correctAnswer) {
-            _uiState.update { it.copy(exerciseFeedbackMessage = "Incorrect answer. Try again.") }
-            return@launch
-        }
+        val submission = currentState.activeExerciseDraft
+            ?.toSubmission()
+            ?: run {
+                _uiState.update {
+                    it.copy(
+                        activeExercisePhase = ActiveExercisePhase.Drafting,
+                        exerciseFeedback = invalidDraftFeedback(exercise.payload)
+                    )
+                }
+                return@launch
+            }
 
         _uiState.update {
             it.copy(
-                isSubmittingAnswer = true,
-                exerciseFeedbackMessage = null
+                activeExercisePhase = ActiveExercisePhase.Submitting,
+                exerciseFeedback = null
             )
         }
 
         try {
-            val completion = userRepository.completeExercise(exercise.id, score = 100)
-            completedExerciseIds = completion.progress.completedExerciseIds
+            val attempt = userRepository.attemptExercise(
+                exerciseId = exercise.id,
+                submission = submission,
+                score = 100
+            )
+
+            if (!attempt.isCorrect) {
+                _uiState.update {
+                    it.copy(
+                        activeExercisePhase = ActiveExercisePhase.RetryReady,
+                        exerciseFeedback = ExerciseFeedbackUiState(
+                            message = attempt.message ?: "Incorrect answer. Try again.",
+                            tone = ExerciseFeedbackTone.Error
+                        )
+                    )
+                }
+                return@launch
+            }
+
+            completedExerciseIds = attempt.progress.completedExerciseIds
             _uiState.value = createLoadedState(
                 lessonMap = lessonMap,
                 completedExerciseIds = completedExerciseIds,
-                exerciseFeedbackMessage = "Exercise completed. Keep going."
+                exerciseFeedback = ExerciseFeedbackUiState(
+                    message = "Exercise completed. Keep going.",
+                    tone = ExerciseFeedbackTone.Success
+                )
             )
         } catch (error: Exception) {
             _uiState.update {
                 it.copy(
-                    isSubmittingAnswer = false,
-                    exerciseFeedbackMessage = error.message ?: "Unable to save your progress"
+                    activeExercisePhase = ActiveExercisePhase.RetryReady,
+                    exerciseFeedback = ExerciseFeedbackUiState(
+                        message = error.message ?: "Unable to save your progress",
+                        tone = ExerciseFeedbackTone.Error
+                    )
                 )
             }
         }
@@ -163,7 +231,7 @@ class LessonMapViewModel(
     private fun createLoadedState(
         lessonMap: LessonMapLesson,
         completedExerciseIds: Set<String>,
-        exerciseFeedbackMessage: String? = null
+        exerciseFeedback: ExerciseFeedbackUiState? = null
     ): LessonMapUiState {
         return LessonMapUiState(
             isLoading = false,
@@ -172,8 +240,42 @@ class LessonMapViewModel(
                 exercises = lessonMap.exercises,
                 completedExerciseIds = completedExerciseIds
             ),
-            exerciseFeedbackMessage = exerciseFeedbackMessage
+            exerciseFeedback = exerciseFeedback
         )
+    }
+
+    private fun createDraft(payload: ExercisePayload): ExerciseAnswerDraft = when (payload) {
+        is MultipleChoicePayload -> ExerciseAnswerDraft.MultipleChoice()
+        is InputValuePayload -> ExerciseAnswerDraft.InputValue()
+        is MultiSelectPayload -> ExerciseAnswerDraft.MultiSelect()
+    }
+
+    private fun invalidDraftFeedback(payload: ExercisePayload): ExerciseFeedbackUiState =
+        ExerciseFeedbackUiState(
+            message = when (payload) {
+                is MultipleChoicePayload -> "Select one option before submitting."
+                is InputValuePayload -> "Enter an answer before submitting."
+                is MultiSelectPayload -> "Select at least one option before submitting."
+            },
+            tone = ExerciseFeedbackTone.Error
+        )
+
+    private fun ExerciseAnswerDraft.toSubmission(): ExerciseSubmission? = when (this) {
+        is ExerciseAnswerDraft.MultipleChoice -> selectedOptionId
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::MultipleChoiceSubmission)
+
+        is ExerciseAnswerDraft.InputValue -> value
+            .trim()
+            .takeIf { it.isNotBlank() }
+            ?.let(::InputValueSubmission)
+
+        is ExerciseAnswerDraft.MultiSelect -> selectedOptionIds
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .distinct()
+            .takeIf(List<String>::isNotEmpty)
+            ?.let(::MultiSelectSubmission)
     }
 }
 
@@ -197,7 +299,7 @@ internal fun buildLessonMapNodes(
             exercise = exercise,
             index = index + 1,
             title = "Exercise ${index + 1}",
-            summary = exercise.question,
+            summary = exercise.title,
             state = state
         )
     }

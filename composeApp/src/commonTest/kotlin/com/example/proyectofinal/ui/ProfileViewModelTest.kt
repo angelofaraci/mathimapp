@@ -6,7 +6,8 @@ import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
-import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -133,7 +134,11 @@ private class FakeUserRepository(
         return requireNotNull(progress)
     }
 
-    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse = error("Not used in these tests")
+    override suspend fun attemptExercise(
+        exerciseId: String,
+        submission: ExerciseSubmission,
+        score: Int
+    ): ExerciseAttemptResponse = error("Not used in these tests")
 }
 
 private class ProfileFakeLearnerProfileRepository : LearnerProfileRepository {

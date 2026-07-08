@@ -2,16 +2,28 @@ package com.example.proyectofinal.data
 
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
-import com.example.proyectofinal.db.*
+import com.example.proyectofinal.db.AppDatabase
+import com.example.proyectofinal.db.CourseEntity
+import com.example.proyectofinal.db.ExerciseEntity
+import com.example.proyectofinal.db.UserEntity
+import com.example.proyectofinal.db.UserProgressEntity
+import com.example.proyectofinal.db.createTestDriver
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.userRoleColumnAdapter
+import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseType
-import io.ktor.client.*
-import io.ktor.client.engine.mock.*
+import com.example.proyectofinal.models.InputValuePayload
+import com.example.proyectofinal.models.MultiSelectPayload
+import com.example.proyectofinal.models.MultipleChoicePayload
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.BeforeTest
@@ -74,24 +86,10 @@ class KtorExerciseRepositoryTest {
     }
 
     @Test
-    fun `getExercisesByLesson fetches from API and saves to DB`() = runTest {
+    fun `getExercisesByLesson fetches from API and saves payload JSON to DB`() = runTest {
         val mockExercises = listOf(
-            Exercise(
-                id = "ex-1",
-                lessonId = "lesson-1",
-                question = "What is Kotlin?",
-                options = listOf("A language", "A tool", "A framework"),
-                correctAnswer = "A language",
-                type = ExerciseType.MULTIPLE_CHOICE
-            ),
-            Exercise(
-                id = "ex-2",
-                lessonId = "lesson-1",
-                question = "Is Kotlin null safe?",
-                options = listOf("Yes", "No"),
-                correctAnswer = "Yes",
-                type = ExerciseType.TRUE_FALSE
-            )
+            multipleChoiceExercise(id = "ex-1"),
+            multiSelectExercise(id = "ex-2")
         )
 
         val mockEngine = MockEngine { request ->
@@ -105,35 +103,23 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val httpClient = HttpClient(mockEngine) {
-            install(ContentNegotiation) {
-                json(json)
-            }
-        }
-
-        val api = ExerciseApi(httpClient, apiConfig)
-        val repository = KtorExerciseRepository(api, database)
+        val repository = KtorExerciseRepository(ExerciseApi(httpClient(mockEngine), apiConfig), database)
 
         val exercises = repository.getExercisesByLesson("lesson-1")
 
         assertEquals(2, exercises.size)
-        assertEquals("What is Kotlin?", exercises[0].question)
+        assertEquals("What is Kotlin?", exercises[0].title)
 
         val dbExercises = database.appDatabaseQueries.selectExercisesByLessonId("lesson-1").executeAsList()
         assertEquals(2, dbExercises.size)
-        assertEquals("What is Kotlin?", dbExercises[0].question)
+        assertEquals("What is Kotlin?", dbExercises[0].title)
+        assertEquals(mockExercises[0].payload, ExercisePayloadJson.decode(dbExercises[0].payload))
+        assertEquals(mockExercises[1].payload, ExercisePayloadJson.decode(dbExercises[1].payload))
     }
 
     @Test
-    fun `createExercise posts to API and returns created exercise`() = runTest {
-        val newExercise = Exercise(
-            id = "new-ex",
-            lessonId = "lesson-1",
-            question = "New Question",
-            options = listOf("Option A", "Option B", "Option C"),
-            correctAnswer = "Option A",
-            type = ExerciseType.MULTIPLE_CHOICE
-        )
+    fun `createExercise posts to API and stores typed payload locally`() = runTest {
+        val newExercise = inputValueExercise(id = "new-ex")
 
         val mockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
@@ -146,46 +132,37 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val httpClient = HttpClient(mockEngine) {
-            install(ContentNegotiation) {
-                json(json)
-            }
-        }
-
-        val api = ExerciseApi(httpClient, apiConfig)
-        val repository = KtorExerciseRepository(api, database)
+        val repository = KtorExerciseRepository(ExerciseApi(httpClient(mockEngine), apiConfig), database)
 
         val created = repository.createExercise(newExercise)
 
-        assertEquals("New Question", created.question)
+        assertEquals("New Question", created.title)
         assertEquals("lesson-1", created.lessonId)
 
         val dbExercise = database.appDatabaseQueries.selectExerciseById("new-ex").executeAsOneOrNull()
-        assertEquals("New Question", dbExercise?.question)
-        assertEquals("Option A", dbExercise?.correctAnswer)
+        assertEquals("New Question", dbExercise?.title)
+        assertEquals(newExercise.payload, dbExercise?.payload?.let(ExercisePayloadJson::decode))
     }
 
     @Test
     fun `updateExercise puts to API and returns updated exercise`() = runTest {
-        val existingExercise = Exercise(
-            id = "existing-ex",
-            lessonId = "lesson-1",
-            question = "Original Question",
-            options = listOf("A", "B", "C"),
-            correctAnswer = "A",
-            type = ExerciseType.MULTIPLE_CHOICE
-        )
+        val existingExercise = multipleChoiceExercise(id = "existing-ex")
 
         database.appDatabaseQueries.insertExercise(
             id = existingExercise.id,
             lessonId = existingExercise.lessonId,
-            question = existingExercise.question,
-            correctAnswer = existingExercise.correctAnswer,
+            title = existingExercise.title,
             type = existingExercise.type,
-            options = "A,B,C"
+            payload = ExercisePayloadJson.encode(existingExercise)
         )
 
-        val updatedExercise = existingExercise.copy(question = "Updated Question", correctAnswer = "B")
+        val updatedExercise = existingExercise.copy(
+            title = "Updated Question",
+            payload = MultipleChoicePayload(
+                options = (existingExercise.payload as MultipleChoicePayload).options,
+                correctOptionId = "tool"
+            )
+        )
 
         val mockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
@@ -198,23 +175,34 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val httpClient = HttpClient(mockEngine) {
-            install(ContentNegotiation) {
-                json(json)
-            }
-        }
-
-        val api = ExerciseApi(httpClient, apiConfig)
-        val repository = KtorExerciseRepository(api, database)
+        val repository = KtorExerciseRepository(ExerciseApi(httpClient(mockEngine), apiConfig), database)
 
         val result = repository.updateExercise(updatedExercise)
 
-        assertEquals("Updated Question", result.question)
-        assertEquals("B", result.correctAnswer)
+        assertEquals("Updated Question", result.title)
 
         val dbExercise = database.appDatabaseQueries.selectExerciseById("existing-ex").executeAsOneOrNull()
-        assertEquals("Updated Question", dbExercise?.question)
-        assertEquals("B", dbExercise?.correctAnswer)
+        assertEquals("Updated Question", dbExercise?.title)
+        assertEquals(updatedExercise.payload, dbExercise?.payload?.let(ExercisePayloadJson::decode))
+    }
+
+    @Test
+    fun `payload JSON round trips through local DB storage`() = runTest {
+        val exercise = multiSelectExercise(id = "payload-round-trip")
+
+        database.appDatabaseQueries.insertExercise(
+            id = exercise.id,
+            lessonId = exercise.lessonId,
+            title = exercise.title,
+            type = exercise.type,
+            payload = ExercisePayloadJson.encode(exercise)
+        )
+
+        val storedExercise = database.appDatabaseQueries.selectExerciseById("payload-round-trip").executeAsOne()
+
+        assertEquals(exercise.title, storedExercise.title)
+        assertEquals(ExerciseType.MULTI_SELECT, storedExercise.type)
+        assertEquals(exercise.payload, ExercisePayloadJson.decode(storedExercise.payload))
     }
 
     @Test
@@ -225,10 +213,13 @@ class KtorExerciseRepositoryTest {
         database.appDatabaseQueries.insertExercise(
             id = exerciseId,
             lessonId = "lesson-1",
-            question = "Question to delete",
-            correctAnswer = "Answer",
+            title = "Question to delete",
             type = ExerciseType.MULTIPLE_CHOICE,
-            options = "A,B,C"
+            payload = ExercisePayloadJson.legacyPayloadJson(
+                type = ExerciseType.MULTIPLE_CHOICE,
+                optionsCsv = "A,B,C",
+                correctAnswer = "A"
+            )
         )
 
         val mockEngine = MockEngine { request ->
@@ -245,14 +236,7 @@ class KtorExerciseRepositoryTest {
             }
         }
 
-        val httpClient = HttpClient(mockEngine) {
-            install(ContentNegotiation) {
-                json(json)
-            }
-        }
-
-        val api = ExerciseApi(httpClient, apiConfig)
-        val repository = KtorExerciseRepository(api, database)
+        val repository = KtorExerciseRepository(ExerciseApi(httpClient(mockEngine), apiConfig), database)
 
         repository.deleteExercise(exerciseId)
 
@@ -261,4 +245,50 @@ class KtorExerciseRepositoryTest {
         val dbExercise = database.appDatabaseQueries.selectExerciseById(exerciseId).executeAsOneOrNull()
         assertEquals(null, dbExercise)
     }
+
+    private fun httpClient(mockEngine: MockEngine): HttpClient = HttpClient(mockEngine) {
+        install(ContentNegotiation) {
+            json(json)
+        }
+    }
 }
+
+private fun multipleChoiceExercise(id: String) = Exercise(
+    id = id,
+    lessonId = "lesson-1",
+    title = "What is Kotlin?",
+    payload = MultipleChoicePayload(
+        options = listOf(
+            ChoiceOption(id = "language", text = "A language"),
+            ChoiceOption(id = "tool", text = "A tool"),
+            ChoiceOption(id = "framework", text = "A framework")
+        ),
+        correctOptionId = "language"
+    )
+)
+
+private fun inputValueExercise(id: String) = Exercise(
+    id = id,
+    lessonId = "lesson-1",
+    title = "New Question",
+    type = ExerciseType.INPUT_VALUE,
+    payload = InputValuePayload(
+        placeholder = "Type your answer",
+        correctValue = "42"
+    )
+)
+
+private fun multiSelectExercise(id: String) = Exercise(
+    id = id,
+    lessonId = "lesson-1",
+    title = "Select every true statement.",
+    type = ExerciseType.MULTI_SELECT,
+    payload = MultiSelectPayload(
+        options = listOf(
+            ChoiceOption(id = "a", text = "A"),
+            ChoiceOption(id = "b", text = "B"),
+            ChoiceOption(id = "c", text = "C")
+        ),
+        correctOptionIds = listOf("a", "c")
+    )
+)

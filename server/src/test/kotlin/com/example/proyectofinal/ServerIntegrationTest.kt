@@ -13,15 +13,20 @@ import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.models.AuthResponse
-import com.example.proyectofinal.models.CompleteExerciseRequest
+import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.CompleteLessonRequest
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.ExerciseAttemptRequest
+import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.Exercise
-import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.InputValueSubmission
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.MultiSelectSubmission
+import com.example.proyectofinal.models.MultipleChoicePayload
+import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.TheoryUpdateRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
@@ -29,6 +34,7 @@ import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.Security
+import com.example.proyectofinal.service.ExercisePayloadSupport
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.bearerAuth
@@ -416,15 +422,27 @@ class ServerIntegrationTest {
                 it[options] = "3,4"
                 it[correctAnswer] = "4"
                 it[type] = "MULTIPLE_CHOICE"
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "3,4",
+                    correctAnswer = "4"
+                )
             }
         }
-        val updateResponse = client.post("/exercises/exercise-1/complete") {
+        val updateResponse = client.post("/exercises/exercise-1/attempt") {
             bearerAuth(token)
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(CompleteExerciseRequest(exerciseId = "exercise-1", score = 15))
+            setBody(
+                ExerciseAttemptRequest(
+                    exerciseId = "exercise-1",
+                    submission = MultipleChoiceSubmission(selectedOptionId = "4"),
+                    score = 15
+                )
+            )
         }
         assertEquals(HttpStatusCode.OK, updateResponse.status)
-        val completion = updateResponse.body<ExerciseCompletionResponse>()
+        val completion = updateResponse.body<ExerciseAttemptResponse>()
+        assertEquals(true, completion.isCorrect)
         assertEquals(true, completion.lessonCompleted)
         assertEquals(userId, completion.progress.userId)
         assertEquals(setOf("exercise-1"), completion.progress.completedExerciseIds)
@@ -452,7 +470,7 @@ class ServerIntegrationTest {
     }
 
     @Test
-    fun `exercise completion validates path body match and learner progress deprecation`() = testApplication {
+    fun `exercise completion endpoint is gone and learner progress endpoint stays deprecated`() = testApplication {
         setupTestDatabase()
 
         application {
@@ -477,24 +495,113 @@ class ServerIntegrationTest {
                 it[options] = "a,b"
                 it[correctAnswer] = "a"
                 it[type] = "MULTIPLE_CHOICE"
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "a,b",
+                    correctAnswer = "a"
+                )
             }
         }
         val response = client.post("/exercises/exercise-real/complete") {
             bearerAuth(token)
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(CompleteExerciseRequest(exerciseId = "exercise-other", score = 10))
+            setBody("{}")
         }
         val deprecatedResponse = client.post("/progress") {
             bearerAuth(token)
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             setBody(CompleteLessonRequest(userId = userId, lessonId = "lesson-legacy", score = 12))
         }
-        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(HttpStatusCode.Gone, response.status)
+        assertTrue(response.body<String>().contains("submit /attempt"))
         assertEquals(HttpStatusCode.Gone, deprecatedResponse.status)
         transaction {
+            assertEquals(0L, CompletedExercises.selectAll().where { CompletedExercises.userId eq userId }.count())
             assertEquals(0L, CompletedLessons.selectAll().where { CompletedLessons.userId eq userId }.count())
             assertEquals(0L, UserProgressTable.selectAll().where { UserProgressTable.userId eq userId }.count())
         }
+    }
+
+    @Test
+    fun `attempt endpoint validates wrong and correct typed answers`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        val token = registerUserAndGetToken(client, email = "attempts@example.com")
+        seedOfficialCourseWithLesson(courseId = "course-attempt", lessonId = "lesson-attempt", schoolYear = 3)
+
+        transaction {
+            Exercises.insert {
+                it[id] = "exercise-attempt"
+                it[lessonId] = "lesson-attempt"
+                it[question] = "2 + 2 = ?"
+                it[options] = "3,4"
+                it[correctAnswer] = "4"
+                it[type] = ExerciseType.MULTIPLE_CHOICE.name
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "3,4",
+                    correctAnswer = "4"
+                )
+            }
+        }
+
+        val wrongResponse = client.post("/exercises/exercise-attempt/attempt") {
+            bearerAuth(token)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                ExerciseAttemptRequest(
+                    exerciseId = "exercise-attempt",
+                    submission = MultipleChoiceSubmission(selectedOptionId = "3"),
+                    score = 20
+                )
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, wrongResponse.status)
+        val wrongAttempt = wrongResponse.body<ExerciseAttemptResponse>()
+        assertEquals(false, wrongAttempt.isCorrect)
+        assertEquals(false, wrongAttempt.lessonCompleted)
+        assertTrue(wrongAttempt.message?.contains("Incorrect") == true)
+
+        val badSubmission = client.post("/exercises/exercise-attempt/attempt") {
+            bearerAuth(token)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                ExerciseAttemptRequest(
+                    exerciseId = "exercise-attempt",
+                    submission = InputValueSubmission(value = "4")
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.BadRequest, badSubmission.status)
+
+        val correctResponse = client.post("/exercises/exercise-attempt/attempt") {
+            bearerAuth(token)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                ExerciseAttemptRequest(
+                    exerciseId = "exercise-attempt",
+                    submission = MultipleChoiceSubmission(selectedOptionId = "4"),
+                    score = 20
+                )
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, correctResponse.status)
+        val correctAttempt = correctResponse.body<ExerciseAttemptResponse>()
+        assertEquals(true, correctAttempt.isCorrect)
+        assertEquals(true, correctAttempt.lessonCompleted)
+        assertEquals(20, correctAttempt.progress.totalScore)
     }
 
     @Test
@@ -540,6 +647,11 @@ class ServerIntegrationTest {
                 it[options] = "3,4,5"
                 it[correctAnswer] = "4"
                 it[type] = "MULTIPLE_CHOICE"
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "3,4,5",
+                    correctAnswer = "4"
+                )
             }
 
             EnrolledCourses.insert {
@@ -598,6 +710,11 @@ class ServerIntegrationTest {
                 it[options] = "a,b"
                 it[correctAnswer] = "a"
                 it[type] = "MULTIPLE_CHOICE"
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "a,b",
+                    correctAnswer = "a"
+                )
             }
         }
 
@@ -829,10 +946,15 @@ class ServerIntegrationTest {
                 CreateExerciseRequest(
                     id = "exercise-forbidden",
                     lessonId = "lesson-owned-exercise",
-                    question = "Forbidden?",
-                    options = listOf("a", "b"),
-                    correctAnswer = "a",
-                    type = ExerciseType.MULTIPLE_CHOICE
+                    title = "Forbidden?",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "a", text = "a"),
+                            ChoiceOption(id = "b", text = "b")
+                        ),
+                        correctOptionId = "a"
+                    )
                 )
             )
         }
@@ -845,10 +967,15 @@ class ServerIntegrationTest {
                 CreateExerciseRequest(
                     id = "exercise-created",
                     lessonId = "lesson-owned-exercise",
-                    question = "Created?",
-                    options = listOf("a", "b"),
-                    correctAnswer = "a",
-                    type = ExerciseType.MULTIPLE_CHOICE
+                    title = "Created?",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "a", text = "a"),
+                            ChoiceOption(id = "b", text = "b")
+                        ),
+                        correctOptionId = "a"
+                    )
                 )
             )
         }
@@ -857,14 +984,14 @@ class ServerIntegrationTest {
         val forbiddenUpdate = client.put("/exercises/exercise-owned") {
             bearerAuth(learnerToken)
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(UpdateExerciseRequest(question = "Nope"))
+            setBody(UpdateExerciseRequest(title = "Nope"))
         }
         assertEquals(HttpStatusCode.Forbidden, forbiddenUpdate.status)
 
         val updated = client.put("/exercises/exercise-owned") {
             bearerAuth(ownerToken)
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody(UpdateExerciseRequest(question = "Updated question"))
+            setBody(UpdateExerciseRequest(title = "Updated question"))
         }
         assertEquals(HttpStatusCode.OK, updated.status)
 
@@ -902,9 +1029,9 @@ class ServerIntegrationTest {
             Lessons.insert { it[id] = "lesson-2"; it[courseId] = "course-2"; it[title] = "lesson-2"; it[theoryContent] = "lesson-2"; it[orderIndex] = 0 }
             Lessons.insert { it[id] = "lesson-3"; it[courseId] = "course-3"; it[title] = "lesson-3"; it[theoryContent] = "lesson-3"; it[orderIndex] = 0 }
 
-            Exercises.insert { it[id] = "exercise-1"; it[lessonId] = "lesson-1"; it[question] = "exercise-1"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE" }
-            Exercises.insert { it[id] = "exercise-2"; it[lessonId] = "lesson-2"; it[question] = "exercise-2"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE" }
-            Exercises.insert { it[id] = "exercise-3"; it[lessonId] = "lesson-3"; it[question] = "exercise-3"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE" }
+            Exercises.insert { it[id] = "exercise-1"; it[lessonId] = "lesson-1"; it[question] = "exercise-1"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE"; it[payload] = ExercisePayloadSupport.legacyPayloadJson(ExerciseType.MULTIPLE_CHOICE, "a,b,c", "a") }
+            Exercises.insert { it[id] = "exercise-2"; it[lessonId] = "lesson-2"; it[question] = "exercise-2"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE"; it[payload] = ExercisePayloadSupport.legacyPayloadJson(ExerciseType.MULTIPLE_CHOICE, "a,b,c", "a") }
+            Exercises.insert { it[id] = "exercise-3"; it[lessonId] = "lesson-3"; it[question] = "exercise-3"; it[options] = "a,b,c"; it[correctAnswer] = "a"; it[type] = "MULTIPLE_CHOICE"; it[payload] = ExercisePayloadSupport.legacyPayloadJson(ExerciseType.MULTIPLE_CHOICE, "a,b,c", "a") }
 
             UserProgressTable.insert { it[userId] = "student-1"; it[totalScore] = 10 }
             UserProgressTable.insert { it[userId] = "student-2"; it[totalScore] = 20 }
@@ -1060,6 +1187,11 @@ class ServerIntegrationTest {
                 it[options] = "a,b"
                 it[correctAnswer] = "a"
                 it[type] = "MULTIPLE_CHOICE"
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "a,b",
+                    correctAnswer = "a"
+                )
             }
         }
     }

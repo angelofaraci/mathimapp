@@ -10,11 +10,16 @@ import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
-import com.example.proyectofinal.models.CompleteExerciseRequest
+import com.example.proyectofinal.models.ChoiceOption
+import com.example.proyectofinal.models.ExerciseAttemptRequest
 import com.example.proyectofinal.models.CreateCourseRequest
 import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.InputValueSubmission
+import com.example.proyectofinal.models.MultiSelectSubmission
+import com.example.proyectofinal.models.MultipleChoicePayload
+import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.UpdateCourseRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
@@ -24,7 +29,8 @@ import com.example.proyectofinal.service.AdminLessonPatchRequest
 import com.example.proyectofinal.service.AuthService
 import com.example.proyectofinal.service.CourseReadResult
 import com.example.proyectofinal.service.CourseService
-import com.example.proyectofinal.service.ExerciseCompletionResult
+import com.example.proyectofinal.service.ExerciseAttemptResult
+import com.example.proyectofinal.service.ExercisePayloadSupport
 import com.example.proyectofinal.service.ExerciseService
 import com.example.proyectofinal.service.FieldPatch
 import com.example.proyectofinal.service.LessonListReadResult
@@ -317,7 +323,7 @@ class LessonExerciseServiceTest {
             service.getLessonByIdForUser("standalone-lesson", "teacher-owner", UserRole.TEACHER)
         ).lesson
 
-        assertEquals("", adminLesson.exercises.single().correctAnswer)
+        assertEquals("42", adminLesson.exercises.single().correctAnswer)
         assertEquals("42", ownerLesson.exercises.single().correctAnswer)
         assertEquals(listOf("standalone-lesson"), service.listStandaloneLessons().map { it.id })
         assertEquals(
@@ -502,10 +508,15 @@ class LessonExerciseServiceTest {
             CreateExerciseRequest(
                 id = "exercise-1",
                 lessonId = "lesson-1",
-                question = "2 + 2 = ?",
-                options = listOf("3", "4"),
-                correctAnswer = "4",
-                type = ExerciseType.MULTIPLE_CHOICE
+                title = "2 + 2 = ?",
+                type = ExerciseType.MULTIPLE_CHOICE,
+                payload = MultipleChoicePayload(
+                    options = listOf(
+                        ChoiceOption(id = "3", text = "3"),
+                        ChoiceOption(id = "4", text = "4")
+                    ),
+                    correctOptionId = "4"
+                )
             )
         )
 
@@ -516,9 +527,14 @@ class LessonExerciseServiceTest {
         val updated = service.updateExercise(
             id = "exercise-1",
             request = UpdateExerciseRequest(
-                question = "3 + 3 = ?",
-                options = listOf("5", "6"),
-                correctAnswer = "6"
+                title = "3 + 3 = ?",
+                payload = MultipleChoicePayload(
+                    options = listOf(
+                        ChoiceOption(id = "5", text = "5"),
+                        ChoiceOption(id = "6", text = "6")
+                    ),
+                    correctOptionId = "6"
+                )
             )
         )
         assertEquals("3 + 3 = ?", updated?.question)
@@ -703,6 +719,174 @@ class LessonExerciseServiceTest {
     }
 
     @Test
+    fun `database init backfills exercise payloads and normalizes true false rows`() {
+        val url = "jdbc:h2:mem:${UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
+
+        DriverManager.getConnection(url, "sa", "").use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute(
+                    """
+                    CREATE TABLE users (
+                        id VARCHAR(50) PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL,
+                        email VARCHAR(100) NOT NULL,
+                        password_hash VARCHAR(255) NOT NULL,
+                        role VARCHAR(20) NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                statement.execute("CREATE UNIQUE INDEX idx_users_email ON users (email)")
+                statement.execute(
+                    """
+                    CREATE TABLE courses (
+                        id VARCHAR(50) PRIMARY KEY,
+                        title VARCHAR(200) NOT NULL,
+                        description VARCHAR(1000) NOT NULL,
+                        creator_id VARCHAR(50) NOT NULL,
+                        is_official BOOLEAN NOT NULL DEFAULT FALSE,
+                        join_code VARCHAR(20)
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE lessons (
+                        id VARCHAR(50) PRIMARY KEY,
+                        course_id VARCHAR(50) NOT NULL,
+                        title VARCHAR(200) NOT NULL,
+                        theory_content TEXT NOT NULL,
+                        order_index INTEGER NOT NULL DEFAULT 0,
+                        CONSTRAINT fk_lessons_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE exercises (
+                        id VARCHAR(50) PRIMARY KEY,
+                        lesson_id VARCHAR(50) NOT NULL,
+                        question VARCHAR(500) NOT NULL,
+                        options VARCHAR(500) NOT NULL,
+                        correct_answer VARCHAR(255) NOT NULL,
+                        type VARCHAR(30) NOT NULL DEFAULT 'MULTIPLE_CHOICE',
+                        CONSTRAINT fk_exercises_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE user_progress (
+                        user_id VARCHAR(50) PRIMARY KEY,
+                        total_score INTEGER NOT NULL DEFAULT 0,
+                        CONSTRAINT fk_user_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE completed_lessons (
+                        user_id VARCHAR(50) NOT NULL,
+                        lesson_id VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (user_id, lesson_id),
+                        CONSTRAINT fk_completed_lessons_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_completed_lessons_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE completed_exercises (
+                        user_id VARCHAR(50) NOT NULL,
+                        exercise_id VARCHAR(50) NOT NULL,
+                        score INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY (user_id, exercise_id),
+                        CONSTRAINT fk_completed_exercises_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_completed_exercises_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute(
+                    """
+                    CREATE TABLE enrolled_courses (
+                        user_id VARCHAR(50) NOT NULL,
+                        course_id VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (user_id, course_id),
+                        CONSTRAINT fk_enrolled_courses_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_enrolled_courses_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                statement.execute("INSERT INTO users (id, name, email, password_hash, role) VALUES ('legacy-admin', 'Legacy Admin', 'legacy-admin@example.com', 'hash', 'ADMIN')")
+                statement.execute("INSERT INTO courses (id, title, description, creator_id, is_official, join_code) VALUES ('legacy-course', 'Legacy Course', 'Legacy', 'legacy-admin', TRUE, 'JOIN123')")
+                statement.execute("INSERT INTO lessons (id, course_id, title, theory_content, order_index) VALUES ('legacy-lesson', 'legacy-course', 'Legacy Lesson', 'Theory', 0)")
+                statement.execute("INSERT INTO exercises (id, lesson_id, question, options, correct_answer, type) VALUES ('legacy-choice', 'legacy-lesson', '2 + 2 = ?', '3,4', '4', 'MULTIPLE_CHOICE')")
+                statement.execute("INSERT INTO exercises (id, lesson_id, question, options, correct_answer, type) VALUES ('legacy-bool', 'legacy-lesson', 'Is 2 even?', 'True,False', 'True', 'TRUE_FALSE')")
+                statement.execute("INSERT INTO exercises (id, lesson_id, question, options, correct_answer, type) VALUES ('legacy-multi-option', 'legacy-lesson', 'Pick a color', 'red,green,blue', 'green', 'MULTIPLE_CHOICE')")
+                statement.execute("INSERT INTO exercises (id, lesson_id, question, options, correct_answer, type) VALUES ('legacy-spaced-option', 'legacy-lesson', 'Pick a spaced color', 'red, green, blue', ' green ', 'MULTIPLE_CHOICE')")
+            }
+        }
+
+        DatabaseFactory.init(
+            url = url,
+            driver = "org.h2.Driver",
+            user = "sa",
+            password = ""
+        )
+
+        DriverManager.getConnection(url, "sa", "").use { connection ->
+            connection.prepareStatement("SELECT type, payload FROM exercises WHERE id = ?").use { statement ->
+                statement.setString(1, "legacy-choice")
+
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    assertEquals("MULTIPLE_CHOICE", resultSet.getString("type"))
+                    assertTrue(resultSet.getString("payload").contains("\"type\":\"multipleChoice\""))
+                    assertTrue(resultSet.getString("payload").contains("\"correctOptionId\":\"4\""))
+                }
+            }
+
+            connection.prepareStatement("SELECT type, payload FROM exercises WHERE id = ?").use { statement ->
+                statement.setString(1, "legacy-bool")
+
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    assertEquals("MULTIPLE_CHOICE", resultSet.getString("type"))
+                    assertTrue(resultSet.getString("payload").contains("\"True\""))
+                }
+            }
+
+            connection.prepareStatement("SELECT payload FROM exercises WHERE id = ?").use { statement ->
+                statement.setString(1, "legacy-multi-option")
+
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    val payload = resultSet.getString("payload")
+                    assertTrue(payload.contains("\"id\":\"red\",\"text\":\"red\""))
+                    assertTrue(payload.contains("\"id\":\"green\",\"text\":\"green\""))
+                    assertTrue(payload.contains("\"id\":\"blue\",\"text\":\"blue\""))
+                    assertTrue(payload.contains("\"correctOptionId\":\"green\""))
+                }
+            }
+
+            connection.prepareStatement("SELECT payload FROM exercises WHERE id = ?").use { statement ->
+                statement.setString(1, "legacy-spaced-option")
+
+                statement.executeQuery().use { resultSet ->
+                    assertTrue(resultSet.next())
+                    val payload = resultSet.getString("payload")
+                    assertTrue(payload.contains("\"id\":\"red\",\"text\":\"red\""))
+                    assertTrue(payload.contains("\"id\":\"green\",\"text\":\"green\""))
+                    assertTrue(payload.contains("\"id\":\"blue\",\"text\":\"blue\""))
+                    assertTrue(payload.contains("\"correctOptionId\":\"green\""))
+                    assertTrue(!payload.contains("\"id\":\" green\""))
+                    assertTrue(!payload.contains("\"text\":\" green\""))
+                    assertTrue(!payload.contains("\"correctOptionId\":\" green \""))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `database init fails when a pending migration cannot be applied`() {
         val url = "jdbc:h2:mem:${UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
 
@@ -753,7 +937,7 @@ class UserServiceTest {
     }
 
     @Test
-    fun `complete exercise is first wins and completes lesson on final exercise`() {
+    fun `attempt exercise is first wins and completes lesson on final exercise`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "learner-1", role = UserRole.STUDENT)
         insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
@@ -761,30 +945,45 @@ class UserServiceTest {
         insertExercise(id = "exercise-1", lessonId = "lesson-1")
         insertExercise(id = "exercise-2", lessonId = "lesson-1")
         val service = UserService()
-        val firstResult = service.completeExercise(
+        val firstResult = service.attemptExercise(
             userId = "learner-1",
             role = UserRole.STUDENT,
-            request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 10)
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise-1",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                score = 10
+            )
         )
-        val duplicateResult = service.completeExercise(
+        val duplicateResult = service.attemptExercise(
             userId = "learner-1",
             role = UserRole.STUDENT,
-            request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 99)
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise-1",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                score = 99
+            )
         )
-        val finalResult = service.completeExercise(
+        val finalResult = service.attemptExercise(
             userId = "learner-1",
             role = UserRole.STUDENT,
-            request = CompleteExerciseRequest(exerciseId = "exercise-2", score = 15)
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise-2",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                score = 15
+            )
         )
-        val firstSuccess = assertIs<ExerciseCompletionResult.Success>(firstResult)
+        val firstSuccess = assertIs<ExerciseAttemptResult.Success>(firstResult)
+        assertEquals(true, firstSuccess.response.isCorrect)
         assertEquals(false, firstSuccess.response.lessonCompleted)
         assertEquals(10, firstSuccess.response.progress.totalScore)
         assertEquals(setOf("exercise-1"), firstSuccess.response.progress.completedExerciseIds)
-        val duplicateSuccess = assertIs<ExerciseCompletionResult.Success>(duplicateResult)
+        val duplicateSuccess = assertIs<ExerciseAttemptResult.Success>(duplicateResult)
+        assertEquals(true, duplicateSuccess.response.isCorrect)
         assertEquals(10, duplicateSuccess.response.progress.totalScore)
         assertEquals(setOf("exercise-1"), duplicateSuccess.response.progress.completedExerciseIds)
         assertEquals(false, duplicateSuccess.response.lessonCompleted)
-        val finalSuccess = assertIs<ExerciseCompletionResult.Success>(finalResult)
+        val finalSuccess = assertIs<ExerciseAttemptResult.Success>(finalResult)
+        assertEquals(true, finalSuccess.response.isCorrect)
         assertEquals(true, finalSuccess.response.lessonCompleted)
         assertEquals(25, finalSuccess.response.progress.totalScore)
         assertEquals(setOf("exercise-1", "exercise-2"), finalSuccess.response.progress.completedExerciseIds)
@@ -811,18 +1010,22 @@ class UserServiceTest {
     }
 
     @Test
-    fun `complete exercise rejects private exercise access for unenrolled learner`() {
+    fun `attempt exercise rejects private exercise access for unenrolled learner`() {
         insertUser(id = "teacher-1", role = UserRole.TEACHER)
         insertUser(id = "learner-1", role = UserRole.STUDENT)
         insertCourse(id = "private-course", creatorId = "teacher-1", isOfficial = false)
         insertLesson(id = "lesson-1", courseId = "private-course")
         insertExercise(id = "exercise-1", lessonId = "lesson-1")
-        val result = UserService().completeExercise(
+        val result = UserService().attemptExercise(
             userId = "learner-1",
             role = UserRole.STUDENT,
-            request = CompleteExerciseRequest(exerciseId = "exercise-1", score = 10)
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise-1",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                score = 10
+            )
         )
-        assertEquals(ExerciseCompletionResult.Forbidden, result)
+        assertEquals(ExerciseAttemptResult.Forbidden, result)
         transaction {
             assertEquals(0L, CompletedExercises.selectAll().count())
             assertEquals(0L, CompletedLessons.selectAll().count())
@@ -831,18 +1034,23 @@ class UserServiceTest {
     }
 
     @Test
-    fun `complete exercise allows standalone exercise for lesson creator`() {
+    fun `attempt exercise allows standalone exercise for lesson creator`() {
         insertUser(id = "learner-owner", role = UserRole.STUDENT)
         insertLesson(id = "standalone-lesson", courseId = null, creatorId = "learner-owner")
         insertExercise(id = "standalone-exercise", lessonId = "standalone-lesson")
 
-        val result = UserService().completeExercise(
+        val result = UserService().attemptExercise(
             userId = "learner-owner",
             role = UserRole.STUDENT,
-            request = CompleteExerciseRequest(exerciseId = "standalone-exercise", score = 7)
+            request = ExerciseAttemptRequest(
+                exerciseId = "standalone-exercise",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                score = 7
+            )
         )
 
-        val success = assertIs<ExerciseCompletionResult.Success>(result)
+        val success = assertIs<ExerciseAttemptResult.Success>(result)
+        assertEquals(true, success.response.isCorrect)
         assertEquals("standalone-exercise", success.response.exerciseId)
         assertEquals("standalone-lesson", success.response.lessonId)
         assertEquals(true, success.response.lessonCompleted)
@@ -852,24 +1060,162 @@ class UserServiceTest {
     }
 
     @Test
-    fun `complete exercise rejects standalone exercise for non owner learner`() {
+    fun `attempt exercise rejects standalone exercise for non owner learner`() {
         insertUser(id = "learner-owner", role = UserRole.STUDENT)
         insertUser(id = "learner-other", role = UserRole.STUDENT)
         insertLesson(id = "standalone-lesson", courseId = null, creatorId = "learner-owner")
         insertExercise(id = "standalone-exercise", lessonId = "standalone-lesson")
 
-        val result = UserService().completeExercise(
+        val result = UserService().attemptExercise(
             userId = "learner-other",
             role = UserRole.STUDENT,
-            request = CompleteExerciseRequest(exerciseId = "standalone-exercise", score = 7)
+            request = ExerciseAttemptRequest(
+                exerciseId = "standalone-exercise",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                score = 7
+            )
         )
 
-        assertEquals(ExerciseCompletionResult.Forbidden, result)
+        assertEquals(ExerciseAttemptResult.Forbidden, result)
         transaction {
             assertEquals(0L, CompletedExercises.selectAll().count())
             assertEquals(0L, CompletedLessons.selectAll().count())
             assertEquals(0L, UserProgressTable.selectAll().count())
         }
+    }
+
+    @Test
+    fun `attempt exercise validates typed submissions and only completes on correct answer`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
+        insertLesson(id = "lesson-1", courseId = "official-course")
+        insertExercise(
+            id = "exercise-choice",
+            lessonId = "lesson-1",
+            question = "2 + 2 = ?",
+            options = "3,4",
+            correctAnswer = "4",
+            type = ExerciseType.MULTIPLE_CHOICE
+        )
+        insertExercise(
+            id = "exercise-input",
+            lessonId = "lesson-1",
+            question = "Write four",
+            options = "",
+            correctAnswer = "Four",
+            type = ExerciseType.INPUT_VALUE
+        )
+        insertExercise(
+            id = "exercise-multi",
+            lessonId = "lesson-1",
+            question = "Select prime numbers",
+            options = "2,3,4",
+            correctAnswer = "2,3",
+            type = ExerciseType.MULTI_SELECT
+        )
+
+        val service = UserService()
+
+        val wrongChoice = assertIs<ExerciseAttemptResult.Success>(
+            service.attemptExercise(
+                userId = "learner-1",
+                role = UserRole.STUDENT,
+                request = ExerciseAttemptRequest(
+                    exerciseId = "exercise-choice",
+                    submission = MultipleChoiceSubmission(selectedOptionId = "3"),
+                    score = 10
+                )
+            )
+        )
+        assertEquals(false, wrongChoice.response.isCorrect)
+        assertTrue(wrongChoice.response.message?.contains("Incorrect") == true)
+
+        val correctChoice = assertIs<ExerciseAttemptResult.Success>(
+            service.attemptExercise(
+                userId = "learner-1",
+                role = UserRole.STUDENT,
+                request = ExerciseAttemptRequest(
+                    exerciseId = "exercise-choice",
+                    submission = MultipleChoiceSubmission(selectedOptionId = "4"),
+                    score = 10
+                )
+            )
+        )
+        assertEquals(true, correctChoice.response.isCorrect)
+
+        val correctInput = assertIs<ExerciseAttemptResult.Success>(
+            service.attemptExercise(
+                userId = "learner-1",
+                role = UserRole.STUDENT,
+                request = ExerciseAttemptRequest(
+                    exerciseId = "exercise-input",
+                    submission = InputValueSubmission(value = "  four  "),
+                    score = 15
+                )
+            )
+        )
+        assertEquals(true, correctInput.response.isCorrect)
+
+        val partialMulti = assertIs<ExerciseAttemptResult.Success>(
+            service.attemptExercise(
+                userId = "learner-1",
+                role = UserRole.STUDENT,
+                request = ExerciseAttemptRequest(
+                    exerciseId = "exercise-multi",
+                    submission = MultiSelectSubmission(selectedOptionIds = listOf("2")),
+                    score = 20
+                )
+            )
+        )
+        assertEquals(false, partialMulti.response.isCorrect)
+
+        val correctMulti = assertIs<ExerciseAttemptResult.Success>(
+            service.attemptExercise(
+                userId = "learner-1",
+                role = UserRole.STUDENT,
+                request = ExerciseAttemptRequest(
+                    exerciseId = "exercise-multi",
+                    submission = MultiSelectSubmission(selectedOptionIds = listOf("3", "2")),
+                    score = 20
+                )
+            )
+        )
+        assertEquals(true, correctMulti.response.isCorrect)
+        assertEquals(true, correctMulti.response.lessonCompleted)
+        assertEquals(45, correctMulti.response.progress.totalScore)
+        assertEquals(
+            setOf("exercise-choice", "exercise-input", "exercise-multi"),
+            correctMulti.response.progress.completedExerciseIds
+        )
+    }
+
+    @Test
+    fun `attempt exercise rejects malformed typed submissions`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
+        insertLesson(id = "lesson-1", courseId = "official-course")
+        insertExercise(
+            id = "exercise-choice",
+            lessonId = "lesson-1",
+            question = "2 + 2 = ?",
+            options = "3,4",
+            correctAnswer = "4",
+            type = ExerciseType.MULTIPLE_CHOICE
+        )
+
+        val result = UserService().attemptExercise(
+            userId = "learner-1",
+            role = UserRole.STUDENT,
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise-choice",
+                submission = InputValueSubmission(value = "4")
+            )
+        )
+
+        val invalid = assertIs<ExerciseAttemptResult.InvalidRequest>(result)
+        assertTrue(invalid.message.contains("submission type"))
     }
 }
 
@@ -947,7 +1293,8 @@ private fun insertExercise(
     lessonId: String,
     question: String = id,
     options: String = "a,b",
-    correctAnswer: String = "a"
+    correctAnswer: String = "a",
+    type: ExerciseType = ExerciseType.MULTIPLE_CHOICE
 ) {
     transaction {
         Exercises.insert {
@@ -956,7 +1303,12 @@ private fun insertExercise(
             it[Exercises.question] = question
             it[Exercises.options] = options
             it[Exercises.correctAnswer] = correctAnswer
-            it[Exercises.type] = ExerciseType.MULTIPLE_CHOICE.name
+            it[Exercises.type] = type.name
+            it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                type = type,
+                optionsCsv = options,
+                correctAnswer = correctAnswer
+            )
         }
     }
 }

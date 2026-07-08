@@ -3,7 +3,8 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.di.TokenStore
 import com.example.proyectofinal.domain.UserRepository
-import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -60,8 +61,12 @@ class KtorUserRepository(
         }
     }
 
-    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse = withContext(Dispatchers.IO) {
-        val response = api.completeExercise(exerciseId = exerciseId, score = score)
+    override suspend fun attemptExercise(
+        exerciseId: String,
+        submission: ExerciseSubmission,
+        score: Int
+    ): ExerciseAttemptResponse = withContext(Dispatchers.IO) {
+        val response = api.attemptExercise(exerciseId = exerciseId, submission = submission, score = score)
         syncUserProgressToLocal(response.progress)
         response
     }

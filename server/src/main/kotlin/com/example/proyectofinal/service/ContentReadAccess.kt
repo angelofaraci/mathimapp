@@ -36,8 +36,8 @@ internal fun canReadLessonContent(access: LessonContentAccess, userId: String, r
 
 internal fun shouldHideLessonAnswers(access: LessonContentAccess, role: UserRole): Boolean =
     when (access) {
-        is LessonContentAccess.CourseLinked -> role == UserRole.STUDENT
-        is LessonContentAccess.Standalone -> role == UserRole.ADMIN
+        is LessonContentAccess.CourseLinked,
+        is LessonContentAccess.Standalone -> role == UserRole.STUDENT
     }
 
 private fun isUserEnrolledInCourse(userId: String, courseId: String): Boolean = dbQuery {

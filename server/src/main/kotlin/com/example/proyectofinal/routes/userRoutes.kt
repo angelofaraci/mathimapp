@@ -1,14 +1,14 @@
 package com.example.proyectofinal.routes
 
-import com.example.proyectofinal.models.CompleteExerciseRequest
-import com.example.proyectofinal.models.UserRole
-import com.example.proyectofinal.models.UpdateUserRequest
 import com.example.proyectofinal.models.CompleteLessonRequest
+import com.example.proyectofinal.models.ExerciseAttemptRequest
+import com.example.proyectofinal.models.UpdateUserRequest
+import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
+import com.example.proyectofinal.service.ExerciseAttemptResult
 import com.example.proyectofinal.service.UserService
-import com.example.proyectofinal.service.ExerciseCompletionResult
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -51,24 +51,37 @@ fun Application.userRoutes(service: UserService) {
             }
 
             post("/exercises/{id}/complete") {
+                call.respond(
+                    HttpStatusCode.Gone,
+                    "Direct exercise completion is deprecated for students; submit /attempt instead"
+                )
+            }
+
+            post("/exercises/{id}/attempt") {
                 val exerciseId = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
-                val request = call.receive<CompleteExerciseRequest>()
+                val request = try {
+                    call.receive<ExerciseAttemptRequest>()
+                } catch (_: Exception) {
+                    return@post call.respond(HttpStatusCode.BadRequest, "Invalid request body")
+                }
+
                 if (exerciseId != request.exerciseId) {
                     return@post call.respond(HttpStatusCode.BadRequest, "Path id must match body exerciseId")
                 }
+
                 val userId = call.currentUserId()
                     ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
                 val role = call.currentRole()
                     ?: return@post call.respond(HttpStatusCode.Unauthorized, "Invalid or expired token")
-                if (role != UserRole.STUDENT) {
-                    return@post call.respond(HttpStatusCode.Forbidden, "Only students can complete exercises")
-                }
-                when (val result = service.completeExercise(userId, role, request)) {
-                    is ExerciseCompletionResult.Success -> call.respond(result.response)
-                    ExerciseCompletionResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
-                    ExerciseCompletionResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+
+                when (val result = service.attemptExercise(userId, role, request)) {
+                    is ExerciseAttemptResult.Success -> call.respond(result.response)
+                    is ExerciseAttemptResult.InvalidRequest -> call.respond(HttpStatusCode.BadRequest, result.message)
+                    ExerciseAttemptResult.Forbidden -> call.respond(HttpStatusCode.Forbidden, "Forbidden")
+                    ExerciseAttemptResult.NotFound -> call.respond(HttpStatusCode.NotFound)
                 }
             }
+
             post("/progress") {
                 val currentRole = call.currentRole() ?: return@post call.respond(HttpStatusCode.Unauthorized)
                 if (currentRole == UserRole.STUDENT) {

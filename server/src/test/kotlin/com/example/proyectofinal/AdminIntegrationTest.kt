@@ -6,6 +6,7 @@ import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.Users
+import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.AdminCourseResponse
 import com.example.proyectofinal.models.AdminExerciseListResponse
 import com.example.proyectofinal.models.AdminExerciseResponse
@@ -19,7 +20,10 @@ import com.example.proyectofinal.models.CreateExerciseRequest
 import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.InputValuePayload
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.MultiSelectPayload
+import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.PageResponse
 import com.example.proyectofinal.models.RoleUpdateRequest
 import com.example.proyectofinal.models.UpdateAdminCourseRequest
@@ -28,6 +32,7 @@ import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.plugins.Security
+import com.example.proyectofinal.service.ExercisePayloadSupport
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.bearerAuth
@@ -572,10 +577,15 @@ class AdminIntegrationTest {
                 CreateExerciseRequest(
                     id = "teacher-standalone-exercise",
                     lessonId = "teacher-standalone",
-                    question = "2 + 2 = ?",
-                    options = listOf("3", "4"),
-                    correctAnswer = "4",
-                    type = ExerciseType.MULTIPLE_CHOICE
+                    title = "2 + 2 = ?",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "3", text = "3"),
+                            ChoiceOption(id = "4", text = "4")
+                        ),
+                        correctOptionId = "4"
+                    )
                 )
             )
         }
@@ -595,10 +605,15 @@ class AdminIntegrationTest {
                 CreateExerciseRequest(
                     id = "teacher-standalone-exercise-2",
                     lessonId = "teacher-standalone",
-                    question = "Blocked",
-                    options = listOf("A", "B"),
-                    correctAnswer = "A",
-                    type = ExerciseType.MULTIPLE_CHOICE
+                    title = "Blocked",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "A", text = "A"),
+                            ChoiceOption(id = "B", text = "B")
+                        ),
+                        correctOptionId = "A"
+                    )
                 )
             )
         }
@@ -611,7 +626,7 @@ class AdminIntegrationTest {
         }
 
         assertEquals(HttpStatusCode.OK, adminStandaloneRead.status)
-        assertEquals("", adminStandaloneRead.body<Lesson>().exercises.single().correctAnswer)
+        assertEquals("4", adminStandaloneRead.body<Lesson>().exercises.single().correctAnswer)
 
         val adminExerciseCreate = client.post("/admin/exercises") {
             bearerAuth(adminToken)
@@ -620,10 +635,15 @@ class AdminIntegrationTest {
                 CreateAdminExerciseRequest(
                     id = "admin-exercise",
                     lessonId = "linked-lesson",
-                    question = "Admin question",
-                    options = listOf("1", "2"),
-                    correctAnswer = "2",
-                    type = ExerciseType.MULTIPLE_CHOICE
+                    title = "Admin question",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "1", text = "1"),
+                            ChoiceOption(id = "2", text = "2")
+                        ),
+                        correctOptionId = "2"
+                    )
                 )
             )
         }
@@ -637,10 +657,15 @@ class AdminIntegrationTest {
                 CreateAdminExerciseRequest(
                     id = "missing-lesson-admin-exercise",
                     lessonId = "missing-lesson",
-                    question = "Unknown lesson",
-                    options = listOf("1", "2"),
-                    correctAnswer = "2",
-                    type = ExerciseType.MULTIPLE_CHOICE
+                    title = "Unknown lesson",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "1", text = "1"),
+                            ChoiceOption(id = "2", text = "2")
+                        ),
+                        correctOptionId = "2"
+                    )
                 )
             )
         }
@@ -680,7 +705,7 @@ class AdminIntegrationTest {
             setBody(
                 UpdateAdminExerciseRequest(
                     lessonId = "standalone-lesson",
-                    question = "Moved question"
+                    title = "Moved question"
                 )
             )
         }
@@ -711,6 +736,95 @@ class AdminIntegrationTest {
 
         assertEquals(HttpStatusCode.NotFound, deleteMissingExercise.status)
         assertEquals(HttpStatusCode.Forbidden, forbiddenAdminExercises.status)
+    }
+
+    @Test
+    fun `admin exercise create rejects invalid typed payloads with documented messages`() = testApplication {
+        setupTestDatabase()
+
+        application {
+            module(initDatabase = false, seedData = false)
+        }
+
+        val client = createClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+
+        insertCourseFixtures()
+        insertLessonFixtures()
+
+        val adminToken = Security.generateToken("admin-1", UserRole.ADMIN.name)
+
+        val multipleChoiceSingleOption = client.post("/admin/exercises") {
+            bearerAuth(adminToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                CreateAdminExerciseRequest(
+                    id = "admin-exercise-mc-single-option",
+                    lessonId = "linked-lesson",
+                    title = "Invalid multiple choice",
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    payload = MultipleChoicePayload(
+                        options = listOf(
+                            ChoiceOption(id = "only", text = "Only option")
+                        ),
+                        correctOptionId = "only"
+                    )
+                )
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, multipleChoiceSingleOption.status)
+        assertTrue(
+            multipleChoiceSingleOption.bodyAsText().contains("MultipleChoice exercises require at least 2 options")
+        )
+
+        val inputValueBlankCorrectValue = client.post("/admin/exercises") {
+            bearerAuth(adminToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                CreateAdminExerciseRequest(
+                    id = "admin-exercise-input-blank-correct-value",
+                    lessonId = "linked-lesson",
+                    title = "Invalid input value",
+                    type = ExerciseType.INPUT_VALUE,
+                    payload = InputValuePayload(
+                        placeholder = "Type the answer",
+                        correctValue = "   "
+                    )
+                )
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, inputValueBlankCorrectValue.status)
+        assertTrue(inputValueBlankCorrectValue.bodyAsText().contains("correctValue is required"))
+
+        val multiSelectInvalidCorrectReference = client.post("/admin/exercises") {
+            bearerAuth(adminToken)
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(
+                CreateAdminExerciseRequest(
+                    id = "admin-exercise-multi-select-invalid-correct-reference",
+                    lessonId = "linked-lesson",
+                    title = "Invalid multi select",
+                    type = ExerciseType.MULTI_SELECT,
+                    payload = MultiSelectPayload(
+                        options = listOf(
+                            ChoiceOption(id = "a", text = "A"),
+                            ChoiceOption(id = "b", text = "B")
+                        ),
+                        correctOptionIds = listOf("missing")
+                    )
+                )
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, multiSelectInvalidCorrectReference.status)
+        assertTrue(
+            multiSelectInvalidCorrectReference.bodyAsText().contains("correctOptionIds must reference valid options")
+        )
     }
 
     // ── PUT /admin/users/{id}/role ─────────────────────────────────
@@ -977,6 +1091,11 @@ class AdminIntegrationTest {
                 it[options] = "1,2"
                 it[correctAnswer] = "2"
                 it[type] = ExerciseType.MULTIPLE_CHOICE.name
+                it[payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "1,2",
+                    correctAnswer = "2"
+                )
             }
         }
     }

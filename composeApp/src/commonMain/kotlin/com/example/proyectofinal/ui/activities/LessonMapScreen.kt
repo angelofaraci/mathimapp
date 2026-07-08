@@ -1,12 +1,11 @@
 package com.example.proyectofinal.ui.activities
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -29,11 +29,17 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.ExercisePayload
+import com.example.proyectofinal.models.InputValuePayload
+import com.example.proyectofinal.models.MultiSelectPayload
+import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MCard
 import com.example.proyectofinal.ui.primitives.MProgressIndicator
+import com.example.proyectofinal.ui.primitives.MTextField
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -49,7 +55,9 @@ fun LessonMapScreen(
         onShowHome = onShowHome,
         onExerciseSelected = viewModel::selectExercise,
         onDismissActiveExercise = viewModel::dismissActiveExercise,
-        onAnswerSelected = viewModel::selectAnswer,
+        onMultipleChoiceAnswerSelected = viewModel::selectMultipleChoiceAnswer,
+        onInputValueChanged = viewModel::updateInputValueAnswer,
+        onMultiSelectAnswerToggled = viewModel::toggleMultiSelectAnswer,
         onSubmitAnswer = viewModel::submitAnswer,
         onOpenTheory = viewModel::openTheory,
         onDismissTheory = viewModel::dismissTheory
@@ -63,7 +71,9 @@ internal fun LessonMapContent(
     onShowHome: () -> Unit,
     onExerciseSelected: (String) -> Unit,
     onDismissActiveExercise: () -> Unit,
-    onAnswerSelected: (String) -> Unit,
+    onMultipleChoiceAnswerSelected: (String) -> Unit,
+    onInputValueChanged: (String) -> Unit,
+    onMultiSelectAnswerToggled: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
     onOpenTheory: () -> Unit,
     onDismissTheory: () -> Unit,
@@ -108,11 +118,13 @@ internal fun LessonMapContent(
                 ExercisePlayerContent(
                     exercise = activeExercise,
                     exerciseNumber = uiState.activeNode?.index,
-                    selectedAnswer = uiState.selectedAnswer,
-                    isSubmitting = uiState.isSubmittingAnswer,
-                    feedbackMessage = uiState.exerciseFeedbackMessage,
+                    draft = uiState.activeExerciseDraft,
+                    phase = uiState.activeExercisePhase,
+                    feedback = uiState.exerciseFeedback,
                     onBack = onDismissActiveExercise,
-                    onAnswerSelected = onAnswerSelected,
+                    onMultipleChoiceAnswerSelected = onMultipleChoiceAnswerSelected,
+                    onInputValueChanged = onInputValueChanged,
+                    onMultiSelectAnswerToggled = onMultiSelectAnswerToggled,
                     onSubmitAnswer = onSubmitAnswer,
                     modifier = modifier
                 )
@@ -139,11 +151,11 @@ internal fun LessonMapContent(
                         Text("View theory")
                     }
 
-                    uiState.exerciseFeedbackMessage?.let { message ->
+                    uiState.exerciseFeedback?.let { feedback ->
                         Text(
-                            text = message,
+                            text = feedback.message,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary,
+                            color = feedbackColor(feedback.tone),
                             fontStyle = FontStyle.Italic
                         )
                     }
@@ -183,11 +195,13 @@ internal fun LessonMapContent(
 private fun ExercisePlayerContent(
     exercise: Exercise,
     exerciseNumber: Int?,
-    selectedAnswer: String?,
-    isSubmitting: Boolean,
-    feedbackMessage: String?,
+    draft: ExerciseAnswerDraft?,
+    phase: ActiveExercisePhase,
+    feedback: ExerciseFeedbackUiState?,
     onBack: () -> Unit,
-    onAnswerSelected: (String) -> Unit,
+    onMultipleChoiceAnswerSelected: (String) -> Unit,
+    onInputValueChanged: (String) -> Unit,
+    onMultiSelectAnswerToggled: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -219,7 +233,7 @@ private fun ExercisePlayerContent(
                     color = MaterialTheme.colorScheme.secondary
                 )
                 Text(
-                    text = exercise.question,
+                    text = exercise.title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -227,38 +241,114 @@ private fun ExercisePlayerContent(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            exercise.options.forEach { option ->
-                AnswerOptionCard(
-                    option = option,
-                    isSelected = selectedAnswer == option,
-                    onClick = { onAnswerSelected(option) }
-                )
-            }
-        }
+        ExerciseAnswerSection(
+            payload = exercise.payload,
+            draft = draft,
+            onMultipleChoiceAnswerSelected = onMultipleChoiceAnswerSelected,
+            onInputValueChanged = onInputValueChanged,
+            onMultiSelectAnswerToggled = onMultiSelectAnswerToggled
+        )
 
-        feedbackMessage?.let { message ->
+        feedback?.let {
             Text(
-                text = message,
+                text = it.message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary
+                color = feedbackColor(it.tone)
             )
         }
 
         MButton(
             onClick = onSubmitAnswer,
             modifier = Modifier.fillMaxWidth(),
-            enabled = selectedAnswer != null && !isSubmitting
+            enabled = canSubmitDraft(draft) && phase != ActiveExercisePhase.Submitting
         ) {
-            Text(if (isSubmitting) "Saving progress..." else "Submit answer")
+            Text(
+                when (phase) {
+                    ActiveExercisePhase.Submitting -> "Checking answer..."
+                    ActiveExercisePhase.RetryReady -> "Try again"
+                    ActiveExercisePhase.Drafting -> "Submit answer"
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun AnswerOptionCard(
-    option: String,
+private fun ExerciseAnswerSection(
+    payload: ExercisePayload,
+    draft: ExerciseAnswerDraft?,
+    onMultipleChoiceAnswerSelected: (String) -> Unit,
+    onInputValueChanged: (String) -> Unit,
+    onMultiSelectAnswerToggled: (String) -> Unit
+) {
+    when {
+        payload is MultipleChoicePayload && draft is ExerciseAnswerDraft.MultipleChoice -> {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                payload.options.forEach { option ->
+                    ChoiceOptionCard(
+                        option = option,
+                        isSelected = draft.selectedOptionId == option.id,
+                        selectionControl = {
+                            RadioButton(
+                                selected = draft.selectedOptionId == option.id,
+                                onClick = { onMultipleChoiceAnswerSelected(option.id) }
+                            )
+                        },
+                        onClick = { onMultipleChoiceAnswerSelected(option.id) }
+                    )
+                }
+            }
+        }
+
+        payload is InputValuePayload && draft is ExerciseAnswerDraft.InputValue -> {
+            MTextField(
+                value = draft.value,
+                onValueChange = onInputValueChanged,
+                singleLine = true,
+                label = { Text("Answer") },
+                placeholder = payload.placeholder?.let { placeholder -> { Text(placeholder) } }
+            )
+        }
+
+        payload is MultiSelectPayload && draft is ExerciseAnswerDraft.MultiSelect -> {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                payload.options.forEach { option ->
+                    ChoiceOptionCard(
+                        option = option,
+                        isSelected = option.id in draft.selectedOptionIds,
+                        selectionControl = {
+                            Checkbox(
+                                checked = option.id in draft.selectedOptionIds,
+                                onCheckedChange = { onMultiSelectAnswerToggled(option.id) }
+                            )
+                        },
+                        onClick = { onMultiSelectAnswerToggled(option.id) }
+                    )
+                }
+            }
+        }
+
+        else -> {
+            MCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Text(
+                    text = "This exercise type is not supported in this app version.",
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChoiceOptionCard(
+    option: ChoiceOption,
     isSelected: Boolean,
+    selectionControl: @Composable () -> Unit,
     onClick: () -> Unit
 ) {
     MCard(
@@ -280,7 +370,7 @@ private fun AnswerOptionCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            RadioButton(selected = isSelected, onClick = onClick)
+            selectionControl()
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -291,14 +381,14 @@ private fun AnswerOptionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = optionLabel(option),
+                    text = optionLabel(option.text),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             Text(
-                text = option,
+                text = option.text,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -307,6 +397,20 @@ private fun AnswerOptionCard(
 }
 
 private fun optionLabel(option: String): String = option.firstOrNull()?.uppercase() ?: "?"
+
+private fun canSubmitDraft(draft: ExerciseAnswerDraft?): Boolean = when (draft) {
+    is ExerciseAnswerDraft.MultipleChoice -> draft.selectedOptionId != null
+    is ExerciseAnswerDraft.InputValue -> draft.value.trim().isNotEmpty()
+    is ExerciseAnswerDraft.MultiSelect -> draft.selectedOptionIds.isNotEmpty()
+    null -> false
+}
+
+@Composable
+private fun feedbackColor(tone: ExerciseFeedbackTone) = when (tone) {
+    ExerciseFeedbackTone.Info -> MaterialTheme.colorScheme.secondary
+    ExerciseFeedbackTone.Success -> MaterialTheme.colorScheme.primary
+    ExerciseFeedbackTone.Error -> MaterialTheme.colorScheme.error
+}
 
 @Composable
 private fun LessonMapHeader(

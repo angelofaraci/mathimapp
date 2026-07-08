@@ -1,6 +1,7 @@
 package com.example.proyectofinal.domain
 
-import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -27,7 +28,11 @@ interface UserRepository {
     suspend fun getUserProgress(userId: String): UserProgress
 
     /**
-     * Completes an exercise for the authenticated learner.
+     * Submits a typed attempt for the authenticated learner.
      */
-    suspend fun completeExercise(exerciseId: String, score: Int = 0): ExerciseCompletionResponse
+    suspend fun attemptExercise(
+        exerciseId: String,
+        submission: ExerciseSubmission,
+        score: Int = 100
+    ): ExerciseAttemptResponse
 }

@@ -263,10 +263,9 @@ private fun Exercise.toAdminExerciseResponse(): AdminExerciseResponse =
     AdminExerciseResponse(
         id = id,
         lessonId = lessonId,
-        question = question,
-        options = options,
-        correctAnswer = correctAnswer,
-        type = type
+        title = title,
+        type = type,
+        payload = payload
     )
 
 private fun JsonObject.toAdminLessonPatchRequest(): AdminLessonPatchRequest =

@@ -41,6 +41,8 @@ fun Application.module(
             prettyPrint = true
             isLenient = true
             ignoreUnknownKeys = true
+            classDiscriminator = "type"
+            explicitNulls = false
         })
     }
 

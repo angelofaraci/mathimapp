@@ -5,10 +5,15 @@ import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
+import com.example.proyectofinal.models.ChoiceOption
 import com.example.proyectofinal.models.Exercise
-import com.example.proyectofinal.models.ExerciseCompletionResponse
-import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.ExerciseSubmission
+import com.example.proyectofinal.models.InputValuePayload
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.MultiSelectPayload
+import com.example.proyectofinal.models.MultipleChoicePayload
+import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -138,17 +143,28 @@ class LessonMapViewModelTest {
     }
 
     @Test
-    fun `submit answer completes exercise and unlocks the next one`() = runTest(dispatcher) {
+    fun `wrong answer keeps exercise active until a correct retry advances`() = runTest(dispatcher) {
         val userRepository = FakeLessonMapUserRepository(
             progress = testProgress(),
-            completionResponse = ExerciseCompletionResponse(
-                exerciseId = "exercise-fractions-1",
-                lessonId = "lesson-map-fractions",
-                lessonCompleted = false,
-                progress = UserProgress(
-                    userId = testUser.id,
-                    completedExerciseIds = setOf("exercise-fractions-1"),
-                    totalScore = 100
+            attemptResponses = listOf(
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-1",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = false,
+                    message = "Incorrect answer. Try again.",
+                    progress = testProgress()
+                ),
+                ExerciseAttemptResponse(
+                    exerciseId = "exercise-fractions-1",
+                    lessonId = "lesson-map-fractions",
+                    isCorrect = true,
+                    lessonCompleted = false,
+                    progress = UserProgress(
+                        userId = testUser.id,
+                        completedExerciseIds = setOf("exercise-fractions-1"),
+                        totalScore = 100,
+                        enrolledCourseIds = setOf("course-fractions")
+                    )
                 )
             )
         )
@@ -161,11 +177,25 @@ class LessonMapViewModelTest {
 
         advanceUntilIdle()
         viewModel.selectExercise("exercise-fractions-1")
-        viewModel.selectAnswer("1/4")
+        viewModel.selectMultipleChoiceAnswer("one-third")
         viewModel.submitAnswer()
         advanceUntilIdle()
 
-        assertEquals(listOf("exercise-fractions-1"), userRepository.completedExerciseCalls)
+        assertEquals("exercise-fractions-1", viewModel.uiState.value.activeExerciseId)
+        assertEquals(ActiveExercisePhase.RetryReady, viewModel.uiState.value.activeExercisePhase)
+        assertEquals("Incorrect answer. Try again.", viewModel.uiState.value.exerciseFeedbackMessage)
+
+        viewModel.selectMultipleChoiceAnswer("one-quarter")
+        viewModel.submitAnswer()
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf<ExerciseSubmission>(
+                MultipleChoiceSubmission("one-third"),
+                MultipleChoiceSubmission("one-quarter")
+            ),
+            userRepository.attemptCalls
+        )
         assertEquals("Exercise completed. Keep going.", viewModel.uiState.value.exerciseFeedbackMessage)
         assertEquals(
             listOf(
@@ -176,6 +206,27 @@ class LessonMapViewModelTest {
             ),
             viewModel.uiState.value.nodes.map(LessonMapNodeUiModel::state)
         )
+    }
+
+    @Test
+    fun `blank input answer is rejected client side`() = runTest(dispatcher) {
+        val userRepository = FakeLessonMapUserRepository(progress = testProgress(completedExerciseIds = setOf("exercise-fractions-1")))
+        val viewModel = LessonMapViewModel(
+            authRepository = FakeLessonMapAuthRepository(testUser),
+            userRepository = userRepository,
+            lessonRepository = FakeLessonRepository(),
+            exerciseRepository = FakeExerciseRepository()
+        )
+
+        advanceUntilIdle()
+        viewModel.selectExercise("exercise-fractions-2")
+        viewModel.updateInputValueAnswer("   ")
+        viewModel.submitAnswer()
+        advanceUntilIdle()
+
+        assertEquals(emptyList(), userRepository.attemptCalls)
+        assertEquals("Enter an answer before submitting.", viewModel.uiState.value.exerciseFeedbackMessage)
+        assertEquals(ActiveExercisePhase.Drafting, viewModel.uiState.value.activeExercisePhase)
     }
 
     @Test
@@ -219,9 +270,10 @@ private class FakeLessonMapAuthRepository(user: User?) : AuthRepository {
 private class FakeLessonMapUserRepository(
     private val progress: UserProgress,
     private val currentUser: User? = testUser,
-    private val completionResponse: ExerciseCompletionResponse? = null
+    attemptResponses: List<ExerciseAttemptResponse> = emptyList()
 ) : UserRepository {
-    val completedExerciseCalls = mutableListOf<String>()
+    val attemptCalls = mutableListOf<ExerciseSubmission>()
+    private val queuedAttemptResponses = ArrayDeque(attemptResponses)
 
     override suspend fun getCurrentUser(): User? = currentUser
 
@@ -231,9 +283,13 @@ private class FakeLessonMapUserRepository(
 
     override suspend fun getUserProgress(userId: String): UserProgress = progress
 
-    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse {
-        completedExerciseCalls += exerciseId
-        return completionResponse ?: error("Completion response not configured")
+    override suspend fun attemptExercise(
+        exerciseId: String,
+        submission: ExerciseSubmission,
+        score: Int
+    ): ExerciseAttemptResponse {
+        attemptCalls += submission
+        return queuedAttemptResponses.removeFirstOrNull() ?: error("Attempt response not configured")
     }
 }
 
@@ -273,34 +329,44 @@ private fun sampleExercises() = listOf(
     Exercise(
         id = "exercise-fractions-1",
         lessonId = "lesson-map-fractions",
-        question = "Which fraction shows one shaded part out of four equal parts?",
-        options = listOf("1/2", "1/3", "1/4", "4/1"),
-        correctAnswer = "1/4",
-        type = ExerciseType.MULTIPLE_CHOICE
+        title = "Which fraction shows one shaded part out of four equal parts?",
+        payload = MultipleChoicePayload(
+            options = listOf(
+                ChoiceOption(id = "one-half", text = "1/2"),
+                ChoiceOption(id = "one-third", text = "1/3"),
+                ChoiceOption(id = "one-quarter", text = "1/4"),
+                ChoiceOption(id = "four-over-one", text = "4/1")
+            )
+        )
     ),
     Exercise(
         id = "exercise-fractions-2",
         lessonId = "lesson-map-fractions",
-        question = "What is 2/4 equivalent to?",
-        options = listOf("1/2", "1/6", "3/4", "2/5"),
-        correctAnswer = "1/2",
-        type = ExerciseType.MULTIPLE_CHOICE
+        title = "What is 2/4 equivalent to?",
+        payload = InputValuePayload(placeholder = "Type the simplified fraction")
     ),
     Exercise(
         id = "exercise-fractions-3",
         lessonId = "lesson-map-fractions",
-        question = "Add the fractions: 1/4 + 2/4.",
-        options = listOf("2/8", "3/4", "3/8", "1/2"),
-        correctAnswer = "3/4",
-        type = ExerciseType.MULTIPLE_CHOICE
+        title = "Select the fractions equivalent to one half.",
+        payload = MultiSelectPayload(
+            options = listOf(
+                ChoiceOption(id = "one-half", text = "1/2"),
+                ChoiceOption(id = "two-fourths", text = "2/4"),
+                ChoiceOption(id = "three-fourths", text = "3/4")
+            )
+        )
     ),
     Exercise(
         id = "exercise-fractions-4",
         lessonId = "lesson-map-fractions",
-        question = "True or false: 3/3 is equal to one whole.",
-        options = listOf("True", "False"),
-        correctAnswer = "True",
-        type = ExerciseType.TRUE_FALSE
+        title = "Which value is greater than one whole?",
+        payload = MultipleChoicePayload(
+            options = listOf(
+                ChoiceOption(id = "three-fourths", text = "3/4"),
+                ChoiceOption(id = "five-fourths", text = "5/4")
+            )
+        )
     )
 )
 

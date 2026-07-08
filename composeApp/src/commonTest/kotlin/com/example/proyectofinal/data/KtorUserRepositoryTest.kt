@@ -7,8 +7,9 @@ import com.example.proyectofinal.db.*
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.TokenStore
 import com.example.proyectofinal.di.userRoleColumnAdapter
-import com.example.proyectofinal.models.CompleteExerciseRequest
-import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.ExerciseAttemptRequest
+import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -242,15 +243,16 @@ class KtorUserRepositoryTest {
     }
 
     @Test
-    fun `completeExercise posts CompleteExerciseRequest to completion endpoint`() = runTest {
-        val exerciseId = "exercise-progress"
-        val requestBody = CompleteExerciseRequest(
+    fun `attemptExercise posts typed attempt request to attempt endpoint`() = runTest {
+        val exerciseId = "exercise-attempt"
+        val requestBody = ExerciseAttemptRequest(
             exerciseId = exerciseId,
-            score = 42
+            submission = MultipleChoiceSubmission(selectedOptionId = "option-b"),
+            score = 100
         )
         var capturedPath: String? = null
         var capturedMethod: HttpMethod? = null
-        var capturedRequest: CompleteExerciseRequest? = null
+        var capturedRequest: ExerciseAttemptRequest? = null
 
         val mockEngine = MockEngine { request ->
             capturedPath = request.url.encodedPath
@@ -259,15 +261,12 @@ class KtorUserRepositoryTest {
 
             respond(
                 content = json.encodeToString(
-                    ExerciseCompletionResponse(
+                    ExerciseAttemptResponse(
                         exerciseId = exerciseId,
                         lessonId = "lesson-progress",
-                        lessonCompleted = false,
-                        progress = UserProgress(
-                            userId = "user-progress",
-                            completedExerciseIds = setOf(exerciseId),
-                            totalScore = 42
-                        )
+                        isCorrect = false,
+                        message = "Incorrect answer. Try again.",
+                        progress = UserProgress(userId = "user-progress")
                     )
                 ),
                 status = HttpStatusCode.OK,
@@ -283,9 +282,13 @@ class KtorUserRepositoryTest {
 
         val api = UserApi(httpClient, apiConfig)
 
-        api.completeExercise(exerciseId = exerciseId, score = requestBody.score)
+        api.attemptExercise(
+            exerciseId = exerciseId,
+            submission = requestBody.submission,
+            score = requestBody.score
+        )
 
-        assertEquals("/exercises/$exerciseId/complete", capturedPath)
+        assertEquals("/exercises/$exerciseId/attempt", capturedPath)
         assertEquals(HttpMethod.Post, capturedMethod)
         assertEquals(requestBody, capturedRequest)
     }
@@ -330,10 +333,13 @@ class KtorUserRepositoryTest {
         database.appDatabaseQueries.insertExercise(
             id = "exercise-1",
             lessonId = "lesson-1",
-            question = "Question",
-            correctAnswer = "Answer",
+            title = "Question",
             type = com.example.proyectofinal.models.ExerciseType.MULTIPLE_CHOICE,
-            options = "A,B"
+            payload = ExercisePayloadJson.legacyPayloadJson(
+                type = com.example.proyectofinal.models.ExerciseType.MULTIPLE_CHOICE,
+                optionsCsv = "A,B",
+                correctAnswer = "Answer"
+            )
         )
 
         val mockEngine = MockEngine { request ->
@@ -365,12 +371,13 @@ class KtorUserRepositoryTest {
     }
 
     @Test
-    fun `completeExercise duplicate sync preserves single local record`() = runTest {
+    fun `attemptExercise duplicate sync preserves single local record`() = runTest {
         val userId = "user-progress"
         val exerciseId = "exercise-1"
-        val response = ExerciseCompletionResponse(
+        val response = ExerciseAttemptResponse(
             exerciseId = exerciseId,
             lessonId = "lesson-1",
+            isCorrect = true,
             lessonCompleted = false,
             progress = UserProgress(
                 userId = userId,
@@ -410,15 +417,18 @@ class KtorUserRepositoryTest {
         database.appDatabaseQueries.insertExercise(
             id = exerciseId,
             lessonId = "lesson-1",
-            question = "Question",
-            correctAnswer = "Answer",
+            title = "Question",
             type = com.example.proyectofinal.models.ExerciseType.MULTIPLE_CHOICE,
-            options = "A,B"
+            payload = ExercisePayloadJson.legacyPayloadJson(
+                type = com.example.proyectofinal.models.ExerciseType.MULTIPLE_CHOICE,
+                optionsCsv = "A,B",
+                correctAnswer = "Answer"
+            )
         )
 
         val mockEngine = MockEngine { request ->
             when (request.url.encodedPath) {
-                "/exercises/$exerciseId/complete" -> respond(
+                "/exercises/$exerciseId/attempt" -> respond(
                     content = json.encodeToString(response),
                     status = HttpStatusCode.OK,
                     headers = headersOf(HttpHeaders.ContentType, "application/json")
@@ -435,8 +445,8 @@ class KtorUserRepositoryTest {
 
         val repository = KtorUserRepository(UserApi(httpClient, apiConfig), database, TestTokenStore())
 
-        repository.completeExercise(exerciseId = exerciseId, score = 10)
-        repository.completeExercise(exerciseId = exerciseId, score = 99)
+        repository.attemptExercise(exerciseId = exerciseId, submission = MultipleChoiceSubmission(selectedOptionId = "Answer"), score = 10)
+        repository.attemptExercise(exerciseId = exerciseId, submission = MultipleChoiceSubmission(selectedOptionId = "Answer"), score = 99)
 
         assertEquals(listOf(exerciseId), database.appDatabaseQueries.selectCompletedExercisesByUserId(userId).executeAsList())
         assertEquals(10, database.appDatabaseQueries.selectProgressByUserId(userId).executeAsOne().totalScore)

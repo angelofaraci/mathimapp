@@ -10,8 +10,9 @@ import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.AdminUserResponse
-import com.example.proyectofinal.models.CompleteExerciseRequest
 import com.example.proyectofinal.models.CompleteLessonRequest
+import com.example.proyectofinal.models.ExerciseAttemptRequest
+import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.PageResponse
 import com.example.proyectofinal.models.UpdateUserRequest
@@ -27,10 +28,11 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-sealed interface ExerciseCompletionResult {
-    data class Success(val response: ExerciseCompletionResponse) : ExerciseCompletionResult
-    object Forbidden : ExerciseCompletionResult
-    object NotFound : ExerciseCompletionResult
+sealed interface ExerciseAttemptResult {
+    data class Success(val response: ExerciseAttemptResponse) : ExerciseAttemptResult
+    data class InvalidRequest(val message: String) : ExerciseAttemptResult
+    object Forbidden : ExerciseAttemptResult
+    object NotFound : ExerciseAttemptResult
 }
 
 class UserService {
@@ -98,42 +100,94 @@ class UserService {
         readUserProgress(userId)
     }
 
-    fun completeExercise(
+    fun attemptExercise(
         userId: String,
         role: UserRole,
-        request: CompleteExerciseRequest
-    ): ExerciseCompletionResult = dbQuery {
+        request: ExerciseAttemptRequest
+    ): ExerciseAttemptResult = dbQuery {
         if (role != UserRole.STUDENT) {
-            return@dbQuery ExerciseCompletionResult.Forbidden
+            return@dbQuery ExerciseAttemptResult.Forbidden
         }
+
         val exerciseRow = (Exercises innerJoin Lessons)
-            .select(Exercises.id, Exercises.lessonId, Lessons.courseId, Lessons.creatorId)
+            .selectAll()
             .where { Exercises.id eq request.exerciseId }
             .firstOrNull()
-            ?: return@dbQuery ExerciseCompletionResult.NotFound
+            ?: return@dbQuery ExerciseAttemptResult.NotFound
+
         val lessonAccess = resolveLessonContentAccess(
             courseId = exerciseRow[Lessons.courseId],
             standaloneCreatorId = exerciseRow[Lessons.creatorId]
-        ) ?: return@dbQuery ExerciseCompletionResult.NotFound
-        val exerciseAccess = ExerciseCompletionAccess(
-            exerciseId = exerciseRow[Exercises.id],
-            lessonId = exerciseRow[Exercises.lessonId],
-            lessonAccess = lessonAccess
-        )
-        if (!canReadLessonContent(exerciseAccess.lessonAccess, userId, role)) {
-            return@dbQuery ExerciseCompletionResult.Forbidden
+        ) ?: return@dbQuery ExerciseAttemptResult.NotFound
+
+        if (!canReadLessonContent(lessonAccess, userId, role)) {
+            return@dbQuery ExerciseAttemptResult.Forbidden
         }
+
+        val exercise = ExercisePayloadSupport.toExercise(
+            id = exerciseRow[Exercises.id],
+            lessonId = exerciseRow[Exercises.lessonId],
+            title = exerciseRow[Exercises.question],
+            persistedType = exerciseRow[Exercises.type],
+            persistedPayload = exerciseRow[Exercises.payload],
+            legacyOptions = exerciseRow[Exercises.options],
+            legacyCorrectAnswer = exerciseRow[Exercises.correctAnswer],
+            hideAnswers = false
+        )
+
+        val evaluation = try {
+            ExercisePayloadSupport.evaluateAttempt(exercise, request.submission)
+        } catch (exception: IllegalArgumentException) {
+            return@dbQuery ExerciseAttemptResult.InvalidRequest(exception.message ?: "Invalid exercise submission")
+        }
+
+        if (!evaluation.isCorrect) {
+            return@dbQuery ExerciseAttemptResult.Success(
+                ExerciseAttemptResponse(
+                    exerciseId = exercise.id,
+                    lessonId = exercise.lessonId,
+                    isCorrect = false,
+                    message = evaluation.message,
+                    progress = readUserProgress(userId)
+                )
+            )
+        }
+
+        val completion = recordExerciseCompletion(
+            userId = userId,
+            exerciseId = exercise.id,
+            lessonId = exercise.lessonId,
+            score = request.score
+        )
+
+        ExerciseAttemptResult.Success(
+            ExerciseAttemptResponse(
+                exerciseId = completion.exerciseId,
+                lessonId = completion.lessonId,
+                isCorrect = true,
+                lessonCompleted = completion.lessonCompleted,
+                progress = completion.progress
+            )
+        )
+    }
+
+    private fun recordExerciseCompletion(
+        userId: String,
+        exerciseId: String,
+        lessonId: String,
+        score: Int
+    ): ExerciseCompletionResponse {
         val existingCompletion = CompletedExercises.selectAll()
             .where {
                 (CompletedExercises.userId eq userId) and
-                    (CompletedExercises.exerciseId eq request.exerciseId)
+                    (CompletedExercises.exerciseId eq exerciseId)
             }
             .firstOrNull()
         if (existingCompletion == null) {
             CompletedExercises.insert {
                 it[CompletedExercises.userId] = userId
-                it[CompletedExercises.exerciseId] = request.exerciseId
-                it[CompletedExercises.score] = request.score
+                it[CompletedExercises.exerciseId] = exerciseId
+                it[CompletedExercises.score] = score
             }
             val existingProgress = UserProgressTable.selectAll()
                 .where { UserProgressTable.userId eq userId }
@@ -141,23 +195,23 @@ class UserService {
             if (existingProgress == null) {
                 UserProgressTable.insert {
                     it[UserProgressTable.userId] = userId
-                    it[UserProgressTable.totalScore] = request.score
+                    it[UserProgressTable.totalScore] = score
                 }
             } else {
                 val currentScore = existingProgress[UserProgressTable.totalScore]
                 UserProgressTable.update({ UserProgressTable.userId eq userId }) { row ->
-                    row[UserProgressTable.totalScore] = currentScore + request.score
+                    row[UserProgressTable.totalScore] = currentScore + score
                 }
             }
         }
         val totalExercisesInLesson = Exercises.selectAll()
-            .where { Exercises.lessonId eq exerciseAccess.lessonId }
+            .where { Exercises.lessonId eq lessonId }
             .count()
         val completedExercisesInLesson = (CompletedExercises innerJoin Exercises)
             .selectAll()
             .where {
                 (CompletedExercises.userId eq userId) and
-                    (Exercises.lessonId eq exerciseAccess.lessonId)
+                    (Exercises.lessonId eq lessonId)
             }
             .count()
         val lessonCompleted = totalExercisesInLesson > 0 && completedExercisesInLesson == totalExercisesInLesson
@@ -165,23 +219,21 @@ class UserService {
             val existingLessonCompletion = CompletedLessons.selectAll()
                 .where {
                     (CompletedLessons.userId eq userId) and
-                        (CompletedLessons.lessonId eq exerciseAccess.lessonId)
+                        (CompletedLessons.lessonId eq lessonId)
                 }
                 .firstOrNull()
             if (existingLessonCompletion == null) {
                 CompletedLessons.insert {
                     it[CompletedLessons.userId] = userId
-                    it[CompletedLessons.lessonId] = exerciseAccess.lessonId
+                    it[CompletedLessons.lessonId] = lessonId
                 }
             }
         }
-        ExerciseCompletionResult.Success(
-            ExerciseCompletionResponse(
-                exerciseId = exerciseAccess.exerciseId,
-                lessonId = exerciseAccess.lessonId,
-                lessonCompleted = lessonCompleted,
-                progress = readUserProgress(userId)
-            )
+        return ExerciseCompletionResponse(
+            exerciseId = exerciseId,
+            lessonId = lessonId,
+            lessonCompleted = lessonCompleted,
+            progress = readUserProgress(userId)
         )
     }
 
@@ -233,13 +285,6 @@ class UserService {
             }
         }
     }
-
-    private data class ExerciseCompletionAccess(
-        val exerciseId: String,
-        val lessonId: String,
-        val lessonAccess: LessonContentAccess
-    )
-
     private fun resolveLessonContentAccess(
         courseId: String?,
         standaloneCreatorId: String?

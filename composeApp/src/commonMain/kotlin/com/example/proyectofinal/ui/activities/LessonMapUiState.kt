@@ -3,6 +3,31 @@ package com.example.proyectofinal.ui.activities
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.Lesson
 
+sealed interface ExerciseAnswerDraft {
+    data class MultipleChoice(val selectedOptionId: String? = null) : ExerciseAnswerDraft
+
+    data class InputValue(val value: String = "") : ExerciseAnswerDraft
+
+    data class MultiSelect(val selectedOptionIds: Set<String> = emptySet()) : ExerciseAnswerDraft
+}
+
+enum class ActiveExercisePhase {
+    Drafting,
+    RetryReady,
+    Submitting,
+}
+
+enum class ExerciseFeedbackTone {
+    Info,
+    Success,
+    Error,
+}
+
+data class ExerciseFeedbackUiState(
+    val message: String,
+    val tone: ExerciseFeedbackTone,
+)
+
 enum class LessonNodeState {
     Locked,
     Unlocked,
@@ -29,9 +54,9 @@ data class LessonMapUiState(
     val nodes: List<LessonMapNodeUiModel> = emptyList(),
     val selectedExerciseId: String? = null,
     val activeExerciseId: String? = null,
-    val selectedAnswer: String? = null,
-    val isSubmittingAnswer: Boolean = false,
-    val exerciseFeedbackMessage: String? = null,
+    val activeExerciseDraft: ExerciseAnswerDraft? = null,
+    val activeExercisePhase: ActiveExercisePhase = ActiveExercisePhase.Drafting,
+    val exerciseFeedback: ExerciseFeedbackUiState? = null,
     val selectedTheoryLesson: Lesson? = null,
     val errorMessage: String? = null
 ) {
@@ -41,6 +66,12 @@ data class LessonMapUiState(
 
     val activeExercise: Exercise?
         get() = lessonMap?.exercises?.firstOrNull { it.id == activeExerciseId }
+
+    val isSubmittingAnswer: Boolean
+        get() = activeExercisePhase == ActiveExercisePhase.Submitting
+
+    val exerciseFeedbackMessage: String?
+        get() = exerciseFeedback?.message
 
     val isTheoryAvailable: Boolean
         get() = lessonMap != null

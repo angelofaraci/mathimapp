@@ -48,10 +48,9 @@ CREATE TABLE LessonEntity (
 CREATE TABLE ExerciseEntity (
     id TEXT NOT NULL PRIMARY KEY,
     lessonId TEXT NOT NULL,
-    question TEXT NOT NULL,
-    correctAnswer TEXT NOT NULL,
+    title TEXT NOT NULL,
     type TEXT AS ExerciseType NOT NULL DEFAULT 'MULTIPLE_CHOICE',
-    options TEXT NOT NULL, -- Stored as comma-separated
+    payload TEXT NOT NULL,
     FOREIGN KEY(lessonId) REFERENCES LessonEntity(id) ON DELETE CASCADE
 );
 
@@ -137,8 +136,8 @@ selectExerciseById:
 SELECT * FROM ExerciseEntity WHERE id = ?;
 
 insertExercise:
-INSERT OR REPLACE INTO ExerciseEntity(id, lessonId, question, correctAnswer, type, options)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO ExerciseEntity(id, lessonId, title, type, payload)
+VALUES (?, ?, ?, ?, ?);
 
 deleteExercise:
 DELETE FROM ExerciseEntity WHERE id = ?;

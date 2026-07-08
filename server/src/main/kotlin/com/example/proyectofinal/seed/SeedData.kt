@@ -2,6 +2,8 @@ package com.example.proyectofinal.seed
 
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.example.proyectofinal.database.*
+import com.example.proyectofinal.models.ExerciseType
+import com.example.proyectofinal.service.ExercisePayloadSupport
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.core.eq
@@ -97,6 +99,11 @@ object SeedData {
                 it[Exercises.options] = "6,7,8,9"
                 it[Exercises.correctAnswer] = "8"
                 it[Exercises.type] = "MULTIPLE_CHOICE"
+                it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "6,7,8,9",
+                    correctAnswer = "8"
+                )
             }
 
             Exercises.insert {
@@ -106,6 +113,11 @@ object SeedData {
                 it[Exercises.options] = "18,19,20,21"
                 it[Exercises.correctAnswer] = "20"
                 it[Exercises.type] = "MULTIPLE_CHOICE"
+                it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "18,19,20,21",
+                    correctAnswer = "20"
+                )
             }
 
             Exercises.insert {
@@ -115,6 +127,11 @@ object SeedData {
                 it[Exercises.options] = "True,False"
                 it[Exercises.correctAnswer] = "True"
                 it[Exercises.type] = "TRUE_FALSE"
+                it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.TRUE_FALSE,
+                    optionsCsv = "True,False",
+                    correctAnswer = "True"
+                )
             }
 
             val subtractionLessonId = "lesson-subtraction"
@@ -146,6 +163,11 @@ object SeedData {
                 it[Exercises.options] = "4,5,6,7"
                 it[Exercises.correctAnswer] = "6"
                 it[Exercises.type] = "MULTIPLE_CHOICE"
+                it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "4,5,6,7",
+                    correctAnswer = "6"
+                )
             }
 
             val multiplicationLessonId = "lesson-multiplication"
@@ -178,6 +200,11 @@ object SeedData {
                 it[Exercises.options] = "36,40,42,48"
                 it[Exercises.correctAnswer] = "42"
                 it[Exercises.type] = "MULTIPLE_CHOICE"
+                it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "36,40,42,48",
+                    correctAnswer = "42"
+                )
             }
 
             val divisionLessonId = "lesson-division"
@@ -209,6 +236,11 @@ object SeedData {
                 it[Exercises.options] = "4,5,6,7"
                 it[Exercises.correctAnswer] = "5"
                 it[Exercises.type] = "MULTIPLE_CHOICE"
+                it[Exercises.payload] = ExercisePayloadSupport.legacyPayloadJson(
+                    type = ExerciseType.MULTIPLE_CHOICE,
+                    optionsCsv = "4,5,6,7",
+                    correctAnswer = "5"
+                )
             }
 
             println("Seed data created successfully!")

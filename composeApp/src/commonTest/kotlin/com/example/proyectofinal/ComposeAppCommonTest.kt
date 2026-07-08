@@ -21,7 +21,8 @@ import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.Exercise
-import com.example.proyectofinal.models.ExerciseCompletionResponse
+import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.User
@@ -261,13 +262,16 @@ private object AppModuleTestUserRepository : UserRepository {
         enrolledCourseIds = setOf("course-1")
     )
 
-    override suspend fun completeExercise(exerciseId: String, score: Int): ExerciseCompletionResponse =
-        ExerciseCompletionResponse(
-            exerciseId = exerciseId,
-            lessonId = "lesson-1",
-            lessonCompleted = false,
-            progress = UserProgress(userId = appModuleTestUser.id, completedExerciseIds = setOf(exerciseId))
-        )
+    override suspend fun attemptExercise(
+        exerciseId: String,
+        submission: ExerciseSubmission,
+        score: Int
+    ): ExerciseAttemptResponse = ExerciseAttemptResponse(
+        exerciseId = exerciseId,
+        lessonId = "lesson-1",
+        isCorrect = true,
+        progress = UserProgress(userId = appModuleTestUser.id, completedExerciseIds = setOf(exerciseId))
+    )
 }
 
 private object AppModuleTestLessonRepository : LessonRepository {
