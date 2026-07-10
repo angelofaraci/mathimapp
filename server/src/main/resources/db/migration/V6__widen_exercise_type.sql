@@ -1,0 +1,2 @@
+ALTER TABLE exercises
+    ALTER COLUMN type TYPE VARCHAR(50);

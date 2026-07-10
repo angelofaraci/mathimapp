@@ -5,11 +5,7 @@ import com.example.proyectofinal.BuildConfig
 
 internal actual fun getApiBaseUrl(): String =
     if (isRunningOnEmulator()) {
-        if (BuildConfig.PHYSICAL_DEVICE_API_BASE_URL != BuildConfig.EMULATOR_API_BASE_URL) {
-            BuildConfig.PHYSICAL_DEVICE_API_BASE_URL
-        } else {
-            BuildConfig.EMULATOR_API_BASE_URL
-        }
+        BuildConfig.EMULATOR_API_BASE_URL
     } else {
         BuildConfig.PHYSICAL_DEVICE_API_BASE_URL
     }
