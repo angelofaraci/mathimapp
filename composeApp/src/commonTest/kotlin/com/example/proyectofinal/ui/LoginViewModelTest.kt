@@ -52,6 +52,36 @@ class LoginViewModelTest {
         }
 
     @Test
+    fun `login with malformed nonblank email sets validation error without calling repository`() =
+        runTest(dispatcher) {
+            val repo = FakeAuthRepository()
+            val vm = LoginViewModel(repo)
+
+            vm.onEmailChange("not-an-email")
+            vm.onPasswordChange("secret")
+            vm.login()
+
+            assertEquals("Ingresá un correo electrónico válido.", vm.uiState.value.emailError)
+            assertNull(vm.uiState.value.errorMessage)
+            assertTrue(repo.loginCalls.isEmpty())
+        }
+
+    @Test
+    fun `password visibility toggles without changing the password`() = runTest(dispatcher) {
+        val vm = LoginViewModel(FakeAuthRepository())
+
+        vm.onPasswordChange("secret")
+        vm.togglePasswordVisibility()
+
+        assertTrue(vm.uiState.value.isPasswordVisible)
+        assertEquals("secret", vm.uiState.value.password)
+
+        vm.togglePasswordVisibility()
+
+        assertFalse(vm.uiState.value.isPasswordVisible)
+    }
+
+    @Test
     fun `login sets loading then clears it on success and authenticates session`() =
         runTest(dispatcher) {
             val user = User("1", "Alice", "alice@example.com", UserRole.STUDENT)

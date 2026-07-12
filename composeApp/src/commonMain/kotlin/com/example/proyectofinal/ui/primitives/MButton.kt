@@ -10,11 +10,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 
 enum class MButtonStyle {
     Filled,
-    Outline
+    Outline,
+    Social
 }
 
 @Composable
@@ -26,7 +28,9 @@ fun MButton(
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable RowScope.() -> Unit
 ) {
-    val buttonModifier = modifier.heightIn(min = 56.dp)
+    val buttonModifier = modifier
+        .heightIn(min = 56.dp)
+        .alpha(if (enabled) 1f else 0.5f)
     val shape = MaterialTheme.shapes.medium
 
     when (style) {
@@ -39,8 +43,8 @@ fun MButton(
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                disabledContainerColor = MaterialTheme.colorScheme.primary,
+                disabledContentColor = MaterialTheme.colorScheme.onPrimary
             ),
             content = content
         )
@@ -52,7 +56,26 @@ fun MButton(
             shape = shape,
             contentPadding = contentPadding,
             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary,
+                disabledContentColor = MaterialTheme.colorScheme.primary
+            ),
+            content = content
+        )
+
+        MButtonStyle.Social -> OutlinedButton(
+            onClick = onClick,
+            modifier = buttonModifier,
+            enabled = enabled,
+            shape = shape,
+            contentPadding = contentPadding,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContentColor = MaterialTheme.colorScheme.onSurface
+            ),
             content = content
         )
     }

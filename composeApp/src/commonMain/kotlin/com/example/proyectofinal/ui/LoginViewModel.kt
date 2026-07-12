@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
+    val isPasswordVisible: Boolean = false,
+    val emailError: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
@@ -27,17 +29,32 @@ class LoginViewModel(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun onEmailChange(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        _uiState.value = _uiState.value.copy(
+            email = value,
+            emailError = emailFormatError(value)
+        )
     }
 
     fun onPasswordChange(value: String) {
         _uiState.value = _uiState.value.copy(password = value)
     }
 
+    fun togglePasswordVisibility() {
+        _uiState.value = _uiState.value.copy(
+            isPasswordVisible = !_uiState.value.isPasswordVisible
+        )
+    }
+
     fun login() {
         val current = _uiState.value
         if (current.email.isBlank() || current.password.isBlank()) {
             _uiState.value = current.copy(errorMessage = "Email and password are required")
+            return
+        }
+
+        val emailError = emailFormatError(current.email)
+        if (emailError != null) {
+            _uiState.value = current.copy(emailError = emailError)
             return
         }
 
@@ -64,5 +81,16 @@ class LoginViewModel(
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
             }
         }
+    }
+
+    private fun emailFormatError(email: String): String? =
+        when {
+            email.isBlank() -> null
+            EMAIL_PATTERN.matches(email.trim()) -> null
+            else -> "Ingresá un correo electrónico válido."
+        }
+
+    private companion object {
+        val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }

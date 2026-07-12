@@ -9,7 +9,7 @@ context: |
     - iosApp: Native Swift/Xcode entrypoint (no KMP logic).
     - admin-web: React 18 + TypeScript + Vite 6 admin panel (no test infrastructure yet).
   Domain: Gamified math learning for Argentina primary/secondary levels with teacher-managed classes.
-  Testing: kotlin.test across commonTest/jvmTest/androidUnitTest (app, 52 tests), Ktor testApplication + H2 (server, 42 tests).
+  Testing: kotlin.test across commonTest/jvmTest/androidUnitTest (app, 92 tests), Ktor testApplication + H2 (server, 59 tests).
   Style: Kotlin official code style, JVM 17, Gradle config cache + build cache enabled.
 
 rules:
@@ -45,14 +45,14 @@ testing:
   runners:
     server:
       command: "./gradlew :server:test"
-      tests: 42
+      tests: 59
       layers:
         unit: true
         integration: true
         e2e: false
     composeApp:
       command: "./gradlew :composeApp:jvmTest"
-      tests: 52
+      tests: 92
       layers:
         unit: true
         integration: true
