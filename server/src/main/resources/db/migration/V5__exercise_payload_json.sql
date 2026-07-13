@@ -2,7 +2,7 @@ ALTER TABLE exercises
     ADD COLUMN IF NOT EXISTS payload TEXT;
 
 ALTER TABLE exercises
-    ALTER COLUMN type VARCHAR(50);
+    ALTER COLUMN type TYPE VARCHAR(50);
 
 UPDATE exercises
 SET payload = CASE
