@@ -53,6 +53,8 @@ class ProfileViewModelTest {
         with(viewModel.uiState.value) {
             assertFalse(isLoading)
             assertEquals("Alice Student", displayName)
+            assertEquals("alice@example.com", email)
+            assertEquals(UserRole.STUDENT, role)
             assertEquals("Year 7 • Secondary", schoolYearLabel)
             assertEquals(3, level)
             assertEquals(50, currentXp)
@@ -101,6 +103,8 @@ class ProfileViewModelTest {
         with(viewModel.uiState.value) {
             assertFalse(isLoading)
             assertEquals("Alice Student", displayName)
+            assertEquals("", email)
+            assertEquals(UserRole.STUDENT, role)
             assertEquals("Progress unavailable", errorMessage)
             assertTrue(achievements.isEmpty())
         }

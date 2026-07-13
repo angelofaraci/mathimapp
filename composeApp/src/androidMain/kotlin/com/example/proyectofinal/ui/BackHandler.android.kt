@@ -1,0 +1,9 @@
+package com.example.proyectofinal.ui
+
+import androidx.activity.compose.BackHandler as AndroidBackHandler
+import androidx.compose.runtime.Composable
+
+@Composable
+internal actual fun BackHandler(enabled: Boolean, onBack: () -> Unit) {
+    AndroidBackHandler(enabled = enabled, onBack = onBack)
+}

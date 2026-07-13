@@ -6,6 +6,7 @@ import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserProgress
+import com.example.proyectofinal.models.UserRole
 import kotlin.math.min
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,8 @@ private const val Lessons10Threshold = 10
 data class ProfileUiState(
     val isLoading: Boolean = true,
     val displayName: String = "",
+    val email: String = "",
+    val role: UserRole = UserRole.STUDENT,
     val schoolYearLabel: String? = null,
     val level: Int = 0,
     val currentXp: Int = 0,
@@ -55,6 +58,8 @@ class ProfileViewModel(
             ProfileUiState(
                 isLoading = false,
                 displayName = user.name,
+                email = user.email,
+                role = user.role,
                 schoolYearLabel = profile?.let { "Year ${it.schoolYear} • ${it.studentTrack.displayName}" },
                 level = progress.totalScore / XpPerLevel,
                 currentXp = progress.totalScore % XpPerLevel,
@@ -67,6 +72,8 @@ class ProfileViewModel(
             ProfileUiState(
                 isLoading = false,
                 displayName = sessionUser?.name.orEmpty(),
+                email = "",
+                role = UserRole.STUDENT,
                 errorMessage = error.message ?: "Unknown error"
             )
         }
