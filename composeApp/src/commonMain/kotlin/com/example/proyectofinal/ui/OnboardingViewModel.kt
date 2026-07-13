@@ -54,7 +54,6 @@ class OnboardingViewModel(
         }
 
         _uiState.value = _uiState.value.copy(
-            currentStep = OnboardingStep.SCHOOL_YEAR,
             availableSchoolYears = schoolYears,
             trackOptions = defaultTrackOptions(),
             selectedProvince = province,
@@ -76,7 +75,6 @@ class OnboardingViewModel(
         }
 
         _uiState.value = state.copy(
-            currentStep = OnboardingStep.CATEGORY,
             selectedSchoolYear = schoolYear,
             selectedTrack = null,
             trackOptions = buildTrackOptions(selectedOption.allowedTracks),
@@ -98,10 +96,57 @@ class OnboardingViewModel(
         }
 
         _uiState.value = state.copy(
-            currentStep = OnboardingStep.CONFIRMATION,
             selectedTrack = track,
             errorMessage = null
         )
+    }
+
+    fun nextStep() {
+        val state = _uiState.value
+        when (state.currentStep) {
+            OnboardingStep.PROVINCE -> {
+                val province = state.selectedProvince
+                if (province == null || ProvinceSchoolCatalog.schoolYearOptionsFor(province).isEmpty()) {
+                    _uiState.value = state.copy(errorMessage = "Select a valid province")
+                    return
+                }
+
+                _uiState.value = state.copy(
+                    currentStep = OnboardingStep.SCHOOL_YEAR,
+                    errorMessage = null
+                )
+            }
+
+            OnboardingStep.SCHOOL_YEAR -> {
+                val schoolYear = state.selectedSchoolYear
+                if (schoolYear == null || state.availableSchoolYears.none { it.schoolYear == schoolYear }) {
+                    _uiState.value = state.copy(errorMessage = "Select a valid school year")
+                    return
+                }
+
+                _uiState.value = state.copy(
+                    currentStep = OnboardingStep.CATEGORY,
+                    errorMessage = null
+                )
+            }
+
+            OnboardingStep.CATEGORY -> {
+                val track = state.selectedTrack
+                if (track == null || state.trackOptions.none { it.track == track && it.enabled }) {
+                    _uiState.value = state.copy(
+                        errorMessage = "Selected category is not available for this school year"
+                    )
+                    return
+                }
+
+                _uiState.value = state.copy(
+                    currentStep = OnboardingStep.CONFIRMATION,
+                    errorMessage = null
+                )
+            }
+
+            OnboardingStep.CONFIRMATION -> Unit
+        }
     }
 
     fun goBack() {

@@ -86,8 +86,7 @@ private fun AuthGate() {
         )
 
         AuthView.REGISTER -> RegisterScreen(
-            viewModel = koinViewModel<RegisterViewModel>(),
-            onSwitchToLogin = router::switchToLogin
+            viewModel = koinViewModel<RegisterViewModel>()
         )
 
         AuthView.ONBOARDING -> OnboardingScreen(

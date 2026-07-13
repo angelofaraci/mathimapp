@@ -49,6 +49,7 @@ fun OnboardingScreen(
         onProvinceSelected = viewModel::selectProvince,
         onSchoolYearSelected = viewModel::selectSchoolYear,
         onTrackSelected = viewModel::selectTrack,
+        onContinue = viewModel::nextStep,
         onBack = viewModel::goBack,
         onComplete = viewModel::completeOnboarding,
         onLogout = onLogout
@@ -61,6 +62,7 @@ private fun OnboardingContent(
     onProvinceSelected: (String) -> Unit,
     onSchoolYearSelected: (Int) -> Unit,
     onTrackSelected: (StudentTrack) -> Unit,
+    onContinue: () -> Unit,
     onBack: () -> Unit,
     onComplete: () -> Unit,
     onLogout: () -> Unit
@@ -127,6 +129,16 @@ private fun OnboardingContent(
             )
         }
 
+        if (state.currentStep != OnboardingStep.CONFIRMATION) {
+            MButton(
+                onClick = onContinue,
+                enabled = !state.isSaving && hasCurrentStepSelection(state),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Continue")
+            }
+        }
+
         if (state.currentStep != OnboardingStep.PROVINCE) {
             MButton(
                 onClick = onBack,
@@ -139,6 +151,14 @@ private fun OnboardingContent(
         }
     }
 }
+
+private fun hasCurrentStepSelection(state: OnboardingUiState): Boolean =
+    when (state.currentStep) {
+        OnboardingStep.PROVINCE -> state.selectedProvince != null
+        OnboardingStep.SCHOOL_YEAR -> state.selectedSchoolYear != null
+        OnboardingStep.CATEGORY -> state.selectedTrack != null
+        OnboardingStep.CONFIRMATION -> false
+    }
 
 @Composable
 private fun StepSummary(state: OnboardingUiState) {

@@ -25,13 +25,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import com.example.proyectofinal.ui.primitives.MButton
-import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MTextField
 
 @Composable
 fun RegisterScreen(
-    viewModel: RegisterViewModel,
-    onSwitchToLogin: () -> Unit
+    viewModel: RegisterViewModel
 ) {
     val state by viewModel.uiState.collectAsState()
     RegisterContent(
@@ -41,10 +39,7 @@ fun RegisterScreen(
         onPasswordChange = viewModel::onPasswordChange,
         onTogglePasswordVisibility = viewModel::togglePasswordVisibility,
         onAcceptedTermsChange = viewModel::setAcceptedTerms,
-        onContinue = viewModel::continueStep,
-        onBack = {
-            if (viewModel.goBack()) onSwitchToLogin()
-        }
+        onContinue = viewModel::continueStep
     )
 }
 
@@ -56,8 +51,7 @@ private fun RegisterContent(
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onAcceptedTermsChange: (Boolean) -> Unit,
-    onContinue: () -> Unit,
-    onBack: () -> Unit
+    onContinue: () -> Unit
 ) {
     AuthScreenScaffold(
         formTitle = "Creá tu cuenta",
@@ -65,15 +59,6 @@ private fun RegisterContent(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             WizardStepIndicator(currentStep = state.step)
-
-            MButton(
-                onClick = onBack,
-                enabled = !state.isLoading,
-                style = MButtonStyle.Outline,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.step == 1) "Volver a iniciar sesión" else "Volver")
-            }
 
             when (state.step) {
                 1 -> NameStep(state, onNameChange)

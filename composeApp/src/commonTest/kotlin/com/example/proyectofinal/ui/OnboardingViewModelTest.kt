@@ -35,15 +35,46 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `selecting a province advances to school year and loads province options`() = runTest(dispatcher) {
+    fun `selecting a province stays on the step until Continue advances and loads province options`() = runTest(dispatcher) {
         val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
 
         viewModel.selectProvince("Buenos Aires")
 
-        assertEquals(OnboardingStep.SCHOOL_YEAR, viewModel.uiState.value.currentStep)
+        assertEquals(OnboardingStep.PROVINCE, viewModel.uiState.value.currentStep)
         assertEquals("Buenos Aires", viewModel.uiState.value.selectedProvince)
         assertEquals(13, viewModel.uiState.value.availableSchoolYears.last().schoolYear)
         assertNull(viewModel.uiState.value.selectedSchoolYear)
+
+        viewModel.nextStep()
+
+        assertEquals(OnboardingStep.SCHOOL_YEAR, viewModel.uiState.value.currentStep)
+    }
+
+    @Test
+    fun `Continue requires a valid selection at every onboarding step`() = runTest(dispatcher) {
+        val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
+
+        viewModel.nextStep()
+
+        assertEquals(OnboardingStep.PROVINCE, viewModel.uiState.value.currentStep)
+        assertEquals("Select a valid province", viewModel.uiState.value.errorMessage)
+
+        viewModel.selectProvince("Buenos Aires")
+        viewModel.nextStep()
+        viewModel.nextStep()
+
+        assertEquals(OnboardingStep.SCHOOL_YEAR, viewModel.uiState.value.currentStep)
+        assertEquals("Select a valid school year", viewModel.uiState.value.errorMessage)
+
+        viewModel.selectSchoolYear(5)
+        viewModel.nextStep()
+        viewModel.nextStep()
+
+        assertEquals(OnboardingStep.CATEGORY, viewModel.uiState.value.currentStep)
+        assertEquals(
+            "Selected category is not available for this school year",
+            viewModel.uiState.value.errorMessage
+        )
     }
 
     @Test
@@ -51,7 +82,9 @@ class OnboardingViewModelTest {
         val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
 
         viewModel.selectProvince("Buenos Aires")
+        viewModel.nextStep()
         viewModel.selectSchoolYear(5)
+        viewModel.nextStep()
 
         val trackOptions = viewModel.uiState.value.trackOptions
 
@@ -68,7 +101,9 @@ class OnboardingViewModelTest {
         val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
 
         viewModel.selectProvince("CABA")
+        viewModel.nextStep()
         viewModel.selectSchoolYear(7)
+        viewModel.nextStep()
         val yearSevenOptions = viewModel.uiState.value.trackOptions.associateBy(OnboardingTrackOption::track)
 
         assertTrue(yearSevenOptions.getValue(StudentTrack.PRIMARY).enabled)
@@ -94,8 +129,11 @@ class OnboardingViewModelTest {
         val viewModel = OnboardingViewModel(repository)
 
         viewModel.selectProvince("Buenos Aires")
+        viewModel.nextStep()
         viewModel.selectSchoolYear(7)
+        viewModel.nextStep()
         viewModel.selectTrack(StudentTrack.SECONDARY)
+        viewModel.nextStep()
         viewModel.completeOnboarding()
         advanceUntilIdle()
 
@@ -137,7 +175,9 @@ class OnboardingViewModelTest {
         val viewModel = OnboardingViewModel(repository)
 
         viewModel.selectProvince("Buenos Aires")
+        viewModel.nextStep()
         viewModel.selectSchoolYear(5)
+        viewModel.nextStep()
         viewModel.selectTrack(StudentTrack.SECONDARY)
         advanceUntilIdle()
 

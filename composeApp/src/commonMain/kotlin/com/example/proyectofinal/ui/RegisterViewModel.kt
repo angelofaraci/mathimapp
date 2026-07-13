@@ -105,25 +105,6 @@ class RegisterViewModel(
         }
     }
 
-    /**
-     * @return true only when the wizard was reset from step one and the caller
-     * should navigate back to Login.
-     */
-    fun goBack(): Boolean {
-        val current = _uiState.value
-        if (current.step == 1) {
-            reset()
-            return true
-        }
-
-        _uiState.value = current.copy(
-            step = current.step - 1,
-            fieldErrors = emptyMap(),
-            errorMessage = null
-        )
-        return false
-    }
-
     fun register() {
         val current = _uiState.value
         // Retain the pre-wizard public contract for callers that submit without
@@ -170,10 +151,6 @@ class RegisterViewModel(
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = null)
             }
         }
-    }
-
-    private fun reset() {
-        _uiState.value = RegisterUiState()
     }
 
     private fun validationErrorsFor(state: RegisterUiState): Map<RegisterField, String> =
