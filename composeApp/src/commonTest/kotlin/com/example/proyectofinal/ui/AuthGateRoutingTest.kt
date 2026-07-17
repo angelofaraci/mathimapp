@@ -9,16 +9,16 @@ import kotlin.test.assertEquals
 /**
  * Runtime coverage for the `frontend-auth` "Auth Entry Flow" scenarios that the
  * verify gate flagged as untested. The routing decision lives in the pure
- * [AuthGateRouter] / [resolveAuthView] construct, including the authenticated
+ * [AuthGateViewModel] / [resolveAuthView] construct, including the authenticated
  * dashboard landing path, so these are plain kotlin.test + StateFlow
  * assertions and need no Compose UI test harness.
  */
-class AuthGateRoutingTest {
+class AuthGateViewModelTest {
 
     // Scenario: "Default state is login" — default target is LOGIN, Register not selected.
     @Test
     fun `default target is login and register is not selected`() {
-        val router = AuthGateRouter()
+        val router = AuthGateViewModel()
 
         assertEquals(AuthScreenTarget.LOGIN, router.target.value)
     }
@@ -28,7 +28,7 @@ class AuthGateRoutingTest {
     @Test
     fun `default view is login when session is anonymous`() {
         val anonymous = AuthSession()
-        val router = AuthGateRouter()
+        val router = AuthGateViewModel()
 
         val view = resolveAuthView(anonymous, router.target.value, onboardingComplete = false)
 
@@ -39,7 +39,7 @@ class AuthGateRoutingTest {
     // WHEN user selects the register link, THEN Register replaces it.
     @Test
     fun `selecting register link switches from login to register`() {
-        val router = AuthGateRouter()
+        val router = AuthGateViewModel()
         assertEquals(
             AuthView.LOGIN,
             resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
@@ -57,7 +57,7 @@ class AuthGateRoutingTest {
     // Scenario: "Text links switch forms" — the reverse direction (Register link back to Login).
     @Test
     fun `selecting login link switches back from register to login`() {
-        val router = AuthGateRouter().apply { switchToRegister() }
+        val router = AuthGateViewModel().apply { switchToRegister() }
         assertEquals(
             AuthView.REGISTER,
             resolveAuthView(AuthSession(), router.target.value, onboardingComplete = false)
@@ -74,7 +74,7 @@ class AuthGateRoutingTest {
 
     @Test
     fun `toggle flips between login and register in both directions`() {
-        val router = AuthGateRouter()
+        val router = AuthGateViewModel()
 
         router.toggle()
         assertEquals(AuthScreenTarget.REGISTER, router.target.value)
@@ -89,7 +89,7 @@ class AuthGateRoutingTest {
             token = "token-123",
             user = User("1", "Alice", "alice@example.com", UserRole.STUDENT)
         )
-        val router = AuthGateRouter().apply { switchToRegister() }
+        val router = AuthGateViewModel().apply { switchToRegister() }
 
         assertEquals(
             AuthView.COURSE,
@@ -103,11 +103,21 @@ class AuthGateRoutingTest {
             token = "token-123",
             user = User("1", "Alice", "alice@example.com", UserRole.STUDENT)
         )
-        val router = AuthGateRouter().apply { switchToRegister() }
+        val router = AuthGateViewModel().apply { switchToRegister() }
 
         assertEquals(
             AuthView.ONBOARDING,
             resolveAuthView(authenticated, router.target.value, onboardingComplete = false)
         )
+    }
+
+    @Test
+    fun `register target remains selected when the view model is reused`() {
+        val viewModel = AuthGateViewModel()
+
+        viewModel.switchToRegister()
+        val reusedViewModel = viewModel
+
+        assertEquals(AuthScreenTarget.REGISTER, reusedViewModel.target.value)
     }
 }

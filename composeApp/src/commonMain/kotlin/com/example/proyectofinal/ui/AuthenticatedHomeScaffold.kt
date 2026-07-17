@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.example.proyectofinal.ui.activities.LessonMapScreen
 import com.example.proyectofinal.ui.home.HomeDashboardScreen
@@ -22,13 +21,15 @@ import proyectofinal.composeapp.generated.resources.tab_activities
 import proyectofinal.composeapp.generated.resources.tab_home
 import proyectofinal.composeapp.generated.resources.tab_profile
 import proyectofinal.composeapp.generated.resources.tab_progress
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun AuthenticatedHomeScaffold(
     onLogout: () -> Unit,
-    router: MainRouter = remember { MainRouter() }
+    router: MainRouterViewModel = koinViewModel<MainRouterViewModel>()
 ) {
     val selectedTab by router.target.collectAsState()
+    val onLogoutAndReset = { logoutFromAuthenticatedHome(router, onLogout) }
 
     Scaffold(
         bottomBar = {
@@ -55,13 +56,21 @@ fun AuthenticatedHomeScaffold(
                 .padding(innerPadding)
         ) {
             when (selectedTab) {
-                MainTab.HOME -> HomeDashboardScreen(router = router, onLogout = onLogout)
+                MainTab.HOME -> HomeDashboardScreen(router = router, onLogout = onLogoutAndReset)
                 MainTab.ACTIVITIES -> LessonMapScreen(onShowHome = router::showHome)
                 MainTab.PROGRESS -> PlaceholderScreen(title = "Progreso")
-                MainTab.PROFILE -> ProfileScreen(onLogout = onLogout)
+                MainTab.PROFILE -> ProfileScreen(onLogout = onLogoutAndReset)
             }
         }
     }
+}
+
+internal fun logoutFromAuthenticatedHome(
+    router: MainRouterViewModel,
+    onLogout: () -> Unit
+) {
+    router.showHome()
+    onLogout()
 }
 
 private data class MainDestination(

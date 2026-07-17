@@ -39,7 +39,8 @@ fun RegisterScreen(
         onPasswordChange = viewModel::onPasswordChange,
         onTogglePasswordVisibility = viewModel::togglePasswordVisibility,
         onAcceptedTermsChange = viewModel::setAcceptedTerms,
-        onContinue = viewModel::continueStep
+        onContinue = viewModel::continueStep,
+        onBack = viewModel::goBack
     )
 }
 
@@ -51,7 +52,8 @@ private fun RegisterContent(
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onAcceptedTermsChange: (Boolean) -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    onBack: () -> Unit
 ) {
     AuthScreenScaffold(
         formTitle = "Creá tu cuenta",
@@ -86,6 +88,17 @@ private fun RegisterContent(
                         else -> "Continuar"
                     }
                 )
+            }
+
+            if (state.step > 1) {
+                MButton(
+                    onClick = onBack,
+                    enabled = !state.isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = com.example.proyectofinal.ui.primitives.MButtonStyle.Outline
+                ) {
+                    Text("Back")
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

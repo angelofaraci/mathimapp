@@ -3,6 +3,7 @@ package com.example.proyectofinal.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,7 +58,7 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun OnboardingContent(
+internal fun OnboardingContent(
     state: OnboardingUiState,
     onProvinceSelected: (String) -> Unit,
     onSchoolYearSelected: (Int) -> Unit,
@@ -101,32 +102,34 @@ private fun OnboardingContent(
             )
         }
 
-        when (state.currentStep) {
-            OnboardingStep.PROVINCE -> ProvinceStep(
-                provinces = state.provinces,
-                selectedProvince = state.selectedProvince,
-                onProvinceSelected = onProvinceSelected,
-                enabled = !state.isSaving
-            )
+        Box(modifier = Modifier.weight(1f)) {
+            when (state.currentStep) {
+                OnboardingStep.PROVINCE -> ProvinceStep(
+                    provinces = state.provinces,
+                    selectedProvince = state.selectedProvince,
+                    onProvinceSelected = onProvinceSelected,
+                    enabled = !state.isSaving
+                )
 
-            OnboardingStep.SCHOOL_YEAR -> SchoolYearStep(
-                schoolYears = state.availableSchoolYears,
-                selectedSchoolYear = state.selectedSchoolYear,
-                onSchoolYearSelected = onSchoolYearSelected,
-                enabled = !state.isSaving
-            )
+                OnboardingStep.SCHOOL_YEAR -> SchoolYearStep(
+                    schoolYears = state.availableSchoolYears,
+                    selectedSchoolYear = state.selectedSchoolYear,
+                    onSchoolYearSelected = onSchoolYearSelected,
+                    enabled = !state.isSaving
+                )
 
-            OnboardingStep.CATEGORY -> CategoryStep(
-                trackOptions = state.trackOptions,
-                selectedTrack = state.selectedTrack,
-                onTrackSelected = onTrackSelected,
-                enabled = !state.isSaving
-            )
+                OnboardingStep.CATEGORY -> CategoryStep(
+                    trackOptions = state.trackOptions,
+                    selectedTrack = state.selectedTrack,
+                    onTrackSelected = onTrackSelected,
+                    enabled = !state.isSaving
+                )
 
-            OnboardingStep.CONFIRMATION -> ConfirmationStep(
-                state = state,
-                onComplete = onComplete
-            )
+                OnboardingStep.CONFIRMATION -> ConfirmationStep(
+                    state = state,
+                    onComplete = onComplete
+                )
+            }
         }
 
         if (state.currentStep != OnboardingStep.CONFIRMATION) {
@@ -191,22 +194,27 @@ private fun ProvinceStep(
     onProvinceSelected: (String) -> Unit,
     enabled: Boolean
 ) {
-    StepTitle(
-        title = "1. Choose your province",
-        description = "Your province determines the valid school-year boundaries."
-    )
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(provinces) { province ->
-            SelectionCard(
-                title = province,
-                selected = selectedProvince == province,
-                enabled = enabled,
-                onClick = { onProvinceSelected(province) }
-            )
+        StepTitle(
+            title = "1. Choose your province",
+            description = "Your province determines the valid school-year boundaries."
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(provinces) { province ->
+                SelectionCard(
+                    title = province,
+                    selected = selectedProvince == province,
+                    enabled = enabled,
+                    onClick = { onProvinceSelected(province) }
+                )
+            }
         }
     }
 }
@@ -218,23 +226,28 @@ private fun SchoolYearStep(
     onSchoolYearSelected: (Int) -> Unit,
     enabled: Boolean
 ) {
-    StepTitle(
-        title = "2. Choose your school year",
-        description = "Available years already reflect the selected province structure."
-    )
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(schoolYears) { option ->
-            SelectionCard(
-                title = option.label,
-                subtitle = allowedTrackSummary(option.allowedTracks),
-                selected = selectedSchoolYear == option.schoolYear,
-                enabled = enabled,
-                onClick = { onSchoolYearSelected(option.schoolYear) }
-            )
+        StepTitle(
+            title = "2. Choose your school year",
+            description = "Available years already reflect the selected province structure."
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(schoolYears) { option ->
+                SelectionCard(
+                    title = option.label,
+                    subtitle = allowedTrackSummary(option.allowedTracks),
+                    selected = selectedSchoolYear == option.schoolYear,
+                    enabled = enabled,
+                    onClick = { onSchoolYearSelected(option.schoolYear) }
+                )
+            }
         }
     }
 }
@@ -246,23 +259,28 @@ private fun CategoryStep(
     onTrackSelected: (StudentTrack) -> Unit,
     enabled: Boolean
 ) {
-    StepTitle(
-        title = "3. Choose your category",
-        description = "All four categories are shown. Only the valid ones for the chosen year are enabled."
-    )
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(trackOptions) { option ->
-            SelectionCard(
-                title = option.track.displayName,
-                subtitle = if (option.enabled) null else "Not available for the selected school year",
-                selected = selectedTrack == option.track,
-                enabled = enabled && option.enabled,
-                onClick = { onTrackSelected(option.track) }
-            )
+        StepTitle(
+            title = "3. Choose your category",
+            description = "All four categories are shown. Only the valid ones for the chosen year are enabled."
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(trackOptions) { option ->
+                SelectionCard(
+                    title = option.track.displayName,
+                    subtitle = if (option.enabled) null else "Not available for the selected school year",
+                    selected = selectedTrack == option.track,
+                    enabled = enabled && option.enabled,
+                    onClick = { onTrackSelected(option.track) }
+                )
+            }
         }
     }
 }
@@ -272,30 +290,35 @@ private fun ConfirmationStep(
     state: OnboardingUiState,
     onComplete: () -> Unit
 ) {
-    StepTitle(
-        title = "4. Confirm your profile",
-        description = "Review the selected province, school year, and category before continuing to courses."
-    )
-
-    MCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("Province: ${state.selectedProvince.orEmpty()}")
-            Text(
-                text = "School year: ${state.availableSchoolYears.firstOrNull { option -> option.schoolYear == state.selectedSchoolYear }?.label.orEmpty()}"
-            )
-            Text("Category: ${state.selectedTrack?.displayName.orEmpty()}")
-        }
-    }
-
-    MButton(
-        onClick = onComplete,
-        enabled = !state.isSaving,
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(if (state.isSaving) "Saving profile..." else "Continue to courses")
+        StepTitle(
+            title = "4. Confirm your profile",
+            description = "Review the selected province, school year, and category before continuing to courses."
+        )
+
+        MCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Province: ${state.selectedProvince.orEmpty()}")
+                Text(
+                    text = "School year: ${state.availableSchoolYears.firstOrNull { option -> option.schoolYear == state.selectedSchoolYear }?.label.orEmpty()}"
+                )
+                Text("Category: ${state.selectedTrack?.displayName.orEmpty()}")
+            }
+        }
+
+        MButton(
+            onClick = onComplete,
+            enabled = !state.isSaving,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (state.isSaving) "Saving profile..." else "Continue to courses")
+        }
     }
 }
 

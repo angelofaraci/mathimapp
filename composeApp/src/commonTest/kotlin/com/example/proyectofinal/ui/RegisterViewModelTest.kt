@@ -67,6 +67,31 @@ class RegisterViewModelTest {
     }
 
     @Test
+    fun `back returns to the preceding wizard step and preserves entered values`() = runTest(dispatcher) {
+        val vm = RegisterViewModel(FakeAuthRepository())
+
+        vm.onNameChange("Bob")
+        vm.continueStep()
+        vm.onEmailChange("bob@example.com")
+        vm.onPasswordChange("top-secret")
+        vm.continueStep()
+        vm.setAcceptedTerms(true)
+
+        vm.goBack()
+        assertEquals(2, vm.uiState.value.step)
+        assertEquals("Bob", vm.uiState.value.name)
+        assertEquals("bob@example.com", vm.uiState.value.email)
+        assertEquals("top-secret", vm.uiState.value.password)
+        assertTrue(vm.uiState.value.acceptedTerms)
+
+        vm.goBack()
+        assertEquals(1, vm.uiState.value.step)
+
+        vm.goBack()
+        assertEquals(1, vm.uiState.value.step)
+    }
+
+    @Test
     fun `password visibility and strength are deterministic`() = runTest(dispatcher) {
         val vm = RegisterViewModel(FakeAuthRepository())
 

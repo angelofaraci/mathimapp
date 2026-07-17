@@ -1,5 +1,6 @@
 package com.example.proyectofinal.ui
 
+import androidx.lifecycle.ViewModel
 import com.example.proyectofinal.domain.AuthSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,14 +19,15 @@ enum class AuthScreenTarget { LOGIN, REGISTER }
 enum class AuthView { COURSE, LOGIN, REGISTER, ONBOARDING }
 
 /**
- * Pure, framework-agnostic state holder for the auth-gate routing decision.
+ * Retained state holder for the auth-gate routing decision.
  *
- * It does not touch Compose, so the auth entry flow behavior is unit-testable
- * in commonTest without a Compose UI test harness. Defaults to
+ * It does not touch Compose, so the auth entry flow behavior remains unit-testable
+ * in commonTest without a Compose UI test harness. As a [ViewModel], it also retains
+ * the selected target across platform configuration changes. Defaults to
  * [AuthScreenTarget.LOGIN] (spec: "Default state is login") and exposes the
  * text-link switching actions (spec: "Text links switch forms").
  */
-class AuthGateRouter {
+class AuthGateViewModel : ViewModel() {
     private val _target = MutableStateFlow(AuthScreenTarget.LOGIN)
 
     /** Currently selected auth form target. Defaults to [AuthScreenTarget.LOGIN]. */

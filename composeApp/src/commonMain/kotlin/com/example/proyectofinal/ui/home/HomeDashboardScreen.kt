@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.proyectofinal.ui.MainRouter
+import com.example.proyectofinal.ui.MainRouterViewModel
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MCard
@@ -41,7 +41,7 @@ import proyectofinal.composeapp.generated.resources.achievement_placeholder
 
 @Composable
 fun HomeDashboardScreen(
-    router: MainRouter,
+    router: MainRouterViewModel,
     onLogout: () -> Unit,
     viewModel: HomeDashboardViewModel = koinViewModel<HomeDashboardViewModel>()
 ) {

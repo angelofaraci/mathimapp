@@ -8,14 +8,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.proyectofinal.di.DatabaseDriverFactory
+import com.example.proyectofinal.di.initializeKoin
 import com.example.proyectofinal.ui.home.HomeDashboardContent
 import com.example.proyectofinal.ui.home.HomeDashboardUiState
+import org.koin.dsl.module
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        initializeKoin(
+            module {
+                single { DatabaseDriverFactory(applicationContext) }
+            }
+        )
 
         setContent {
             App()

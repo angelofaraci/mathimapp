@@ -25,10 +25,12 @@ import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.ui.AuthGateViewModel
 import com.example.proyectofinal.ui.CourseViewModel
 import com.example.proyectofinal.ui.activities.LessonMapViewModel
 import com.example.proyectofinal.ui.home.HomeDashboardViewModel
 import com.example.proyectofinal.ui.LoginViewModel
+import com.example.proyectofinal.ui.MainRouterViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
@@ -54,9 +56,11 @@ val appModule = module {
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
 
     viewModelOf(::CourseViewModel)
+    viewModelOf(::AuthGateViewModel)
     viewModelOf(::LessonMapViewModel)
     viewModelOf(::HomeDashboardViewModel)
     viewModelOf(::LoginViewModel)
+    viewModelOf(::MainRouterViewModel)
     viewModelOf(::OnboardingViewModel)
     viewModelOf(::ProfileViewModel)
     viewModelOf(::RegisterViewModel)

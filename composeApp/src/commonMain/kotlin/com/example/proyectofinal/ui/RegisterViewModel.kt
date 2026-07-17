@@ -105,6 +105,17 @@ class RegisterViewModel(
         }
     }
 
+    fun goBack() {
+        val current = _uiState.value
+        if (current.step > 1 && !current.isLoading) {
+            _uiState.value = current.copy(
+                step = current.step - 1,
+                fieldErrors = emptyMap(),
+                errorMessage = null
+            )
+        }
+    }
+
     fun register() {
         val current = _uiState.value
         // Retain the pre-wizard public contract for callers that submit without

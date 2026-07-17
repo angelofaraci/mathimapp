@@ -13,13 +13,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.proyectofinal.di.appModule
-import com.example.proyectofinal.di.rememberPlatformModule
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.ui.primitives.MProgressIndicator
 import com.example.proyectofinal.ui.theme.AppTheme
-import com.example.proyectofinal.ui.AuthGateRouter
+import com.example.proyectofinal.ui.AuthGateViewModel
 import com.example.proyectofinal.ui.AuthView
 import com.example.proyectofinal.ui.AuthenticatedHomeScaffold
 import com.example.proyectofinal.ui.LoginScreen
@@ -29,24 +27,17 @@ import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.RegisterScreen
 import com.example.proyectofinal.ui.RegisterViewModel
 import com.example.proyectofinal.ui.resolveAuthView
-import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun App() {
-    val platformModule = rememberPlatformModule()
-
-    KoinApplication(application = {
-        modules(platformModule, appModule)
-    }) {
-        AppTheme {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                AuthGate()
-            }
+    AppTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            AuthGate()
         }
     }
 }
@@ -56,7 +47,7 @@ private fun AuthGate() {
     val authRepository = koinInject<AuthRepository>()
     val learnerProfileRepository = koinInject<LearnerProfileRepository>()
     val session by authRepository.session.collectAsState()
-    val router = remember { AuthGateRouter() }
+    val router = koinViewModel<AuthGateViewModel>()
     val target by router.target.collectAsState()
     var onboardingRefreshKey by remember(session.token) { mutableStateOf(0) }
     val onboardingComplete by produceState<Boolean?>(
