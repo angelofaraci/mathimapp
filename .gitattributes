@@ -1,0 +1,20 @@
+# Line-ending normalization: repo stores LF, Windows tools may write CRLF.
+# Git cleans CRLF -> LF on add/status, so cross-platform edits stop producing phantom diffs.
+* text=auto eol=lf
+
+# Windows script files: keep CRLF in the working tree for cmd/PowerShell compatibility.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: never normalize.
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.keystore binary
+*.p12 binary
+*.pdf binary

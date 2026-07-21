@@ -52,7 +52,7 @@ testing:
         e2e: false
     composeApp:
       command: "./gradlew :composeApp:jvmTest"
-      tests: 92
+      tests: 106
       layers:
         unit: true
         integration: true

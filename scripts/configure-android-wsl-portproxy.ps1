@@ -1,7 +1,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [ValidatePattern('^[A-Za-z0-9._-]+$')]
-    [string]$DistroName = 'FedoraLinux-43'
+    [string]$DistroName = 'Ubuntu'
 )
 
 Set-StrictMode -Version Latest
