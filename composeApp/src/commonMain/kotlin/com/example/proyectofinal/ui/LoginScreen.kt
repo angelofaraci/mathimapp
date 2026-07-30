@@ -27,7 +27,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.text.KeyboardOptions
@@ -129,8 +128,7 @@ private fun LoginContent(
                     .align(Alignment.End)
                     .clickable { showRecoveryPlaceholder = true },
                 color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodyMedium
             )
 
             if (showRecoveryPlaceholder) {
@@ -165,7 +163,7 @@ private fun LoginContent(
                 HorizontalDivider(modifier = Modifier.weight(1f))
                 Text(
                     text = "o continuá con",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 HorizontalDivider(modifier = Modifier.weight(1f))
@@ -196,16 +194,14 @@ private fun LoginContent(
             ) {
                 Text(
                     text = "¿No tenés cuenta? ",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "Registrate",
                     modifier = Modifier.clickable(enabled = !state.isLoading, onClick = onSwitchToRegister),
                     color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    textDecoration = TextDecoration.Underline
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
         }

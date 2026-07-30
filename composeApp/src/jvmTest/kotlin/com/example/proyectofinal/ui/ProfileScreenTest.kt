@@ -35,7 +35,7 @@ class ProfileScreenTest {
         composeTestRule.onNodeWithText("Ayuda y soporte").assertExists()
         composeTestRule.onNodeWithText("Acerca de").assertExists()
         composeTestRule.onNodeWithText("Cerrar sesión").performClick()
-        composeTestRule.onNodeWithText("MathimApp · version X").assertExists()
+        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
         assertEquals(1, logoutCalls)
 
         composeTestRule.setContent {
@@ -61,12 +61,12 @@ class ProfileScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("MathimApp · version X").assertExists()
+        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
         composeTestRule.onNodeWithText("Cuenta").performClick()
         composeTestRule.onNodeWithContentDescription("Volver").assertExists()
         composeTestRule.onNodeWithContentDescription("Volver").performClick()
         composeTestRule.onNodeWithContentDescription("Volver").assertDoesNotExist()
-        composeTestRule.onNodeWithText("MathimApp · version X").assertExists()
+        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
     }
 
     private fun profileUiState(displayName: String = "Alice Student") = ProfileUiState(

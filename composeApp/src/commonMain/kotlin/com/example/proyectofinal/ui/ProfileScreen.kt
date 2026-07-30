@@ -1,7 +1,9 @@
 package com.example.proyectofinal.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -41,7 +46,27 @@ import com.example.proyectofinal.ui.primitives.ProfileListRow
 import com.example.proyectofinal.ui.primitives.ProfileNavigationCard
 import com.example.proyectofinal.ui.primitives.ProfileToggleRow
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.ic_arrow_left
+import proyectofinal.composeapp.generated.resources.ic_bell
+import proyectofinal.composeapp.generated.resources.ic_edit
+import proyectofinal.composeapp.generated.resources.ic_file_text
+import proyectofinal.composeapp.generated.resources.ic_flag
+import proyectofinal.composeapp.generated.resources.ic_flame
+import proyectofinal.composeapp.generated.resources.ic_globe
+import proyectofinal.composeapp.generated.resources.ic_help_circle
+import proyectofinal.composeapp.generated.resources.ic_info
+import proyectofinal.composeapp.generated.resources.ic_lock
+import proyectofinal.composeapp.generated.resources.ic_logout
+import proyectofinal.composeapp.generated.resources.ic_mail
+import proyectofinal.composeapp.generated.resources.ic_moon
+import proyectofinal.composeapp.generated.resources.ic_person
+import proyectofinal.composeapp.generated.resources.ic_settings
+import proyectofinal.composeapp.generated.resources.ic_shield
+import proyectofinal.composeapp.generated.resources.ic_volume
 
 @Composable
 internal expect fun BackHandler(enabled: Boolean, onBack: () -> Unit)
@@ -111,43 +136,62 @@ private fun ProfileHub(
         ProfileIdentity(
             displayName = uiState.displayName,
             email = uiState.email,
-            role = uiState.role
+            role = uiState.role,
+            streak = uiState.streak
         )
         Spacer(Modifier.size(2.dp))
         ProfileNavigationCard(
             title = "Cuenta",
             subtitle = "Nombre, correo, contraseña",
             onClick = { onDestinationSelected(ProfileSubScreen.ACCOUNT) },
-            icon = { ProfileCardIcon("C") }
+            icon = { ProfileNavIcon(Res.drawable.ic_person, MaterialTheme.colorScheme.primary) }
         )
         ProfileNavigationCard(
             title = "Preferencias",
             subtitle = "Notificaciones, sonidos, idioma",
             onClick = { onDestinationSelected(ProfileSubScreen.PREFERENCES) },
-            icon = { ProfileCardIcon("P") }
+            icon = { ProfileNavIcon(Res.drawable.ic_settings, MaterialTheme.colorScheme.secondary) }
         )
         ProfileNavigationCard(
             title = "Ayuda y soporte",
             subtitle = "FAQ, contacto, reportar un problema",
             onClick = { onDestinationSelected(ProfileSubScreen.HELP) },
-            icon = { ProfileCardIcon("?") }
+            icon = { ProfileNavIcon(Res.drawable.ic_help_circle, MaterialTheme.colorScheme.error) }
         )
         ProfileNavigationCard(
             title = "Acerca de",
             subtitle = "Términos, privacidad, versión",
             onClick = { onDestinationSelected(ProfileSubScreen.ABOUT) },
-            icon = { ProfileCardIcon("i") }
+            icon = { ProfileNavIcon(Res.drawable.ic_info, MaterialTheme.colorScheme.onSurfaceVariant) }
         )
         Spacer(Modifier.size(10.dp))
-        MButton(
+        Surface(
             onClick = onLogout,
             modifier = Modifier.fillMaxWidth(),
-            style = MButtonStyle.Outline
+            shape = RoundedCornerShape(AppThemeDefaults.shapes.button),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Text("Cerrar sesión")
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_logout),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "Cerrar sesión",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
         Text(
-            text = "MathimApp · version X",
+            text = "MathimApp · versión ${appVersionName()}",
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -157,7 +201,7 @@ private fun ProfileHub(
 }
 
 @Composable
-private fun ProfileIdentity(displayName: String, email: String, role: UserRole) {
+private fun ProfileIdentity(displayName: String, email: String, role: UserRole, streak: Int) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -166,77 +210,122 @@ private fun ProfileIdentity(displayName: String, email: String, role: UserRole) 
         Box(contentAlignment = Alignment.BottomEnd) {
             Box(
                 modifier = Modifier.size(92.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(3.dp, MaterialTheme.colorScheme.surface, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = displayName.toInitials(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            Text(
-                text = "✎",
+            Box(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary)
-                    .padding(4.dp)
+                    .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
                     .semantics { contentDescription = "Editar avatar" }
                     .clickable {
                         // TODO: Open an avatar picker when platform-specific support is available.
                     },
-                color = MaterialTheme.colorScheme.onPrimary,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelLarge
-            )
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_edit),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
-        Text(displayName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(displayName, style = MaterialTheme.typography.headlineSmall)
         Text(email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Surface(
-            shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
-            color = MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Text(
-                text = role.displayName(),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                fontWeight = FontWeight.Bold
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ProfileChip {
+                Text(
+                    text = role.displayName(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (streak > 0) {
+                ProfileChip(modifier = Modifier.testTag("streakChip")) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_flame),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    Text(
+                        text = "Racha $streak días",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ProfileCardIcon(symbol: String) {
-    Text(
-        text = symbol,
-        style = MaterialTheme.typography.titleLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold
+private fun ProfileChip(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ProfileNavIcon(resource: DrawableResource, tint: Color) {
+    Icon(
+        painter = painterResource(resource),
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier.size(22.dp)
     )
 }
 
 @Composable
 private fun ProfileSubScreenScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "←",
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(40.dp)
-                    .clip(MaterialTheme.shapes.medium)
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .semantics { contentDescription = "Volver" }
-                    .clickable(onClick = onBack)
-                    .padding(8.dp),
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_arrow_left),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center
             )
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.size(38.dp))
         }
         Spacer(Modifier.size(20.dp))
         content()
@@ -247,13 +336,13 @@ private fun ProfileSubScreenScaffold(title: String, onBack: () -> Unit, content:
 private fun AccountScreen(displayName: String, email: String, role: UserRole, onBack: () -> Unit) {
     ProfileSubScreenScaffold(title = "Cuenta", onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileListRow(label = "Nombre completo", value = displayName, onClick = {
+            ProfileListRow(label = "Nombre completo", value = displayName, leadingIcon = Res.drawable.ic_person, onClick = {
                 // TODO: Wire account name editing in a separately scoped change.
             })
-            ProfileListRow(label = "Correo electrónico", value = email, onClick = {
+            ProfileListRow(label = "Correo electrónico", value = email, leadingIcon = Res.drawable.ic_mail, onClick = {
                 // TODO: Wire account email editing in a separately scoped change.
             })
-            ProfileListRow(label = "Contraseña", value = "Cambiar", onClick = {
+            ProfileListRow(label = "Contraseña", value = "Cambiar", leadingIcon = Res.drawable.ic_lock, onClick = {
                 // TODO: Wire password changes in a separately scoped change.
             })
             Text(
@@ -284,13 +373,16 @@ private fun AccountScreen(displayName: String, email: String, role: UserRole, on
 private fun PreferencesScreen(onBack: () -> Unit) {
     ProfileSubScreenScaffold(title = "Preferencias", onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileToggleRow(label = "Notificaciones", checked = true, onCheckedChange = {
+            ProfileToggleRow(label = "Notificaciones", checked = true, leadingIcon = Res.drawable.ic_bell, onCheckedChange = {
                 // TODO: Persist notification preferences in a separately scoped change.
             })
-            ProfileToggleRow(label = "Sonidos", checked = true, onCheckedChange = {
+            ProfileToggleRow(label = "Sonidos", checked = true, leadingIcon = Res.drawable.ic_volume, onCheckedChange = {
                 // TODO: Persist sound preferences in a separately scoped change.
             })
-            ProfileListRow(label = "Idioma", value = "Español", onClick = {
+            ProfileToggleRow(label = "Modo oscuro", checked = false, leadingIcon = Res.drawable.ic_moon, onCheckedChange = {
+                // TODO: Wire dark-mode switching when the theme change is scoped; visual placeholder only (no-op per spec).
+            })
+            ProfileListRow(label = "Idioma", value = "Español", leadingIcon = Res.drawable.ic_globe, onClick = {
                 // TODO: Add language selection in a separately scoped change.
             })
         }
@@ -301,13 +393,13 @@ private fun PreferencesScreen(onBack: () -> Unit) {
 private fun HelpScreen(onBack: () -> Unit) {
     ProfileSubScreenScaffold(title = "Ayuda y soporte", onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileListRow(label = "Preguntas frecuentes", value = "", onClick = {
+            ProfileListRow(label = "Preguntas frecuentes", value = "", leadingIcon = Res.drawable.ic_help_circle, onClick = {
                 // TODO: Add FAQ content in a separately scoped change.
             })
-            ProfileListRow(label = "Contactar soporte", value = "", onClick = {
+            ProfileListRow(label = "Contactar soporte", value = "", leadingIcon = Res.drawable.ic_mail, onClick = {
                 // TODO: Add support contact behavior in a separately scoped change.
             })
-            ProfileListRow(label = "Reportar un problema", value = "", onClick = {
+            ProfileListRow(label = "Reportar un problema", value = "", leadingIcon = Res.drawable.ic_flag, onClick = {
                 // TODO: Add issue reporting in a separately scoped change.
             })
         }
@@ -318,13 +410,13 @@ private fun HelpScreen(onBack: () -> Unit) {
 private fun AboutScreen(onBack: () -> Unit) {
     ProfileSubScreenScaffold(title = "Acerca de", onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileListRow(label = "Términos de uso", value = "", onClick = {
+            ProfileListRow(label = "Términos de uso", value = "", leadingIcon = Res.drawable.ic_file_text, onClick = {
                 // TODO: Add terms content in a separately scoped change.
             })
-            ProfileListRow(label = "Política de privacidad", value = "", onClick = {
+            ProfileListRow(label = "Política de privacidad", value = "", leadingIcon = Res.drawable.ic_shield, onClick = {
                 // TODO: Add privacy content in a separately scoped change.
             })
-            ProfileListRow(label = "Versión", value = "X", onClick = {
+            ProfileListRow(label = "Versión", value = appVersionName(), leadingIcon = Res.drawable.ic_info, onClick = {
                 // TODO: Resolve the app version from a cross-platform source in a separately scoped change.
             })
         }

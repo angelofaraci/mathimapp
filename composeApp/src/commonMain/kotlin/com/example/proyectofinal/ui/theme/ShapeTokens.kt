@@ -11,14 +11,22 @@ data class AppShapeTokens(
     val card: Dp,
     val button: Dp,
     val field: Dp,
-    val pill: Dp
+    val pill: Dp,
+    val checkbox: Dp,
+    val iconBox: Dp,
+    val socialButton: Dp,
+    val stepSegment: Dp
 )
 
 val DefaultAppShapeTokens = AppShapeTokens(
-    card = 28.dp,
-    button = 20.dp,
-    field = 18.dp,
-    pill = 999.dp
+    card = 18.dp,
+    button = 16.dp,
+    field = 15.dp,
+    pill = 999.dp,
+    checkbox = 7.dp,
+    iconBox = 13.dp,
+    socialButton = 14.dp,
+    stepSegment = 999.dp
 )
 
 internal val LocalAppShapeTokens = staticCompositionLocalOf { DefaultAppShapeTokens }

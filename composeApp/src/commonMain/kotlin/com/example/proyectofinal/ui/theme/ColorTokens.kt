@@ -11,6 +11,10 @@ val BrandSurface = Color(0xFFFFFFFF)
 val BrandSurfaceVariant = Color(0xFFF6EFE6)
 val BrandOutlineVariant = Color(0xFFEBE3D7)
 val BrandOnSurface = Color(0xFF26333B)
+val BrandTrack = Color(0xFFEADFD1)
+val BrandLock = Color(0xFFCBBEAE)
+val BrandStripe = Color(0xFFF2E9DD)
+val BrandCoralShadow = Color(0x6BF2654B)
 
 val AppLightColorScheme = lightColorScheme(
     primary = BrandPrimary,

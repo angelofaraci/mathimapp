@@ -9,6 +9,7 @@ import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.ui.ActivityStreakCap
 import com.example.proyectofinal.ui.XpPerLevel
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.min
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,14 +19,23 @@ import kotlinx.coroutines.launch
 private val MorningHours = 5..11
 private val AfternoonHours = 12..18
 
+data class HomeCourseProgress(
+    val courseId: String,
+    val title: String,
+    val progressPercent: Int
+)
+
 data class HomeDashboardUiState(
     val isLoading: Boolean = true,
     val greeting: String = "",
     val schoolYearLabel: String? = null,
     val level: Int = 0,
-    val activityCount: Int = 0,
+    val streak: Int = 0,
+    val currentXp: Int = 0,
+    val xpForNextLevel: Int = XpPerLevel,
     val completedLessons: Int = 0,
     val hasEnrolledCourse: Boolean = false,
+    val inProgressCourses: List<HomeCourseProgress> = emptyList(),
     val isJoiningCourse: Boolean = false,
     val joinCourseMessage: String? = null,
     val errorMessage: String? = null
@@ -93,6 +103,8 @@ class HomeDashboardViewModel(
         _uiState.value = try {
             val user = resolveCurrentUser() ?: error("Authenticated user not available")
             buildDashboardState(user).copy(joinCourseMessage = previousState.joinCourseMessage)
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             HomeDashboardUiState(
                 isLoading = false,
@@ -115,10 +127,31 @@ class HomeDashboardViewModel(
             greeting = greetingFor(user.name),
             schoolYearLabel = profile?.let { "Year ${it.schoolYear} • ${it.studentTrack.displayName}" },
             level = progress.totalScore / XpPerLevel,
-            activityCount = min(completedLessons, ActivityStreakCap),
+            streak = min(completedLessons, ActivityStreakCap),
+            currentXp = progress.totalScore % XpPerLevel,
+            xpForNextLevel = XpPerLevel,
             completedLessons = completedLessons,
-            hasEnrolledCourse = progress.enrolledCourseIds.isNotEmpty()
+            hasEnrolledCourse = progress.enrolledCourseIds.isNotEmpty(),
+            inProgressCourses = loadInProgressCourses(user.id, progress.completedLessonIds)
         )
+    }
+
+    private suspend fun loadInProgressCourses(
+        userId: String,
+        completedLessonIds: Set<String>
+    ): List<HomeCourseProgress> = runCatching {
+        courseRepository.getEnrolledCourses(userId).map { course ->
+            val totalLessons = course.lessons.size
+            val completedInCourse = course.lessons.count { it.id in completedLessonIds }
+            HomeCourseProgress(
+                courseId = course.id,
+                title = course.title,
+                progressPercent = if (totalLessons == 0) 0 else completedInCourse * 100 / totalLessons
+            )
+        }
+    }.getOrElse { error ->
+        if (error is CancellationException) throw error
+        emptyList()
     }
 }
 

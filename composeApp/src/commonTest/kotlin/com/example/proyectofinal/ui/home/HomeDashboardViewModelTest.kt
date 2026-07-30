@@ -10,6 +10,7 @@ import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -22,6 +23,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -64,7 +66,7 @@ class HomeDashboardViewModelTest {
     }
 
     @Test
-    fun `view model derives level math and caps activity at seven`() = runTest(dispatcher) {
+    fun `view model derives level math and caps streak at seven`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser),
             courseRepository = FakeHomeDashboardCourseRepository(),
@@ -83,13 +85,15 @@ class HomeDashboardViewModelTest {
         with(viewModel.uiState.value) {
             assertTrue(greeting.endsWith("Alice Student"))
             assertEquals(3, level)
-            assertEquals(7, activityCount)
+            assertEquals(7, streak)
+            assertEquals(50, currentXp)
+            assertEquals(100, xpForNextLevel)
             assertEquals(12, completedLessons)
         }
     }
 
     @Test
-    fun `view model keeps the progress chip state at zero when progress is empty`() = runTest(dispatcher) {
+    fun `view model keeps the progress card state at zero when progress is empty`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser),
             courseRepository = FakeHomeDashboardCourseRepository(),
@@ -108,10 +112,100 @@ class HomeDashboardViewModelTest {
         with(viewModel.uiState.value) {
             assertFalse(isLoading)
             assertEquals(0, level)
-            assertEquals(0, activityCount)
+            assertEquals(0, streak)
+            assertEquals(0, currentXp)
+            assertEquals(100, xpForNextLevel)
             assertEquals(0, completedLessons)
             assertTrue(greeting.endsWith("Alice Student"))
         }
+    }
+
+    @Test
+    fun `view model exposes per-course completion percentages for enrolled courses`() = runTest(dispatcher) {
+        val enrolledCourses = listOf(
+            Course(
+                id = "course-1",
+                title = "Fracciones - Básico",
+                description = "Learn fractions",
+                creatorId = "teacher-1",
+                lessons = (1..4).map { Lesson(id = "lesson-$it", title = "Lesson $it", theoryContent = "") }
+            ),
+            Course(
+                id = "course-2",
+                title = "Álgebra Inicial",
+                description = "Learn algebra",
+                creatorId = "teacher-1",
+                lessons = (5..6).map { Lesson(id = "lesson-$it", title = "Lesson $it", theoryContent = "") }
+            )
+        )
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser),
+            courseRepository = FakeHomeDashboardCourseRepository(enrolledCourses = enrolledCourses),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(
+                    userId = testUser.id,
+                    enrolledCourseIds = setOf("course-1", "course-2"),
+                    completedLessonIds = setOf("lesson-1", "lesson-2"),
+                    totalScore = 20
+                )
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertFalse(isLoading)
+            assertEquals(
+                listOf(
+                    HomeCourseProgress(courseId = "course-1", title = "Fracciones - Básico", progressPercent = 50),
+                    HomeCourseProgress(courseId = "course-2", title = "Álgebra Inicial", progressPercent = 0)
+                ),
+                inProgressCourses
+            )
+        }
+    }
+
+    @Test
+    fun `view model degrades to an empty course list when the course fetch fails`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser),
+            courseRepository = FakeHomeDashboardCourseRepository(coursesErrorMessage = "Courses unavailable"),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(
+                    userId = testUser.id,
+                    enrolledCourseIds = setOf("course-1"),
+                    completedLessonIds = setOf("lesson-1"),
+                    totalScore = 10
+                )
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        with(viewModel.uiState.value) {
+            assertFalse(isLoading)
+            assertEquals(null, errorMessage)
+            assertTrue(hasEnrolledCourse)
+            assertEquals(emptyList(), inProgressCourses)
+        }
+    }
+
+    @Test
+    fun `course fetch cancellation is propagated instead of degrading to an empty list`() = runTest(dispatcher) {
+        val viewModel = HomeDashboardViewModel(
+            authRepository = HomeDashboardFakeAuthRepository(testUser),
+            courseRepository = FakeHomeDashboardCourseRepository(cancelCourseFetch = true),
+            userRepository = FakeHomeDashboardUserRepository(
+                progress = UserProgress(userId = testUser.id, enrolledCourseIds = setOf("course-1"))
+            ),
+            learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
+        )
+
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isLoading)
     }
 
     @Test
@@ -209,7 +303,10 @@ private class HomeDashboardFakeAuthRepository(user: User?) : AuthRepository {
 }
 
 private class FakeHomeDashboardCourseRepository(
-    private val joinedCourse: Course? = null
+    private val joinedCourse: Course? = null,
+    private val enrolledCourses: List<Course> = emptyList(),
+    private val coursesErrorMessage: String? = null,
+    private val cancelCourseFetch: Boolean = false
 ) : CourseRepository {
     val joinCalls = mutableListOf<String>()
 
@@ -219,7 +316,11 @@ private class FakeHomeDashboardCourseRepository(
 
     override suspend fun getMyCreatedCourses(creatorId: String): List<Course> = emptyList()
 
-    override suspend fun getEnrolledCourses(userId: String): List<Course> = emptyList()
+    override suspend fun getEnrolledCourses(userId: String): List<Course> {
+        if (cancelCourseFetch) throw CancellationException("Course fetch cancelled")
+        coursesErrorMessage?.let { throw IllegalStateException(it) }
+        return enrolledCourses
+    }
 
     override suspend fun createCourse(course: Course): Course = course
 

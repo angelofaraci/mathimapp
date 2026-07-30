@@ -1,7 +1,7 @@
 package com.example.proyectofinal.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,9 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,12 +21,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MTextField
+import com.example.proyectofinal.ui.theme.AppThemeDefaults
 
 @Composable
 fun RegisterScreen(
@@ -110,7 +115,7 @@ private fun RegisterContent(
 private fun WizardStepIndicator(currentStep: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(3) { index ->
@@ -119,14 +124,14 @@ private fun WizardStepIndicator(currentStep: Int) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(6.dp)
-                    .background(color, RoundedCornerShape(3.dp))
+                    .height(5.dp)
+                    .background(color, RoundedCornerShape(AppThemeDefaults.shapes.stepSegment))
             )
         }
     }
     Text(
-        text = "Paso $currentStep de 3",
-        style = MaterialTheme.typography.labelMedium,
+        text = "Paso $currentStep / 3",
+        style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
@@ -215,7 +220,7 @@ private fun PasswordStrengthMeter(strength: PasswordStrength) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             repeat(3) { index ->
-                val color = if (index < filledSegments) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                val color = if (index < filledSegments) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
                         .weight(1f)
@@ -238,13 +243,14 @@ private fun TermsStep(state: RegisterUiState, onAcceptedTermsChange: (Boolean) -
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onAcceptedTermsChange(!state.acceptedTerms) },
+            .toggleable(
+                value = state.acceptedTerms,
+                role = Role.Checkbox,
+                onValueChange = onAcceptedTermsChange
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(
-            checked = state.acceptedTerms,
-            onCheckedChange = onAcceptedTermsChange
-        )
+        TermsCheckboxBox(checked = state.acceptedTerms)
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Acepto los términos y condiciones de MathimApp.",
@@ -258,5 +264,50 @@ private fun TermsStep(state: RegisterUiState, onAcceptedTermsChange: (Boolean) -
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall
         )
+    }
+}
+
+/**
+ * Redesign handoff terms control: 22x22dp box, 7dp checkbox radius, coral fill with
+ * an on-coral checkmark when checked. Toggle semantics live on the parent row.
+ */
+@Composable
+private fun TermsCheckboxBox(checked: Boolean) {
+    val shape = RoundedCornerShape(AppThemeDefaults.shapes.checkbox)
+    val boxModifier = if (checked) {
+        Modifier.background(MaterialTheme.colorScheme.primary, shape)
+    } else {
+        Modifier
+            .background(MaterialTheme.colorScheme.surface, shape)
+            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+    }
+    val checkColor = MaterialTheme.colorScheme.onPrimary
+
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .testTag("termsCheckboxBox")
+            .then(boxModifier),
+        contentAlignment = Alignment.Center
+    ) {
+        if (checked) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.size(12.dp)) {
+                val strokeWidth = 2.dp.toPx()
+                drawLine(
+                    color = checkColor,
+                    start = androidx.compose.ui.geometry.Offset(2.5.dp.toPx(), 6.dp.toPx()),
+                    end = androidx.compose.ui.geometry.Offset(5.dp.toPx(), 9.dp.toPx()),
+                    strokeWidth = strokeWidth,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+                drawLine(
+                    color = checkColor,
+                    start = androidx.compose.ui.geometry.Offset(5.dp.toPx(), 9.dp.toPx()),
+                    end = androidx.compose.ui.geometry.Offset(9.5.dp.toPx(), 3.dp.toPx()),
+                    strokeWidth = strokeWidth,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            }
+        }
     }
 }

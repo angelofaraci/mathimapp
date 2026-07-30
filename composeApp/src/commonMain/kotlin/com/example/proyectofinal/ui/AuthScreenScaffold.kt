@@ -22,8 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.jetbrains.compose.resources.painterResource
 import proyectofinal.composeapp.generated.resources.Res
@@ -54,6 +59,8 @@ internal fun AuthScreenScaffold(
             ) {
                 AuthBrand()
                 Spacer(modifier = Modifier.height(26.dp))
+                // Jul 16 handoff: screen title is 27/800 (headlineMedium). The 32/800 in
+                // design/tasks predates the handoff update and is intentionally not used.
                 Text(
                     text = formTitle,
                     style = MaterialTheme.typography.headlineMedium,
@@ -85,7 +92,8 @@ private fun AuthBrand() {
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.outlineVariant,
-                    shape = RoundedCornerShape(AppThemeDefaults.shapes.card)
+                    // Brand mark card: 16dp per the Jul 16 handoff, decoupled from the 18dp card token.
+                    shape = RoundedCornerShape(AppThemeDefaults.shapes.button)
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -96,11 +104,22 @@ private fun AuthBrand() {
             )
         }
         Spacer(modifier = Modifier.width(11.dp))
+        // Handoff wordmark: 22sp/800 with -0.02em tracking, "Mathim" ink + "App" muted/500.
         Text(
-            text = "MathimApp",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append("Mathim") }
+                withStyle(
+                    SpanStyle(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                ) { append("App") }
+            },
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 22.sp,
+                letterSpacing = (-0.02).em
+            ),
+            fontWeight = FontWeight.ExtraBold
         )
     }
 }

@@ -15,9 +15,11 @@ fun AppTheme(content: @Composable () -> Unit) {
             colorScheme = AppLightColorScheme,
             typography = AppTypography,
             shapes = Shapes(
+                extraSmall = RoundedCornerShape(shapeTokens.checkbox),
                 small = RoundedCornerShape(shapeTokens.field),
                 medium = RoundedCornerShape(shapeTokens.button),
-                large = RoundedCornerShape(shapeTokens.card)
+                large = RoundedCornerShape(shapeTokens.card),
+                extraLarge = RoundedCornerShape(shapeTokens.pill)
             ),
             content = content
         )

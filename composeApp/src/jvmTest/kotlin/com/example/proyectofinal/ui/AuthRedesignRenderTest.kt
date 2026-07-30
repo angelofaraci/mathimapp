@@ -1,0 +1,109 @@
+package com.example.proyectofinal.ui
+
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
+import com.example.proyectofinal.ui.theme.AppTheme
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import org.junit.Rule
+import org.junit.Test
+
+/**
+ * Render coverage for the `ui-redesign-sync` auth slice (Jul 16 handoff). Asserts the
+ * semantics-observable token changes (step-label copy, 22x22 terms checkbox) and guards
+ * the behavior that must survive the visual sync (footer navigation, terms toggling).
+ */
+class AuthRedesignRenderTest {
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    @Test
+    fun `login renders redesign copy and footer link navigates to register`() {
+        var registerTaps = 0
+
+        composeTestRule.setContent {
+            AppTheme {
+                LoginScreen(
+                    viewModel = LoginViewModel(FakeAuthRepository()),
+                    onSwitchToRegister = { registerTaps++ }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Hola de nuevo").assertExists()
+        composeTestRule.onNodeWithText("¿Olvidaste tu contraseña?").assertExists()
+        composeTestRule.onNodeWithText("Iniciar sesión").assertExists()
+        composeTestRule.onNodeWithText("o continuá con").assertExists()
+        composeTestRule.onNodeWithText("Google").assertExists()
+        composeTestRule.onNodeWithText("Apple").assertExists()
+        composeTestRule.onNodeWithText("¿No tenés cuenta?", substring = true).assertExists()
+
+        composeTestRule.onNodeWithText("Registrate").assertExists().performClick()
+
+        assertEquals(1, registerTaps)
+    }
+
+    @Test
+    fun `register step label uses handoff copy and follows the wizard step`() {
+        val viewModel = RegisterViewModel(FakeAuthRepository())
+
+        composeTestRule.setContent {
+            AppTheme {
+                RegisterScreen(viewModel = viewModel)
+            }
+        }
+
+        composeTestRule.onNodeWithText("Paso 1 / 3").assertExists()
+
+        composeTestRule.runOnIdle {
+            viewModel.onNameChange("Ana")
+            viewModel.continueStep()
+        }
+
+        composeTestRule.onNodeWithText("Paso 1 / 3").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Paso 2 / 3").assertExists()
+    }
+
+    @Test
+    fun `terms checkbox is 22 by 22 dp and toggles acceptance from the row`() {
+        val viewModel = RegisterViewModel(FakeAuthRepository()).apply {
+            onNameChange("Ana")
+            continueStep()
+            onEmailChange("ana@correo.com")
+            onPasswordChange("Password1!")
+            continueStep()
+        }
+
+        composeTestRule.setContent {
+            AppTheme {
+                RegisterScreen(viewModel = viewModel)
+            }
+        }
+
+        composeTestRule.onNodeWithText("Paso 3 / 3").assertExists()
+        // The toggleable row merges its descendants; the tagged box only exists in the unmerged tree.
+        composeTestRule.onNodeWithTag("termsCheckboxBox", useUnmergedTree = true)
+            .assertWidthIsEqualTo(22.dp)
+            .assertHeightIsEqualTo(22.dp)
+
+        val checkbox = composeTestRule.onNode(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox)
+        )
+        checkbox.assertExists().assertIsOff()
+
+        checkbox.performClick()
+
+        checkbox.assertIsOn()
+        assertTrue(viewModel.uiState.value.acceptedTerms)
+    }
+}

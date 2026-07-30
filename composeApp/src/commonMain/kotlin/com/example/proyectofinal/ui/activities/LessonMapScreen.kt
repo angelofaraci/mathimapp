@@ -1,30 +1,44 @@
 package com.example.proyectofinal.ui.activities
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,9 +52,15 @@ import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MCard
+import com.example.proyectofinal.ui.primitives.MLinearProgressIndicator
 import com.example.proyectofinal.ui.primitives.MProgressIndicator
 import com.example.proyectofinal.ui.primitives.MTextField
+import com.example.proyectofinal.ui.theme.AppThemeDefaults
+import com.example.proyectofinal.ui.theme.BrandLock
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.ic_arrow_left
 
 @Composable
 fun LessonMapScreen(
@@ -129,54 +149,46 @@ internal fun LessonMapContent(
                     modifier = modifier
                 )
             } else {
-                Column(
-                    modifier = modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    LessonMapHeader(
-                        title = lessonMap.lesson.title,
-                        totalExercises = lessonMap.exercises.size,
-                        completedExercises = uiState.nodes.count { it.state == LessonNodeState.Completed }
-                    )
-
-                    MButton(
-                        onClick = onOpenTheory,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = uiState.isTheoryAvailable,
-                        style = MButtonStyle.Outline
+                Column(modifier = modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
                     ) {
-                        Text("View theory")
-                    }
-
-                    uiState.exerciseFeedback?.let { feedback ->
-                        Text(
-                            text = feedback.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = feedbackColor(feedback.tone),
-                            fontStyle = FontStyle.Italic
+                        Spacer(Modifier.height(20.dp))
+                        LessonMapHeader(
+                            title = lessonMap.lesson.title,
+                            totalExercises = uiState.nodes.size,
+                            isTheoryAvailable = uiState.isTheoryAvailable,
+                            onBack = onShowHome,
+                            onOpenTheory = onOpenTheory
                         )
-                    }
-
-                    uiState.activeNode?.let { activeNode ->
-                        ActiveExerciseCard(activeNode)
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        uiState.nodes.forEachIndexed { index, node ->
-                            LessonMapNode(
-                                node = node,
-                                onClick = { onExerciseSelected(node.exercise.id) }
+                        Spacer(Modifier.height(20.dp))
+                        LessonMapProgress(nodes = uiState.nodes)
+                        uiState.exerciseFeedback?.let { feedback ->
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = feedback.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = feedbackColor(feedback.tone),
+                                fontStyle = FontStyle.Italic
                             )
-
-                            if (index < uiState.nodes.lastIndex) {
-                                LessonMapConnector(
-                                    isOpenPath = node.state != LessonNodeState.Locked
-                                )
-                            }
                         }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        Spacer(Modifier.height(24.dp))
+                        LessonMapPath(
+                            nodes = uiState.nodes,
+                            onNodeClick = { node -> onExerciseSelected(node.exercise.id) }
+                        )
+                        Spacer(Modifier.height(32.dp))
                     }
                 }
             }
@@ -412,87 +424,172 @@ private fun feedbackColor(tone: ExerciseFeedbackTone) = when (tone) {
     ExerciseFeedbackTone.Error -> MaterialTheme.colorScheme.error
 }
 
+// Serpentine geometry per design.md: 120dp vertical step, node centers y = i*120+60dp,
+// alternating x at 72dp from each edge. Parity is read on the node's 1-based index so the
+// first node sits on the right, matching the authoritative mapa-leccion.png (design's
+// "even -> left, odd -> right" wording holds against that index).
+private const val PathStepDp = 120
+private const val NodeCenterXDp = 72
+
 @Composable
 private fun LessonMapHeader(
     title: String,
     totalExercises: Int,
-    completedExercises: Int
+    isTheoryAvailable: Boolean,
+    onBack: () -> Unit,
+    onOpenTheory: () -> Unit
 ) {
-    MCard(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .semantics { contentDescription = "Volver" }
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Activities",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+            Icon(
+                painter = painterResource(Res.drawable.ic_arrow_left),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(20.dp)
             )
+        }
+        Spacer(Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.headlineSmall
             )
             Text(
-                text = "Move one exercise at a time. Theory stays available for the whole lesson.",
+                text = "$totalExercises Lecciones",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Surface(
+            shape = RoundedCornerShape(AppThemeDefaults.shapes.pill),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .testTag("theoryPill")
+                .clip(RoundedCornerShape(AppThemeDefaults.shapes.pill))
+                .clickable(enabled = isTheoryAvailable, onClick = onOpenTheory)
+                .alpha(if (isTheoryAvailable) 1f else 0.5f)
+        ) {
+            Text(
+                text = "Ver teoría",
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+    }
+}
+
+@Composable
+private fun LessonMapProgress(nodes: List<LessonMapNodeUiModel>) {
+    val total = nodes.size
+    val completed = nodes.count { it.state == LessonNodeState.Completed }
+    // Percent is derived from node state; the PNG's "45%" at 3/8 is mock math (3/8 = 37%).
+    val percent = if (total > 0) completed * 100 / total else 0
+    val progress = if (total > 0) completed.toFloat() / total else 0f
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        MLinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$percent% Completado",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Text(
+                text = "$completed/$total Lecciones",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = "$completedExercises of $totalExercises exercises completed",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary
-            )
         }
     }
 }
 
 @Composable
-private fun ActiveExerciseCard(node: LessonMapNodeUiModel) {
-    MCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = if (node.state == LessonNodeState.Current) "Current exercise" else "Next available exercise",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary
-            )
-            Text(
-                text = node.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Text(
-                text = node.summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.82f)
-            )
-        }
-    }
-}
+private fun LessonMapPath(
+    nodes: List<LessonMapNodeUiModel>,
+    onNodeClick: (LessonMapNodeUiModel) -> Unit
+) {
+    if (nodes.isEmpty()) return
 
-@Composable
-private fun LessonMapConnector(isOpenPath: Boolean) {
-    Box(
+    val completedColor = MaterialTheme.colorScheme.secondary
+    val actionableColor = MaterialTheme.colorScheme.primary
+
+    BoxWithConstraints(
         modifier = Modifier
-            .padding(start = 21.dp)
-            .width(2.dp)
-            .height(18.dp)
-            .background(
-                color = if (isOpenPath) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
-                } else {
-                    MaterialTheme.colorScheme.outlineVariant
+            .fillMaxWidth()
+            .height((nodes.size * PathStepDp).dp)
+    ) {
+        val width = maxWidth
+
+        Canvas(
+            modifier = Modifier
+                .matchParentSize()
+                .testTag("lessonMapPath")
+        ) {
+            val strokeWidth = 4.dp.toPx()
+            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 6.dp.toPx()))
+            val leftCenterX = NodeCenterXDp.dp.toPx()
+            val rightCenterX = size.width - NodeCenterXDp.dp.toPx()
+
+            fun centerX(nodeIndex: Int) = if (nodeIndex % 2 == 0) leftCenterX else rightCenterX
+
+            // Dash rule per mapa-leccion.png: a segment is dashed when the node it runs INTO is
+            // locked; solid teal after a completed node; solid coral otherwise.
+            for (i in 0 until nodes.lastIndex) {
+                val from = nodes[i]
+                val to = nodes[i + 1]
+                val dashed = to.state == LessonNodeState.Locked
+                val color = when {
+                    dashed -> BrandLock
+                    from.state == LessonNodeState.Completed -> completedColor
+                    else -> actionableColor
                 }
+                drawLine(
+                    color = color,
+                    start = Offset(centerX(from.index), (i * PathStepDp + PathStepDp / 2).dp.toPx()),
+                    end = Offset(centerX(to.index), ((i + 1) * PathStepDp + PathStepDp / 2).dp.toPx()),
+                    strokeWidth = strokeWidth,
+                    cap = StrokeCap.Round,
+                    pathEffect = if (dashed) dashEffect else null
+                )
+            }
+        }
+
+        nodes.forEach { node ->
+            val isLeft = node.index % 2 == 0
+            LessonMapNode(
+                node = node,
+                onClick = { onNodeClick(node) },
+                modifier = Modifier.absoluteOffset(
+                    x = if (isLeft) {
+                        (NodeCenterXDp - LessonNodeSizeDp / 2).dp
+                    } else {
+                        width - (NodeCenterXDp + LessonNodeSizeDp / 2).dp
+                    },
+                    y = ((node.index - 1) * PathStepDp + (PathStepDp - LessonNodeSizeDp) / 2).dp
+                )
             )
-    )
+        }
+    }
 }
