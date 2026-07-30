@@ -2,6 +2,7 @@ package com.example.proyectofinal
 
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.EnumColumnAdapter
+import com.example.proyectofinal.data.KtorCourseRepository
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.db.CourseEntity
 import com.example.proyectofinal.db.ExerciseEntity
@@ -51,7 +52,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppModuleTest {
@@ -68,7 +71,30 @@ class AppModuleTest {
     }
 
     @Test
-    fun `app module resolves http client course repository and course view model`() = runTest(dispatcher) {
+    fun `app module wires http client and ktor course repository`() {
+        val koinApp = koinApplication {
+            allowOverride(true)
+            modules(
+                appModule,
+                module {
+                    single { createTestAppDatabase() }
+                }
+            )
+        }
+
+        try {
+            val koin = koinApp.koin
+
+            assertNotNull(koin.get<HttpClient>())
+            assertIs<KtorCourseRepository>(koin.get<CourseRepository>())
+        } finally {
+            koinApp.close()
+        }
+    }
+
+    @Test
+    fun `app module resolves view models with controlled course repository`() = runTest(dispatcher) {
+        val controlledCourseRepository = FakeCourseRepository { emptyList() }
         val koinApp = koinApplication {
             allowOverride(true)
             modules(
@@ -77,6 +103,7 @@ class AppModuleTest {
                     single { createTestAppDatabase() }
                     single<AuthRepository> { AppModuleTestAuthRepository }
                     single<UserRepository> { AppModuleTestUserRepository }
+                    single<CourseRepository> { controlledCourseRepository }
                     single<LessonRepository> { AppModuleTestLessonRepository }
                     single<ExerciseRepository> { AppModuleTestExerciseRepository }
                     single<LearnerProfileRepository> { FakeLearnerProfileRepository(7) }
@@ -87,14 +114,19 @@ class AppModuleTest {
         try {
             val koin = koinApp.koin
 
-            assertNotNull(koin.get<HttpClient>())
-            assertNotNull(koin.get<CourseRepository>())
-            assertNotNull(koin.get<CourseViewModel>())
-            assertNotNull(koin.get<LessonMapViewModel>())
-            assertNotNull(koin.get<ProfileViewModel>())
+            assertSame(controlledCourseRepository, koin.get<CourseRepository>())
+            val courseViewModel = koin.get<CourseViewModel>()
+            val lessonMapViewModel = koin.get<LessonMapViewModel>()
+            val profileViewModel = koin.get<ProfileViewModel>()
             advanceUntilIdle()
+
+            assertNotNull(courseViewModel)
+            assertNotNull(lessonMapViewModel)
+            assertNotNull(profileViewModel)
         } finally {
+            advanceUntilIdle()
             koinApp.close()
+            advanceUntilIdle()
         }
     }
 }
