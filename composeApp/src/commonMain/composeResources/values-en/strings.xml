@@ -11,10 +11,10 @@
     <string name="onboarding_summary_category">Category: %1$s</string>
     <string name="onboarding_step1_title">1. Choose your province</string>
     <string name="onboarding_step1_description">Your province determines the valid school-year boundaries.</string>
-    <string name="onboarding_step2_title">2. Choose your school year</string>
-    <string name="onboarding_step2_description">Available years already reflect the selected province structure.</string>
-    <string name="onboarding_step3_title">3. Choose your category</string>
-    <string name="onboarding_step3_description">All four categories are shown. Only the valid ones for the chosen year are enabled.</string>
+    <string name="onboarding_step2_title">2. Choose your category</string>
+    <string name="onboarding_step2_description">All four categories are shown and available regardless of province.</string>
+    <string name="onboarding_step3_title">3. Choose your school year</string>
+    <string name="onboarding_step3_description">Available years reflect the selected province and category.</string>
     <string name="onboarding_step4_title">4. Confirm your profile</string>
     <string name="onboarding_step4_description">Review the selected province, school year, and category before continuing to courses.</string>
     <string name="onboarding_track_unavailable">Not available for the selected school year</string>

@@ -99,6 +99,9 @@ object ProvinceSchoolCatalog {
         }
     }
 
+    fun schoolYearOptionsFor(province: String, track: StudentTrack): List<SchoolYearOption> =
+        schoolYearOptionsFor(province).filter { option -> track in option.allowedTracks }
+
     fun allowedTracksFor(province: String, schoolYear: Int): Set<StudentTrack> =
         schoolYearOptionsFor(province)
             .firstOrNull { option -> option.schoolYear == schoolYear }

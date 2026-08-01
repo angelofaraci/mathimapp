@@ -11,10 +11,10 @@
     <string name="onboarding_summary_category">Categoría: %1$s</string>
     <string name="onboarding_step1_title">1. Elige tu provincia</string>
     <string name="onboarding_step1_description">Tu provincia determina los años escolares válidos.</string>
-    <string name="onboarding_step2_title">2. Elige tu año escolar</string>
-    <string name="onboarding_step2_description">Los años disponibles ya reflejan la estructura de la provincia seleccionada.</string>
-    <string name="onboarding_step3_title">3. Elige tu categoría</string>
-    <string name="onboarding_step3_description">Se muestran las cuatro categorías. Solo se habilitan las válidas para el año elegido.</string>
+    <string name="onboarding_step2_title">2. Elige tu categoría</string>
+    <string name="onboarding_step2_description">Se muestran las cuatro categorías y todas están disponibles sin importar la provincia.</string>
+    <string name="onboarding_step3_title">3. Elige tu año escolar</string>
+    <string name="onboarding_step3_description">Los años disponibles reflejan la provincia y la categoría seleccionadas.</string>
     <string name="onboarding_step4_title">4. Confirma tu perfil</string>
     <string name="onboarding_step4_description">Revisa la provincia, el año escolar y la categoría antes de continuar a los cursos.</string>
     <string name="onboarding_track_unavailable">No disponible para el año escolar seleccionado</string>

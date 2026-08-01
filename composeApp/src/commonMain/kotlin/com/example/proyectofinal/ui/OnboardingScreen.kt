@@ -131,17 +131,17 @@ internal fun OnboardingContent(
                     enabled = !state.isSaving
                 )
 
-                OnboardingStep.SCHOOL_YEAR -> SchoolYearStep(
-                    schoolYears = state.availableSchoolYears,
-                    selectedSchoolYear = state.selectedSchoolYear,
-                    onSchoolYearSelected = onSchoolYearSelected,
-                    enabled = !state.isSaving
-                )
-
                 OnboardingStep.CATEGORY -> CategoryStep(
                     trackOptions = state.trackOptions,
                     selectedTrack = state.selectedTrack,
                     onTrackSelected = onTrackSelected,
+                    enabled = !state.isSaving
+                )
+
+                OnboardingStep.SCHOOL_YEAR -> SchoolYearStep(
+                    schoolYears = state.availableSchoolYears,
+                    selectedSchoolYear = state.selectedSchoolYear,
+                    onSchoolYearSelected = onSchoolYearSelected,
                     enabled = !state.isSaving
                 )
 
@@ -178,8 +178,8 @@ internal fun OnboardingContent(
 private fun hasCurrentStepSelection(state: OnboardingUiState): Boolean =
     when (state.currentStep) {
         OnboardingStep.PROVINCE -> state.selectedProvince != null
-        OnboardingStep.SCHOOL_YEAR -> state.selectedSchoolYear != null
         OnboardingStep.CATEGORY -> state.selectedTrack != null
+        OnboardingStep.SCHOOL_YEAR -> state.selectedSchoolYear != null
         OnboardingStep.CONFIRMATION -> false
     }
 
@@ -259,8 +259,8 @@ private fun SchoolYearStep(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StepTitle(
-            title = stringResource(Res.string.onboarding_step2_title),
-            description = stringResource(Res.string.onboarding_step2_description)
+            title = stringResource(Res.string.onboarding_step3_title),
+            description = stringResource(Res.string.onboarding_step3_description)
         )
 
         LazyColumn(
@@ -292,8 +292,8 @@ private fun CategoryStep(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StepTitle(
-            title = stringResource(Res.string.onboarding_step3_title),
-            description = stringResource(Res.string.onboarding_step3_description)
+            title = stringResource(Res.string.onboarding_step2_title),
+            description = stringResource(Res.string.onboarding_step2_description)
         )
 
         LazyColumn(

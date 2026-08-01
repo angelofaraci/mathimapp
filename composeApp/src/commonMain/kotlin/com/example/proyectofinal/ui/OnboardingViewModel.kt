@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 
 enum class OnboardingStep {
     PROVINCE,
-    SCHOOL_YEAR,
     CATEGORY,
+    SCHOOL_YEAR,
     CONFIRMATION
 }
 
@@ -56,11 +56,30 @@ class OnboardingViewModel(
         }
 
         _uiState.value = _uiState.value.copy(
-            availableSchoolYears = schoolYears,
-            trackOptions = defaultTrackOptions(),
+            trackOptions = buildTrackOptions(StudentTrack.entries.toSet()),
             selectedProvince = province,
-            selectedSchoolYear = null,
             selectedTrack = null,
+            selectedSchoolYear = null,
+            availableSchoolYears = emptyList(),
+            errorMessage = null
+        )
+    }
+
+    fun selectTrack(track: StudentTrack) {
+        val state = _uiState.value
+        val province = state.selectedProvince
+
+        if (province == null || track !in StudentTrack.entries) {
+            _uiState.value = state.copy(
+                errorMessage = "Selected category is not available"
+            )
+            return
+        }
+
+        _uiState.value = state.copy(
+            selectedTrack = track,
+            availableSchoolYears = ProvinceSchoolCatalog.schoolYearOptionsFor(province, track),
+            selectedSchoolYear = null,
             errorMessage = null
         )
     }
@@ -78,27 +97,6 @@ class OnboardingViewModel(
 
         _uiState.value = state.copy(
             selectedSchoolYear = schoolYear,
-            selectedTrack = null,
-            trackOptions = buildTrackOptions(selectedOption.allowedTracks),
-            errorMessage = null
-        )
-    }
-
-    fun selectTrack(track: StudentTrack) {
-        val state = _uiState.value
-        val enabledTrack = state.trackOptions.firstOrNull { option ->
-            option.track == track && option.enabled
-        }
-
-        if (enabledTrack == null) {
-            _uiState.value = state.copy(
-                errorMessage = "Selected category is not available for this school year"
-            )
-            return
-        }
-
-        _uiState.value = state.copy(
-            selectedTrack = track,
             errorMessage = null
         )
     }
@@ -110,6 +108,21 @@ class OnboardingViewModel(
                 val province = state.selectedProvince
                 if (province == null || ProvinceSchoolCatalog.schoolYearOptionsFor(province).isEmpty()) {
                     _uiState.value = state.copy(errorMessage = "Select a valid province")
+                    return
+                }
+
+                _uiState.value = state.copy(
+                    currentStep = OnboardingStep.CATEGORY,
+                    errorMessage = null
+                )
+            }
+
+            OnboardingStep.CATEGORY -> {
+                val track = state.selectedTrack
+                if (track == null) {
+                    _uiState.value = state.copy(
+                        errorMessage = "Selected category is not available"
+                    )
                     return
                 }
 
@@ -127,21 +140,6 @@ class OnboardingViewModel(
                 }
 
                 _uiState.value = state.copy(
-                    currentStep = OnboardingStep.CATEGORY,
-                    errorMessage = null
-                )
-            }
-
-            OnboardingStep.CATEGORY -> {
-                val track = state.selectedTrack
-                if (track == null || state.trackOptions.none { it.track == track && it.enabled }) {
-                    _uiState.value = state.copy(
-                        errorMessage = "Selected category is not available for this school year"
-                    )
-                    return
-                }
-
-                _uiState.value = state.copy(
                     currentStep = OnboardingStep.CONFIRMATION,
                     errorMessage = null
                 )
@@ -155,19 +153,22 @@ class OnboardingViewModel(
         val state = _uiState.value
         _uiState.value = when (state.currentStep) {
             OnboardingStep.PROVINCE -> state
-            OnboardingStep.SCHOOL_YEAR -> state.copy(
+            OnboardingStep.CATEGORY -> state.copy(
                 currentStep = OnboardingStep.PROVINCE,
+                selectedTrack = null,
+                availableSchoolYears = emptyList(),
+                selectedSchoolYear = null,
                 errorMessage = null
             )
 
-            OnboardingStep.CATEGORY -> state.copy(
-                currentStep = OnboardingStep.SCHOOL_YEAR,
-                selectedTrack = null,
+            OnboardingStep.SCHOOL_YEAR -> state.copy(
+                currentStep = OnboardingStep.CATEGORY,
+                selectedSchoolYear = null,
                 errorMessage = null
             )
 
             OnboardingStep.CONFIRMATION -> state.copy(
-                currentStep = OnboardingStep.CATEGORY,
+                currentStep = OnboardingStep.SCHOOL_YEAR,
                 errorMessage = null
             )
         }
@@ -228,8 +229,6 @@ class OnboardingViewModel(
             }
         }
     }
-
-    private fun defaultTrackOptions(): List<OnboardingTrackOption> = buildTrackOptions(emptySet())
 
     private fun buildTrackOptions(allowedTracks: Set<StudentTrack>): List<OnboardingTrackOption> =
         StudentTrack.entries.map { track ->
