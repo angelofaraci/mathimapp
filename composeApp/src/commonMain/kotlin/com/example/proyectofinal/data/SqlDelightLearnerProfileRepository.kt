@@ -12,8 +12,10 @@ class SqlDelightLearnerProfileRepository(
     private val database: AppDatabase
 ) : LearnerProfileRepository {
 
-    override suspend fun getProfile(): LearnerProfile? = withContext(Dispatchers.IO) {
-        database.appDatabaseQueries.selectProfile().executeAsOneOrNull()?.let { entity ->
+    override suspend fun getProfile(userId: String): LearnerProfile? = withContext(Dispatchers.IO) {
+        if (userId.isBlank()) return@withContext null
+
+        database.appDatabaseQueries.selectProfile(userId).executeAsOneOrNull()?.let { entity ->
             LearnerProfile(
                 province = entity.province,
                 schoolYear = entity.schoolYear.toInt(),
@@ -24,15 +26,20 @@ class SqlDelightLearnerProfileRepository(
         }
     }
 
-    override suspend fun isOnboardingComplete(): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun isOnboardingComplete(userId: String): Boolean = withContext(Dispatchers.IO) {
+        if (userId.isBlank()) return@withContext false
+
         database.appDatabaseQueries
-            .selectProfile()
+            .selectProfile(userId)
             .executeAsOneOrNull()
             ?.onboardingComplete == true
     }
 
-    override suspend fun upsertProfile(profile: LearnerProfile) = withContext(Dispatchers.IO) {
+    override suspend fun upsertProfile(userId: String, profile: LearnerProfile) = withContext(Dispatchers.IO) {
+        if (userId.isBlank()) return@withContext
+
         database.appDatabaseQueries.upsertProfile(
+            userId = userId,
             province = profile.province,
             schoolYear = profile.schoolYear.toLong(),
             studentTrack = profile.studentTrack.displayName,

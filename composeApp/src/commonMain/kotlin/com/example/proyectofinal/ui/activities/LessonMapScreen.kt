@@ -58,9 +58,25 @@ import com.example.proyectofinal.ui.primitives.MTextField
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import com.example.proyectofinal.ui.theme.BrandLock
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.ic_arrow_left
+import proyectofinal.composeapp.generated.resources.lesson_map_action_back_to_map
+import proyectofinal.composeapp.generated.resources.lesson_map_action_checking_answer
+import proyectofinal.composeapp.generated.resources.lesson_map_action_go_home
+import proyectofinal.composeapp.generated.resources.lesson_map_action_retry
+import proyectofinal.composeapp.generated.resources.lesson_map_action_submit_answer
+import proyectofinal.composeapp.generated.resources.lesson_map_action_try_again
+import proyectofinal.composeapp.generated.resources.lesson_map_action_view_theory
+import proyectofinal.composeapp.generated.resources.lesson_map_answer_label
+import proyectofinal.composeapp.generated.resources.lesson_map_back_content_description
+import proyectofinal.composeapp.generated.resources.lesson_map_exercise_numbered
+import proyectofinal.composeapp.generated.resources.lesson_map_exercise_unnumbered
+import proyectofinal.composeapp.generated.resources.lesson_map_exercise_unsupported
+import proyectofinal.composeapp.generated.resources.lesson_map_header_lessons_count
+import proyectofinal.composeapp.generated.resources.lesson_map_progress_lessons
+import proyectofinal.composeapp.generated.resources.lesson_map_progress_percent
 
 @Composable
 fun LessonMapScreen(
@@ -122,10 +138,10 @@ internal fun LessonMapContent(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 MButton(onClick = onRetry) {
-                    Text("Retry")
+                    Text(stringResource(Res.string.lesson_map_action_retry))
                 }
                 MButton(onClick = onShowHome, style = MButtonStyle.Outline) {
-                    Text("Go to Home")
+                    Text(stringResource(Res.string.lesson_map_action_go_home))
                 }
             }
         }
@@ -228,7 +244,7 @@ private fun ExercisePlayerContent(
             onClick = onBack,
             style = MButtonStyle.Outline
         ) {
-            Text("Back to lesson map")
+            Text(stringResource(Res.string.lesson_map_action_back_to_map))
         }
 
         MCard(
@@ -240,7 +256,9 @@ private fun ExercisePlayerContent(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = exerciseNumber?.let { "Exercise $it" } ?: "Exercise",
+                    text = exerciseNumber?.let {
+                        stringResource(Res.string.lesson_map_exercise_numbered, it)
+                    } ?: stringResource(Res.string.lesson_map_exercise_unnumbered),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -276,9 +294,9 @@ private fun ExercisePlayerContent(
         ) {
             Text(
                 when (phase) {
-                    ActiveExercisePhase.Submitting -> "Checking answer..."
-                    ActiveExercisePhase.RetryReady -> "Try again"
-                    ActiveExercisePhase.Drafting -> "Submit answer"
+                    ActiveExercisePhase.Submitting -> stringResource(Res.string.lesson_map_action_checking_answer)
+                    ActiveExercisePhase.RetryReady -> stringResource(Res.string.lesson_map_action_try_again)
+                    ActiveExercisePhase.Drafting -> stringResource(Res.string.lesson_map_action_submit_answer)
                 }
             )
         }
@@ -317,7 +335,7 @@ private fun ExerciseAnswerSection(
                 value = draft.value,
                 onValueChange = onInputValueChanged,
                 singleLine = true,
-                label = { Text("Answer") },
+                label = { Text(stringResource(Res.string.lesson_map_answer_label)) },
                 placeholder = payload.placeholder?.let { placeholder -> { Text(placeholder) } }
             )
         }
@@ -346,7 +364,7 @@ private fun ExerciseAnswerSection(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
             ) {
                 Text(
-                    text = "This exercise type is not supported in this app version.",
+                    text = stringResource(Res.string.lesson_map_exercise_unsupported),
                     modifier = Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium
@@ -439,6 +457,7 @@ private fun LessonMapHeader(
     onBack: () -> Unit,
     onOpenTheory: () -> Unit
 ) {
+    val backContentDescription = stringResource(Res.string.lesson_map_back_content_description)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -448,7 +467,7 @@ private fun LessonMapHeader(
                 .size(38.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .semantics { contentDescription = "Volver" }
+                .semantics { contentDescription = backContentDescription }
                 .clickable(onClick = onBack),
             contentAlignment = Alignment.Center
         ) {
@@ -466,7 +485,7 @@ private fun LessonMapHeader(
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(
-                text = "$totalExercises Lecciones",
+                text = stringResource(Res.string.lesson_map_header_lessons_count, totalExercises),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -481,7 +500,7 @@ private fun LessonMapHeader(
                 .alpha(if (isTheoryAvailable) 1f else 0.5f)
         ) {
             Text(
-                text = "Ver teoría",
+                text = stringResource(Res.string.lesson_map_action_view_theory),
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
@@ -512,12 +531,12 @@ private fun LessonMapProgress(nodes: List<LessonMapNodeUiModel>) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$percent% Completado",
+                text = stringResource(Res.string.lesson_map_progress_percent, percent),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
             Text(
-                text = "$completed/$total Lecciones",
+                text = stringResource(Res.string.lesson_map_progress_lessons, completed, total),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

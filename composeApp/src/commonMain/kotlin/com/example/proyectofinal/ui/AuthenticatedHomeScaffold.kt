@@ -16,7 +16,12 @@ import com.example.proyectofinal.ui.activities.LessonMapScreen
 import com.example.proyectofinal.ui.home.HomeDashboardScreen
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.nav_tab_activities
+import proyectofinal.composeapp.generated.resources.nav_tab_home
+import proyectofinal.composeapp.generated.resources.nav_tab_profile
+import proyectofinal.composeapp.generated.resources.nav_tab_progress
 import proyectofinal.composeapp.generated.resources.tab_activities
 import proyectofinal.composeapp.generated.resources.tab_home
 import proyectofinal.composeapp.generated.resources.tab_profile
@@ -34,7 +39,7 @@ fun AuthenticatedHomeScaffold(
     Scaffold(
         bottomBar = {
             NavigationBar {
-                mainDestinations.forEach { destination ->
+                mainDestinations().forEach { destination ->
                     NavigationBarItem(
                         selected = selectedTab == destination.tab,
                         onClick = { router.select(destination.tab) },
@@ -58,7 +63,7 @@ fun AuthenticatedHomeScaffold(
             when (selectedTab) {
                 MainTab.HOME -> HomeDashboardScreen(router = router, onLogout = onLogoutAndReset)
                 MainTab.ACTIVITIES -> LessonMapScreen(onShowHome = router::showHome)
-                MainTab.PROGRESS -> PlaceholderScreen(title = "Progreso")
+                MainTab.PROGRESS -> PlaceholderScreen(title = stringResource(Res.string.nav_tab_progress))
                 MainTab.PROFILE -> ProfileScreen(onLogout = onLogoutAndReset)
             }
         }
@@ -79,9 +84,10 @@ private data class MainDestination(
     val icon: DrawableResource
 )
 
-private val mainDestinations = listOf(
-    MainDestination(MainTab.HOME, "Inicio", Res.drawable.tab_home),
-    MainDestination(MainTab.ACTIVITIES, "Actividades", Res.drawable.tab_activities),
-    MainDestination(MainTab.PROGRESS, "Progreso", Res.drawable.tab_progress),
-    MainDestination(MainTab.PROFILE, "Perfil", Res.drawable.tab_profile)
+@Composable
+private fun mainDestinations() = listOf(
+    MainDestination(MainTab.HOME, stringResource(Res.string.nav_tab_home), Res.drawable.tab_home),
+    MainDestination(MainTab.ACTIVITIES, stringResource(Res.string.nav_tab_activities), Res.drawable.tab_activities),
+    MainDestination(MainTab.PROGRESS, stringResource(Res.string.nav_tab_progress), Res.drawable.tab_progress),
+    MainDestination(MainTab.PROFILE, stringResource(Res.string.nav_tab_profile), Res.drawable.tab_profile)
 )

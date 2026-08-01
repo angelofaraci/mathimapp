@@ -20,3 +20,4 @@ node_modules/
 .atl/
 /admin-web/.env
 /server/.env
+/scripts/configure-android-wsl-portproxy.ps1

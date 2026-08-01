@@ -55,7 +55,8 @@ class ProfileViewModelTest {
             assertEquals("Alice Student", displayName)
             assertEquals("alice@example.com", email)
             assertEquals(UserRole.STUDENT, role)
-            assertEquals("Year 7 • Secondary", schoolYearLabel)
+            assertEquals(7, schoolYear)
+            assertEquals(StudentTrack.SECONDARY, studentTrack)
             assertEquals(3, level)
             assertEquals(50, currentXp)
             assertEquals(100, xpForNextLevel)
@@ -146,7 +147,7 @@ private class FakeUserRepository(
 }
 
 private class ProfileFakeLearnerProfileRepository : LearnerProfileRepository {
-    override suspend fun getProfile(): LearnerProfile = LearnerProfile("Buenos Aires", 7, StudentTrack.SECONDARY, true)
-    override suspend fun isOnboardingComplete(): Boolean = true
-    override suspend fun upsertProfile(profile: LearnerProfile) = Unit
+    override suspend fun getProfile(userId: String): LearnerProfile = LearnerProfile("Buenos Aires", 7, StudentTrack.SECONDARY, true)
+    override suspend fun isOnboardingComplete(userId: String): Boolean = true
+    override suspend fun upsertProfile(userId: String, profile: LearnerProfile) = Unit
 }

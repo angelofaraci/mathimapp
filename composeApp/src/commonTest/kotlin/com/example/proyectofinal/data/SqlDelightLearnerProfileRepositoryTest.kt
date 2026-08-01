@@ -31,8 +31,8 @@ class SqlDelightLearnerProfileRepositoryTest {
 
     @Test
     fun `getProfile returns null and onboarding incomplete when profile is missing`() = runTest {
-        assertNull(repository.getProfile())
-        assertFalse(repository.isOnboardingComplete())
+        assertNull(repository.getProfile("user-a"))
+        assertFalse(repository.isOnboardingComplete("user-a"))
     }
 
     @Test
@@ -44,15 +44,16 @@ class SqlDelightLearnerProfileRepositoryTest {
             onboardingComplete = true
         )
 
-        repository.upsertProfile(profile)
+        repository.upsertProfile("user-a", profile)
 
-        assertEquals(profile, repository.getProfile())
-        assertTrue(repository.isOnboardingComplete())
+        assertEquals(profile, repository.getProfile("user-a"))
+        assertTrue(repository.isOnboardingComplete("user-a"))
     }
 
     @Test
     fun `upsertProfile replaces the existing row and preserves self-directed mapping`() = runTest {
         repository.upsertProfile(
+            "user-a",
             LearnerProfile(
                 province = "Córdoba",
                 schoolYear = 6,
@@ -68,16 +69,17 @@ class SqlDelightLearnerProfileRepositoryTest {
             onboardingComplete = true
         )
 
-        repository.upsertProfile(replacement)
+        repository.upsertProfile("user-a", replacement)
 
-        assertEquals(listOf(replacement), repository.getProfile()?.let(::listOf).orEmpty())
-        assertEquals(1, database.appDatabaseQueries.selectProfile().executeAsList().size)
-        assertEquals(StudentTrack.SELF_DIRECTED, repository.getProfile()?.studentTrack)
+        assertEquals(listOf(replacement), repository.getProfile("user-a")?.let(::listOf).orEmpty())
+        assertEquals(1, database.appDatabaseQueries.selectProfile("user-a").executeAsList().size)
+        assertEquals(StudentTrack.SELF_DIRECTED, repository.getProfile("user-a")?.studentTrack)
     }
 
     @Test
     fun `isOnboardingComplete returns false for incomplete persisted profile`() = runTest {
         repository.upsertProfile(
+            "user-a",
             LearnerProfile(
                 province = "Mendoza",
                 schoolYear = 8,
@@ -86,7 +88,135 @@ class SqlDelightLearnerProfileRepositoryTest {
             )
         )
 
-        assertFalse(repository.isOnboardingComplete())
+        assertFalse(repository.isOnboardingComplete("user-a"))
+    }
+
+    @Test
+    fun `different users on the same device get independent rows`() = runTest {
+        val profileA = LearnerProfile(
+            province = "Buenos Aires",
+            schoolYear = 13,
+            studentTrack = StudentTrack.TECHNICAL_SECONDARY,
+            onboardingComplete = true
+        )
+        val profileB = LearnerProfile(
+            province = "Córdoba",
+            schoolYear = 6,
+            studentTrack = StudentTrack.PRIMARY,
+            onboardingComplete = false
+        )
+
+        repository.upsertProfile("user-a", profileA)
+        repository.upsertProfile("user-b", profileB)
+
+        assertEquals(profileA, repository.getProfile("user-a"))
+        assertEquals(profileB, repository.getProfile("user-b"))
+        assertTrue(repository.isOnboardingComplete("user-a"))
+        assertFalse(repository.isOnboardingComplete("user-b"))
+    }
+
+    @Test
+    fun `writing user A profile never flips user B onboarding state`() = runTest {
+        repository.upsertProfile(
+            "user-b",
+            LearnerProfile(
+                province = "Santa Fe",
+                schoolYear = 12,
+                studentTrack = StudentTrack.SELF_DIRECTED,
+                onboardingComplete = true
+            )
+        )
+
+        repository.upsertProfile(
+            "user-a",
+            LearnerProfile(
+                province = "Mendoza",
+                schoolYear = 8,
+                studentTrack = StudentTrack.SECONDARY,
+                onboardingComplete = false
+            )
+        )
+
+        assertTrue(repository.isOnboardingComplete("user-b"))
+        assertFalse(repository.isOnboardingComplete("user-a"))
+    }
+
+    @Test
+    fun `upsertProfile replaces only within one user and keeps row count at one per user`() = runTest {
+        repository.upsertProfile(
+            "user-a",
+            LearnerProfile(
+                province = "Córdoba",
+                schoolYear = 6,
+                studentTrack = StudentTrack.PRIMARY,
+                onboardingComplete = true
+            )
+        )
+        repository.upsertProfile(
+            "user-b",
+            LearnerProfile(
+                province = "Santa Fe",
+                schoolYear = 12,
+                studentTrack = StudentTrack.SELF_DIRECTED,
+                onboardingComplete = true
+            )
+        )
+
+        val replacementA = LearnerProfile(
+            province = "Mendoza",
+            schoolYear = 8,
+            studentTrack = StudentTrack.SECONDARY,
+            onboardingComplete = false
+        )
+        repository.upsertProfile("user-a", replacementA)
+
+        assertEquals(replacementA, repository.getProfile("user-a"))
+        assertEquals(1, database.appDatabaseQueries.selectProfile("user-a").executeAsList().size)
+        assertEquals(1, database.appDatabaseQueries.selectProfile("user-b").executeAsList().size)
+    }
+
+    @Test
+    fun `upsertProfile round-trips every StudentTrack displayName unchanged`() = runTest {
+        StudentTrack.entries.forEachIndexed { index, track ->
+            val userId = "round-trip-user-$index"
+            val profile = LearnerProfile(
+                province = "Buenos Aires",
+                schoolYear = 7,
+                studentTrack = track,
+                onboardingComplete = true
+            )
+
+            repository.upsertProfile(userId, profile)
+
+            val persistedDisplayName = database.appDatabaseQueries
+                .selectProfile(userId)
+                .executeAsOne()
+                .studentTrack
+            assertEquals(track.displayName, persistedDisplayName)
+
+            val reloaded = repository.getProfile(userId)
+            assertEquals(track, reloaded?.studentTrack)
+            assertEquals(track, StudentTrack.parse(persistedDisplayName))
+        }
+    }
+
+    @Test
+    fun `blank userId short-circuits without touching the database`() = runTest {
+        assertNull(repository.getProfile(""))
+        assertFalse(repository.isOnboardingComplete(""))
+
+        repository.upsertProfile(
+            "",
+            LearnerProfile(
+                province = "Buenos Aires",
+                schoolYear = 13,
+                studentTrack = StudentTrack.TECHNICAL_SECONDARY,
+                onboardingComplete = true
+            )
+        )
+
+        assertNull(repository.getProfile(""))
+        assertFalse(repository.isOnboardingComplete(""))
     }
 }
 

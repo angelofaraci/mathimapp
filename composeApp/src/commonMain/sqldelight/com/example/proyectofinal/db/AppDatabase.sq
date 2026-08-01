@@ -63,7 +63,7 @@ CREATE TABLE UserProgressEntity (
 
 -- Learner profile table
 CREATE TABLE LearnerProfileEntity (
-    profileId INTEGER NOT NULL PRIMARY KEY CHECK (profileId = 1),
+    userId TEXT NOT NULL PRIMARY KEY,
     province TEXT NOT NULL,
     schoolYear INTEGER NOT NULL,
     studentTrack TEXT NOT NULL,
@@ -153,14 +153,14 @@ VALUES (?, ?);
 selectProfile:
 SELECT province, schoolYear, studentTrack, onboardingComplete
 FROM LearnerProfileEntity
-WHERE profileId = 1;
+WHERE userId = ?;
 
 upsertProfile:
-INSERT OR REPLACE INTO LearnerProfileEntity(profileId, province, schoolYear, studentTrack, onboardingComplete)
-VALUES (1, ?, ?, ?, ?);
+INSERT OR REPLACE INTO LearnerProfileEntity(userId, province, schoolYear, studentTrack, onboardingComplete)
+VALUES (?, ?, ?, ?, ?);
 
 clearProfile:
-DELETE FROM LearnerProfileEntity WHERE profileId = 1;
+DELETE FROM LearnerProfileEntity WHERE userId = ?;
 
 selectCompletedLessonsByUserId:
 SELECT lessonId FROM CompletedLesson WHERE userId = ?;

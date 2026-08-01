@@ -40,8 +40,29 @@ import com.example.proyectofinal.ui.primitives.MProgressIndicator
 import com.example.proyectofinal.ui.primitives.MTextField
 import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.achievement_placeholder
+import proyectofinal.composeapp.generated.resources.home_join_course_action_join
+import proyectofinal.composeapp.generated.resources.home_join_course_action_joining
+import proyectofinal.composeapp.generated.resources.home_join_course_code_label
+import proyectofinal.composeapp.generated.resources.home_join_course_code_placeholder
+import proyectofinal.composeapp.generated.resources.home_join_course_description
+import proyectofinal.composeapp.generated.resources.home_join_course_title
+import proyectofinal.composeapp.generated.resources.home_level
+import proyectofinal.composeapp.generated.resources.home_continue_learning_illustration_description
+import proyectofinal.composeapp.generated.resources.home_action_go
+import proyectofinal.composeapp.generated.resources.home_action_go_to_map
+import proyectofinal.composeapp.generated.resources.home_action_open_lesson_map
+import proyectofinal.composeapp.generated.resources.home_continue_learning_empty_description
+import proyectofinal.composeapp.generated.resources.home_continue_learning_empty_title
+import proyectofinal.composeapp.generated.resources.home_continue_learning_title
+import proyectofinal.composeapp.generated.resources.home_course_progress_percent
+import proyectofinal.composeapp.generated.resources.home_dashboard_subtitle
+import proyectofinal.composeapp.generated.resources.home_greeting_wave
+import proyectofinal.composeapp.generated.resources.home_in_progress_courses_header
+import proyectofinal.composeapp.generated.resources.home_streak_days
+import proyectofinal.composeapp.generated.resources.home_xp_progress
 import proyectofinal.composeapp.generated.resources.ic_flame
 
 @Composable
@@ -105,7 +126,7 @@ internal fun HomeDashboardContent(
             if (uiState.hasEnrolledCourse) {
                 if (uiState.inProgressCourses.isNotEmpty()) {
                     Text(
-                        text = "MIS CURSOS EN PROGRESO",
+                        text = stringResource(Res.string.home_in_progress_courses_header),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 1.sp
@@ -115,7 +136,7 @@ internal fun HomeDashboardContent(
                     }
                 } else {
                     Text(
-                        text = "Continuar aprendiendo",
+                        text = stringResource(Res.string.home_continue_learning_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -126,7 +147,7 @@ internal fun HomeDashboardContent(
                     modifier = Modifier.fillMaxWidth(),
                     style = MButtonStyle.Outline
                 ) {
-                    Text("Abrir mapa de lecciones")
+                    Text(stringResource(Res.string.home_action_open_lesson_map))
                 }
             } else {
                 JoinCourseCard(
@@ -149,7 +170,7 @@ private fun DashboardHeader(greeting: String, streak: Int) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$greeting 👋",
+                text = stringResource(Res.string.home_greeting_wave, greeting),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f)
             )
@@ -158,7 +179,7 @@ private fun DashboardHeader(greeting: String, streak: Int) {
             }
         }
         Text(
-            text = "¡Es hora de practicar hoy!",
+            text = stringResource(Res.string.home_dashboard_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -184,7 +205,7 @@ private fun StreakPill(streak: Int) {
                 modifier = Modifier.size(14.dp)
             )
             Text(
-                text = "+$streak días",
+                text = stringResource(Res.string.home_streak_days, streak),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimary
@@ -202,9 +223,9 @@ private fun ProgressSummaryCard(level: Int, currentXp: Int, xpForNextLevel: Int)
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Nivel $level", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.home_level, level), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "$currentXp / $xpForNextLevel XP",
+                    text = stringResource(Res.string.home_xp_progress, currentXp, xpForNextLevel),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -242,7 +263,7 @@ private fun CourseProgressCard(course: HomeCourseProgress, onOpenLessonMap: () -
             Column(modifier = Modifier.weight(1f)) {
                 Text(course.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "Progreso: ${course.progressPercent}%",
+                    text = stringResource(Res.string.home_course_progress_percent, course.progressPercent),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -253,7 +274,7 @@ private fun CourseProgressCard(course: HomeCourseProgress, onOpenLessonMap: () -
                 color = MaterialTheme.colorScheme.secondary
             ) {
                 Text(
-                    text = "Ir",
+                    text = stringResource(Res.string.home_action_go),
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -274,24 +295,24 @@ private fun ContinueLearningCard(onContinueLearning: () -> Unit) {
         ) {
             Icon(
                 painter = painterResource(Res.drawable.achievement_placeholder),
-                contentDescription = "Learning placeholder illustration",
+                contentDescription = stringResource(Res.string.home_continue_learning_illustration_description),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(48.dp)
             )
             Text(
-                text = "Todavía no tienes una actividad en curso",
+                text = stringResource(Res.string.home_continue_learning_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Explora el mapa de lecciones para avanzar una actividad a la vez y repasar teoría cuando lo necesites.",
+                text = stringResource(Res.string.home_continue_learning_empty_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
             MButton(onClick = onContinueLearning, modifier = Modifier.fillMaxWidth()) {
-                Text("Ir al mapa")
+                Text(stringResource(Res.string.home_action_go_to_map))
             }
         }
     }
@@ -311,12 +332,12 @@ private fun JoinCourseCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Join a course to unlock activities",
+                text = stringResource(Res.string.home_join_course_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "Enter the code your teacher shared to start your lesson map.",
+                text = stringResource(Res.string.home_join_course_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -324,8 +345,8 @@ private fun JoinCourseCard(
                 value = joinCode,
                 onValueChange = onJoinCodeChange,
                 singleLine = true,
-                label = { Text("Course code") },
-                placeholder = { Text("Example: FRACTIONS-7A") }
+                label = { Text(stringResource(Res.string.home_join_course_code_label)) },
+                placeholder = { Text(stringResource(Res.string.home_join_course_code_placeholder)) }
             )
             joinCourseMessage?.let { message ->
                 Text(
@@ -339,7 +360,13 @@ private fun JoinCourseCard(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isJoiningCourse
             ) {
-                Text(if (isJoiningCourse) "Joining course..." else "Join course")
+                Text(
+                    if (isJoiningCourse) {
+                        stringResource(Res.string.home_join_course_action_joining)
+                    } else {
+                        stringResource(Res.string.home_join_course_action_join)
+                    }
+                )
             }
         }
     }

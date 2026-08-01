@@ -43,9 +43,9 @@ class HomeDashboardRedesignRenderTest {
         }
 
         composeTestRule.onNodeWithText("Hola, María 👋").assertExists()
-        composeTestRule.onNodeWithText("¡Es hora de practicar hoy!").assertExists()
+        composeTestRule.onNodeWithText("It's time to practice today!").assertExists()
         composeTestRule.onNodeWithTag("homeStreakPill").assertExists()
-        composeTestRule.onNodeWithText("+7 días").assertExists()
+        composeTestRule.onNodeWithText("+7 days").assertExists()
     }
 
     @Test
@@ -63,7 +63,7 @@ class HomeDashboardRedesignRenderTest {
         }
 
         composeTestRule.onNodeWithTag("homeStreakPill").assertDoesNotExist()
-        composeTestRule.onNodeWithText("+0 días").assertDoesNotExist()
+        composeTestRule.onNodeWithText("+0 days").assertDoesNotExist()
     }
 
     @Test
@@ -80,7 +80,7 @@ class HomeDashboardRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Nivel 5").assertExists()
+        composeTestRule.onNodeWithText("Level 5").assertExists()
         composeTestRule.onNodeWithText("340 / 500 XP").assertExists()
         composeTestRule.onNode(
             SemanticsMatcher.expectValue(
@@ -104,7 +104,7 @@ class HomeDashboardRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Nivel 0").assertExists()
+        composeTestRule.onNodeWithText("Level 0").assertExists()
         composeTestRule.onNodeWithText("0 / 100 XP").assertExists()
         composeTestRule.onNode(
             SemanticsMatcher.expectValue(
@@ -134,17 +134,17 @@ class HomeDashboardRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("MIS CURSOS EN PROGRESO").assertExists()
+        composeTestRule.onNodeWithText("MY COURSES IN PROGRESS").assertExists()
         composeTestRule.onNodeWithText("Fracciones - Básico").assertExists()
-        composeTestRule.onNodeWithText("Progreso: 45%").assertExists()
+        composeTestRule.onNodeWithText("Progress: 45%").assertExists()
         composeTestRule.onNodeWithText("Álgebra Inicial").assertExists()
-        composeTestRule.onNodeWithText("Progreso: 12%").assertExists()
+        composeTestRule.onNodeWithText("Progress: 12%").assertExists()
 
-        composeTestRule.onAllNodesWithText("Ir").assertCountEquals(2)
-        composeTestRule.onAllNodesWithText("Ir")[0].performClick()
+        composeTestRule.onAllNodesWithText("Go").assertCountEquals(2)
+        composeTestRule.onAllNodesWithText("Go")[0].performClick()
         assert(lessonMapOpens == 1)
 
-        composeTestRule.onNodeWithText("Abrir mapa de lecciones").performClick()
+        composeTestRule.onNodeWithText("Open lesson map").performClick()
         assert(lessonMapOpens == 2)
     }
 
@@ -164,14 +164,14 @@ class HomeDashboardRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("MIS CURSOS EN PROGRESO").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Continuar aprendiendo").assertExists()
-        composeTestRule.onNodeWithText("Todavía no tienes una actividad en curso").assertExists()
+        composeTestRule.onNodeWithText("MY COURSES IN PROGRESS").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Continue learning").assertExists()
+        composeTestRule.onNodeWithText("You don't have an activity in progress yet").assertExists()
 
-        composeTestRule.onNodeWithText("Ir al mapa").performClick()
+        composeTestRule.onNodeWithText("Go to map").performClick()
         assert(continueLearningClicks == 1)
 
-        composeTestRule.onNodeWithText("Abrir mapa de lecciones").performClick()
+        composeTestRule.onNodeWithText("Open lesson map").performClick()
         assert(lessonMapOpens == 1)
     }
 

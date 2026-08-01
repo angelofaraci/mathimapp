@@ -11,13 +11,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import org.jetbrains.compose.resources.stringResource
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.placeholder_default_message
 
 @Composable
 fun PlaceholderScreen(
     title: String,
-    message: String = "This area is under development.",
+    message: String? = null,
     modifier: Modifier = Modifier
 ) {
+    val resolvedMessage = message ?: stringResource(Res.string.placeholder_default_message)
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -31,7 +35,7 @@ fun PlaceholderScreen(
             textAlign = TextAlign.Center
         )
         Text(
-            text = message,
+            text = resolvedMessage,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

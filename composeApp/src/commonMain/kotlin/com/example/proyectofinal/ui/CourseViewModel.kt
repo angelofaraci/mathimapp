@@ -2,6 +2,7 @@ package com.example.proyectofinal.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.models.Course
@@ -12,7 +13,8 @@ import kotlinx.coroutines.launch
 
 class CourseViewModel(
     private val repository: CourseRepository,
-    private val learnerProfileRepository: LearnerProfileRepository
+    private val learnerProfileRepository: LearnerProfileRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<CourseUiState>(CourseUiState.Loading)
@@ -26,7 +28,8 @@ class CourseViewModel(
         viewModelScope.launch {
             _uiState.value = CourseUiState.Loading
             try {
-                val schoolYear = learnerProfileRepository.getProfile()?.schoolYear
+                val userId = authRepository.session.value.user?.id.orEmpty()
+                val schoolYear = learnerProfileRepository.getProfile(userId)?.schoolYear
                 val courses = repository.getOfficialCourses(schoolYear)
                 _uiState.value = CourseUiState.Success(courses)
             } catch (e: Exception) {

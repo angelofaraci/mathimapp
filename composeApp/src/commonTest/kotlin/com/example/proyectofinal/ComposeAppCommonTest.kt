@@ -164,7 +164,8 @@ class CourseViewModelTest {
         }
         val viewModel = CourseViewModel(
             fakeCourseRepository,
-            FakeLearnerProfileRepository(expectedSchoolYear)
+            FakeLearnerProfileRepository(expectedSchoolYear),
+            AppModuleTestAuthRepository
         )
 
         val collectionJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -185,7 +186,8 @@ class CourseViewModelTest {
         val emittedStates = mutableListOf<CourseUiState>()
         val viewModel = CourseViewModel(
             FakeCourseRepository { throw IllegalStateException("Network unavailable") },
-            FakeLearnerProfileRepository(null)
+            FakeLearnerProfileRepository(null),
+            AppModuleTestAuthRepository
         )
 
         val collectionJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -232,11 +234,11 @@ private class FakeLearnerProfileRepository(
         )
     }
 
-    override suspend fun getProfile(): LearnerProfile? = profile
+    override suspend fun getProfile(userId: String): LearnerProfile? = profile
 
-    override suspend fun isOnboardingComplete(): Boolean = profile?.onboardingComplete == true
+    override suspend fun isOnboardingComplete(userId: String): Boolean = profile?.onboardingComplete == true
 
-    override suspend fun upsertProfile(profile: LearnerProfile) = Unit
+    override suspend fun upsertProfile(userId: String, profile: LearnerProfile) = Unit
 }
 
 private fun createTestAppDatabase(): AppDatabase {

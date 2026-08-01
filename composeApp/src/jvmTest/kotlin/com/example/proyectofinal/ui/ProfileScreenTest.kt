@@ -29,13 +29,13 @@ class ProfileScreenTest {
 
         composeTestRule.onNodeWithText("Alice Student").assertExists()
         composeTestRule.onNodeWithText("alice@example.com").assertExists()
-        composeTestRule.onNodeWithText("Estudiante").assertExists()
-        composeTestRule.onNodeWithText("Cuenta").assertExists()
-        composeTestRule.onNodeWithText("Preferencias").assertExists()
-        composeTestRule.onNodeWithText("Ayuda y soporte").assertExists()
-        composeTestRule.onNodeWithText("Acerca de").assertExists()
-        composeTestRule.onNodeWithText("Cerrar sesión").performClick()
-        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
+        composeTestRule.onNodeWithText("Student").assertExists()
+        composeTestRule.onNodeWithText("Account").assertExists()
+        composeTestRule.onNodeWithText("Preferences").assertExists()
+        composeTestRule.onNodeWithText("Help & support").assertExists()
+        composeTestRule.onNodeWithText("About").assertExists()
+        composeTestRule.onNodeWithText("Log out").performClick()
+        composeTestRule.onNodeWithText("MathimApp · version 1.0").assertExists()
         assertEquals(1, logoutCalls)
 
         composeTestRule.setContent {
@@ -61,12 +61,12 @@ class ProfileScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
-        composeTestRule.onNodeWithText("Cuenta").performClick()
-        composeTestRule.onNodeWithContentDescription("Volver").assertExists()
-        composeTestRule.onNodeWithContentDescription("Volver").performClick()
-        composeTestRule.onNodeWithContentDescription("Volver").assertDoesNotExist()
-        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
+        composeTestRule.onNodeWithText("MathimApp · version 1.0").assertExists()
+        composeTestRule.onNodeWithText("Account").performClick()
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        composeTestRule.onNodeWithContentDescription("Back").assertDoesNotExist()
+        composeTestRule.onNodeWithText("MathimApp · version 1.0").assertExists()
     }
 
     private fun profileUiState(displayName: String = "Alice Student") = ProfileUiState(

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Complete your onboarding</string>
+    <string name="onboarding_action_logout">Logout</string>
+    <string name="onboarding_action_continue">Continue</string>
+    <string name="onboarding_action_back">Back</string>
+    <string name="onboarding_action_saving">Saving profile...</string>
+    <string name="onboarding_action_continue_to_courses">Continue to courses</string>
+    <string name="onboarding_summary_province">Province: %1$s</string>
+    <string name="onboarding_summary_school_year">School year: %1$s</string>
+    <string name="onboarding_summary_category">Category: %1$s</string>
+    <string name="onboarding_step1_title">1. Choose your province</string>
+    <string name="onboarding_step1_description">Your province determines the valid school-year boundaries.</string>
+    <string name="onboarding_step2_title">2. Choose your school year</string>
+    <string name="onboarding_step2_description">Available years already reflect the selected province structure.</string>
+    <string name="onboarding_step3_title">3. Choose your category</string>
+    <string name="onboarding_step3_description">All four categories are shown. Only the valid ones for the chosen year are enabled.</string>
+    <string name="onboarding_step4_title">4. Confirm your profile</string>
+    <string name="onboarding_step4_description">Review the selected province, school year, and category before continuing to courses.</string>
+    <string name="onboarding_track_unavailable">Not available for the selected school year</string>
+
+    <string name="track_primary">Primary</string>
+    <string name="track_secondary">Secondary</string>
+    <string name="track_technical_secondary">Technical Secondary</string>
+    <string name="track_self_directed">Self-directed</string>
+
+    <string name="lesson_map_action_retry">Retry</string>
+    <string name="lesson_map_action_go_home">Go to Home</string>
+    <string name="lesson_map_header_lessons_count">%1$d Lessons</string>
+    <string name="lesson_map_action_view_theory">View theory</string>
+    <string name="lesson_map_back_content_description">Back</string>
+    <string name="lesson_map_progress_percent">%1$d% Completed</string>
+    <string name="lesson_map_progress_lessons">%1$d/%2$d Lessons</string>
+    <string name="lesson_map_action_back_to_map">Back to lesson map</string>
+    <string name="lesson_map_exercise_numbered">Exercise %1$d</string>
+    <string name="lesson_map_exercise_unnumbered">Exercise</string>
+    <string name="lesson_map_action_checking_answer">Checking answer...</string>
+    <string name="lesson_map_action_try_again">Try again</string>
+    <string name="lesson_map_action_submit_answer">Submit answer</string>
+    <string name="lesson_map_answer_label">Answer</string>
+    <string name="lesson_map_exercise_unsupported">This exercise type is not supported in this app version.</string>
+    <string name="lesson_map_node_completed_description">Lesson completed</string>
+    <string name="lesson_map_node_current_description">Current lesson</string>
+    <string name="lesson_map_node_locked_description">Locked lesson</string>
+
+    <string name="theory_sheet_label">Theory</string>
+
+    <string name="placeholder_default_message">This area is under development.</string>
+
+    <string name="register_action_back">Back</string>
+    <string name="register_step_indicator">Step %1$d / 3</string>
+
+    <string name="home_join_course_title">Join a course to unlock activities</string>
+    <string name="home_join_course_description">Enter the code your teacher shared to start your lesson map.</string>
+    <string name="home_join_course_code_label">Course code</string>
+    <string name="home_join_course_code_placeholder">Example: FRACTIONS-7A</string>
+    <string name="home_join_course_action_joining">Joining course...</string>
+    <string name="home_join_course_action_join">Join course</string>
+    <string name="home_level">Level %1$d</string>
+    <string name="home_xp_progress">%1$d / %2$d XP</string>
+    <string name="home_continue_learning_illustration_description">Learning placeholder illustration</string>
+    <string name="home_greeting_wave">%1$s 👋</string>
+    <string name="home_dashboard_subtitle">It's time to practice today!</string>
+    <string name="home_streak_days">+%1$d days</string>
+    <string name="home_in_progress_courses_header">MY COURSES IN PROGRESS</string>
+    <string name="home_continue_learning_title">Continue learning</string>
+    <string name="home_action_open_lesson_map">Open lesson map</string>
+    <string name="home_course_progress_percent">Progress: %1$d%</string>
+    <string name="home_action_go">Go</string>
+    <string name="home_continue_learning_empty_title">You don't have an activity in progress yet</string>
+    <string name="home_continue_learning_empty_description">Explore the lesson map to move forward one activity at a time and review theory whenever you need to.</string>
+    <string name="home_action_go_to_map">Go to map</string>
+
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Log in to keep your streak going.</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_email_placeholder">email@example.com</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_password_hide_description">Hide password</string>
+    <string name="login_password_show_description">Show password</string>
+    <string name="login_forgot_password">Forgot your password?</string>
+    <string name="login_recovery_placeholder">Password recovery will be available soon.</string>
+    <string name="login_action_logging_in">Logging in...</string>
+    <string name="login_action_login">Log in</string>
+    <string name="login_divider_or">or continue with</string>
+    <string name="login_social_google">Google</string>
+    <string name="login_social_apple">Apple</string>
+    <string name="login_no_account_prompt">Don't have an account? </string>
+    <string name="login_action_register">Sign up</string>
+
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Start learning math at your own pace.</string>
+    <string name="register_action_creating">Creating account...</string>
+    <string name="register_action_create">Create account</string>
+    <string name="register_action_continue">Continue</string>
+    <string name="register_name_label">Full name</string>
+    <string name="register_name_placeholder">Your name</string>
+    <string name="register_email_label">Email</string>
+    <string name="register_email_placeholder">email@example.com</string>
+    <string name="register_password_label">Password</string>
+    <string name="register_password_hide_toggle">Hide</string>
+    <string name="register_password_show_toggle">Show</string>
+    <string name="register_password_strength_empty">Use at least 8 characters and mix character types.</string>
+    <string name="register_password_strength_weak">Password strength: weak</string>
+    <string name="register_password_strength_medium">Password strength: medium</string>
+    <string name="register_password_strength_strong">Password strength: strong</string>
+    <string name="register_terms_text">I accept MathimApp's terms and conditions.</string>
+
+    <string name="auth_scaffold_logo_description">MathimApp logo</string>
+
+    <string name="profile_nav_account_title">Account</string>
+    <string name="profile_nav_account_subtitle">Name, email, password</string>
+    <string name="profile_nav_preferences_title">Preferences</string>
+    <string name="profile_nav_preferences_subtitle">Notifications, sounds, language</string>
+    <string name="profile_nav_help_title">Help &amp; support</string>
+    <string name="profile_nav_help_subtitle">FAQ, contact, report an issue</string>
+    <string name="profile_nav_about_title">About</string>
+    <string name="profile_nav_about_subtitle">Terms, privacy, version</string>
+    <string name="profile_action_logout">Log out</string>
+    <string name="profile_version_label">MathimApp · version %1$s</string>
+    <string name="profile_avatar_edit_description">Edit avatar</string>
+    <string name="profile_streak_days">%1$d-day streak</string>
+    <string name="profile_back_description">Back</string>
+    <string name="profile_account_name_label">Full name</string>
+    <string name="profile_account_email_label">Email</string>
+    <string name="profile_account_password_label">Password</string>
+    <string name="profile_account_password_change_value">Change</string>
+    <string name="profile_account_role_notice">Your current role is %1$s. Account changes will require email confirmation.</string>
+    <string name="profile_account_delete_action">Delete account</string>
+    <string name="profile_account_delete_warning">This action is permanent and erases all your progress.</string>
+    <string name="profile_preferences_notifications_label">Notifications</string>
+    <string name="profile_preferences_sounds_label">Sounds</string>
+    <string name="profile_preferences_dark_mode_label">Dark mode</string>
+    <string name="profile_preferences_language_label">Language</string>
+    <string name="profile_preferences_language_value">Spanish</string>
+    <string name="profile_help_faq_label">Frequently asked questions</string>
+    <string name="profile_help_contact_label">Contact support</string>
+    <string name="profile_help_report_label">Report a problem</string>
+    <string name="profile_about_terms_label">Terms of use</string>
+    <string name="profile_about_privacy_label">Privacy policy</string>
+    <string name="profile_about_version_label">Version</string>
+    <string name="profile_role_admin">Administrator</string>
+    <string name="profile_role_teacher">Teacher</string>
+    <string name="profile_role_student">Student</string>
+    <string name="profile_school_year">Year %1$d • %2$s</string>
+
+    <string name="nav_tab_home">Home</string>
+    <string name="nav_tab_activities">Activities</string>
+    <string name="nav_tab_progress">Progress</string>
+    <string name="nav_tab_profile">Profile</string>
+</resources>

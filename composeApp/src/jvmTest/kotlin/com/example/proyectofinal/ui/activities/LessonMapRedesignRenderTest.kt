@@ -50,12 +50,12 @@ class LessonMapRedesignRenderTest {
         )
 
         composeTestRule.onNodeWithText("Fundamentos").assertExists()
-        composeTestRule.onNodeWithText("4 Lecciones").assertExists()
+        composeTestRule.onNodeWithText("4 Lessons").assertExists()
 
-        composeTestRule.onNodeWithText("Ver teoría").performClick()
+        composeTestRule.onNodeWithText("View theory").performClick()
         assert(theoryOpens == 1)
 
-        composeTestRule.onNodeWithContentDescription("Volver").performClick()
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
         assert(homeShows == 1)
     }
 
@@ -68,8 +68,8 @@ class LessonMapRedesignRenderTest {
 
         renderMap(uiState = mapUiState(nodes))
 
-        composeTestRule.onNodeWithText("37% Completado").assertExists()
-        composeTestRule.onNodeWithText("3/8 Lecciones").assertExists()
+        composeTestRule.onNodeWithText("37% Completed").assertExists()
+        composeTestRule.onNodeWithText("3/8 Lessons").assertExists()
         composeTestRule.onNode(
             SemanticsMatcher.expectValue(
                 SemanticsProperties.ProgressBarRangeInfo,

@@ -17,10 +17,14 @@ import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.ui.theme.BrandLock
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.ic_check
 import proyectofinal.composeapp.generated.resources.ic_lock
 import proyectofinal.composeapp.generated.resources.ic_play
+import proyectofinal.composeapp.generated.resources.lesson_map_node_completed_description
+import proyectofinal.composeapp.generated.resources.lesson_map_node_current_description
+import proyectofinal.composeapp.generated.resources.lesson_map_node_locked_description
 
 /**
  * Circular serpentine-path node for the redesign lesson map (mapa-leccion.png).
@@ -76,21 +80,21 @@ private fun lessonNodePalette(state: LessonNodeState): LessonNodePalette {
             container = colorScheme.secondary,
             icon = Res.drawable.ic_check,
             iconTint = colorScheme.onSecondary,
-            contentDescription = "Lección completada"
+            contentDescription = stringResource(Res.string.lesson_map_node_completed_description)
         )
 
         LessonNodeState.Current, LessonNodeState.Unlocked -> LessonNodePalette(
             container = colorScheme.primary,
             icon = Res.drawable.ic_play,
             iconTint = colorScheme.onPrimary,
-            contentDescription = "Lección actual"
+            contentDescription = stringResource(Res.string.lesson_map_node_current_description)
         )
 
         LessonNodeState.Locked -> LessonNodePalette(
             container = BrandLock,
             icon = Res.drawable.ic_lock,
             iconTint = colorScheme.surface,
-            contentDescription = "Lección bloqueada"
+            contentDescription = stringResource(Res.string.lesson_map_node_locked_description)
         )
     }
 }

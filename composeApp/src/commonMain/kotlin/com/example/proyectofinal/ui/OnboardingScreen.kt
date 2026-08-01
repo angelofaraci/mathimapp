@@ -30,6 +30,26 @@ import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MCard
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
+import org.jetbrains.compose.resources.stringResource
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.onboarding_action_back
+import proyectofinal.composeapp.generated.resources.onboarding_action_continue
+import proyectofinal.composeapp.generated.resources.onboarding_action_continue_to_courses
+import proyectofinal.composeapp.generated.resources.onboarding_action_logout
+import proyectofinal.composeapp.generated.resources.onboarding_action_saving
+import proyectofinal.composeapp.generated.resources.onboarding_step1_description
+import proyectofinal.composeapp.generated.resources.onboarding_step1_title
+import proyectofinal.composeapp.generated.resources.onboarding_step2_description
+import proyectofinal.composeapp.generated.resources.onboarding_step2_title
+import proyectofinal.composeapp.generated.resources.onboarding_step3_description
+import proyectofinal.composeapp.generated.resources.onboarding_step3_title
+import proyectofinal.composeapp.generated.resources.onboarding_step4_description
+import proyectofinal.composeapp.generated.resources.onboarding_step4_title
+import proyectofinal.composeapp.generated.resources.onboarding_summary_category
+import proyectofinal.composeapp.generated.resources.onboarding_summary_province
+import proyectofinal.composeapp.generated.resources.onboarding_summary_school_year
+import proyectofinal.composeapp.generated.resources.onboarding_title
+import proyectofinal.composeapp.generated.resources.onboarding_track_unavailable
 
 @Composable
 fun OnboardingScreen(
@@ -80,7 +100,7 @@ internal fun OnboardingContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Complete your onboarding",
+                text = stringResource(Res.string.onboarding_title),
                 style = MaterialTheme.typography.headlineSmall
             )
             MButton(
@@ -88,7 +108,7 @@ internal fun OnboardingContent(
                 enabled = !state.isSaving,
                 style = MButtonStyle.Outline
             ) {
-                Text("Logout")
+                Text(stringResource(Res.string.onboarding_action_logout))
             }
         }
 
@@ -138,7 +158,7 @@ internal fun OnboardingContent(
                 enabled = !state.isSaving && hasCurrentStepSelection(state),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Continue")
+                Text(stringResource(Res.string.onboarding_action_continue))
             }
         }
 
@@ -149,7 +169,7 @@ internal fun OnboardingContent(
                 modifier = Modifier.fillMaxWidth(),
                 style = MButtonStyle.Outline
             ) {
-                Text("Back")
+                Text(stringResource(Res.string.onboarding_action_back))
             }
         }
     }
@@ -165,11 +185,19 @@ private fun hasCurrentStepSelection(state: OnboardingUiState): Boolean =
 
 @Composable
 private fun StepSummary(state: OnboardingUiState) {
-    val summary = buildList {
-        state.selectedProvince?.let { add("Province: $it") }
+    val provinceSummary = stringResource(Res.string.onboarding_summary_province, state.selectedProvince.orEmpty())
+    val schoolYearSummary = stringResource(
+        Res.string.onboarding_summary_school_year,
         state.availableSchoolYears.firstOrNull { option -> option.schoolYear == state.selectedSchoolYear }
-            ?.let { add("School year: ${it.label}") }
-        state.selectedTrack?.let { add("Category: ${it.displayName}") }
+            ?.label.orEmpty()
+    )
+    val selectedTrackLabel = state.selectedTrack?.let { track -> track.localizedLabel() } ?: ""
+    val categorySummary = stringResource(Res.string.onboarding_summary_category, selectedTrackLabel)
+    val summary = buildList {
+        state.selectedProvince?.let { add(provinceSummary) }
+        state.availableSchoolYears.firstOrNull { option -> option.schoolYear == state.selectedSchoolYear }
+            ?.let { add(schoolYearSummary) }
+        state.selectedTrack?.let { add(categorySummary) }
     }
 
     if (summary.isNotEmpty()) {
@@ -199,8 +227,8 @@ private fun ProvinceStep(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StepTitle(
-            title = "1. Choose your province",
-            description = "Your province determines the valid school-year boundaries."
+            title = stringResource(Res.string.onboarding_step1_title),
+            description = stringResource(Res.string.onboarding_step1_description)
         )
 
         LazyColumn(
@@ -231,8 +259,8 @@ private fun SchoolYearStep(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StepTitle(
-            title = "2. Choose your school year",
-            description = "Available years already reflect the selected province structure."
+            title = stringResource(Res.string.onboarding_step2_title),
+            description = stringResource(Res.string.onboarding_step2_description)
         )
 
         LazyColumn(
@@ -264,8 +292,8 @@ private fun CategoryStep(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StepTitle(
-            title = "3. Choose your category",
-            description = "All four categories are shown. Only the valid ones for the chosen year are enabled."
+            title = stringResource(Res.string.onboarding_step3_title),
+            description = stringResource(Res.string.onboarding_step3_description)
         )
 
         LazyColumn(
@@ -273,9 +301,10 @@ private fun CategoryStep(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(trackOptions) { option ->
+                val unavailableLabel = stringResource(Res.string.onboarding_track_unavailable)
                 SelectionCard(
-                    title = option.track.displayName,
-                    subtitle = if (option.enabled) null else "Not available for the selected school year",
+                    title = option.track.localizedLabel(),
+                    subtitle = if (option.enabled) null else unavailableLabel,
                     selected = selectedTrack == option.track,
                     enabled = enabled && option.enabled,
                     onClick = { onTrackSelected(option.track) }
@@ -295,20 +324,26 @@ private fun ConfirmationStep(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StepTitle(
-            title = "4. Confirm your profile",
-            description = "Review the selected province, school year, and category before continuing to courses."
+            title = stringResource(Res.string.onboarding_step4_title),
+            description = stringResource(Res.string.onboarding_step4_description)
         )
+
+        val confirmationTrackLabel = state.selectedTrack?.let { track -> track.localizedLabel() } ?: ""
 
         MCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Province: ${state.selectedProvince.orEmpty()}")
+                Text(stringResource(Res.string.onboarding_summary_province, state.selectedProvince.orEmpty()))
                 Text(
-                    text = "School year: ${state.availableSchoolYears.firstOrNull { option -> option.schoolYear == state.selectedSchoolYear }?.label.orEmpty()}"
+                    text = stringResource(
+                        Res.string.onboarding_summary_school_year,
+                        state.availableSchoolYears.firstOrNull { option -> option.schoolYear == state.selectedSchoolYear }
+                            ?.label.orEmpty()
+                    )
                 )
-                Text("Category: ${state.selectedTrack?.displayName.orEmpty()}")
+                Text(stringResource(Res.string.onboarding_summary_category, confirmationTrackLabel))
             }
         }
 
@@ -317,7 +352,13 @@ private fun ConfirmationStep(
             enabled = !state.isSaving,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (state.isSaving) "Saving profile..." else "Continue to courses")
+            Text(
+                if (state.isSaving) {
+                    stringResource(Res.string.onboarding_action_saving)
+                } else {
+                    stringResource(Res.string.onboarding_action_continue_to_courses)
+                }
+            )
         }
     }
 }
@@ -382,5 +423,8 @@ private fun SelectionCard(
     }
 }
 
-private fun allowedTrackSummary(tracks: Set<StudentTrack>): String =
-    tracks.joinToString { track -> track.displayName }
+@Composable
+private fun allowedTrackSummary(tracks: Set<StudentTrack>): String {
+    val labels = tracks.map { track -> track.localizedLabel() }
+    return labels.joinToString()
+}

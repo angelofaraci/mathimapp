@@ -15,6 +15,7 @@ internal fun SqlDriver.applyPendingLocalSchemaFixes(): SqlDriver {
     ensureCourseDiscoveryColumns()
     ensureLessonEntityShape()
     ensureExerciseEntityShape()
+    ensureLearnerProfileEntityShape()
     return this
 }
 
@@ -222,6 +223,74 @@ private fun SqlDriver.ensureExerciseEntityShape() {
         execute(
             identifier = null,
             sql = "ALTER TABLE ExerciseEntity_new RENAME TO ExerciseEntity",
+            parameters = 0,
+        ).value
+        execute(identifier = null, sql = "COMMIT TRANSACTION", parameters = 0).value
+    } catch (error: Throwable) {
+        execute(identifier = null, sql = "ROLLBACK TRANSACTION", parameters = 0).value
+        throw error
+    } finally {
+        execute(identifier = null, sql = "PRAGMA foreign_keys=ON", parameters = 0).value
+    }
+}
+
+private fun SqlDriver.ensureLearnerProfileEntityShape() {
+    val columns = executeQuery(
+        identifier = null,
+        sql = "PRAGMA table_info(LearnerProfileEntity)",
+        mapper = { cursor ->
+            val profileColumns = mutableSetOf<String>()
+            while (cursor.next().value) {
+                cursor.getString(1)?.let(profileColumns::add)
+            }
+            QueryResult.Value(profileColumns)
+        },
+        parameters = 0,
+    ).value
+
+    if (columns.isEmpty()) {
+        return
+    }
+
+    val hasUserId = "userId" in columns
+    val hasProfileId = "profileId" in columns
+
+    if (hasUserId && !hasProfileId) {
+        return
+    }
+
+    execute(identifier = null, sql = "PRAGMA foreign_keys=OFF", parameters = 0).value
+    execute(identifier = null, sql = "BEGIN TRANSACTION", parameters = 0).value
+
+    try {
+        execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE LearnerProfileEntity_new (
+                    userId TEXT NOT NULL PRIMARY KEY,
+                    province TEXT NOT NULL,
+                    schoolYear INTEGER NOT NULL,
+                    studentTrack TEXT NOT NULL,
+                    onboardingComplete INTEGER NOT NULL DEFAULT 0
+                )
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+
+        execute(
+            identifier = null,
+            sql = """
+                INSERT INTO LearnerProfileEntity_new (userId, province, schoolYear, studentTrack, onboardingComplete)
+                SELECT '' AS userId, province, schoolYear, studentTrack, onboardingComplete
+                FROM LearnerProfileEntity
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+
+        execute(identifier = null, sql = "DROP TABLE LearnerProfileEntity", parameters = 0).value
+        execute(
+            identifier = null,
+            sql = "ALTER TABLE LearnerProfileEntity_new RENAME TO LearnerProfileEntity",
             parameters = 0,
         ).value
         execute(identifier = null, sql = "COMMIT TRANSACTION", parameters = 0).value

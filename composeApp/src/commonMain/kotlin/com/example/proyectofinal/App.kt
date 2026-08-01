@@ -52,13 +52,15 @@ private fun AuthGate() {
     var onboardingRefreshKey by remember(session.token) { mutableStateOf(0) }
     val onboardingComplete by produceState<Boolean?>(
         initialValue = if (session.isAuthenticated) null else false,
-        key1 = session.isAuthenticated,
-        key2 = session.token,
-        key3 = onboardingRefreshKey
+        keys = arrayOf<Any?>(session.isAuthenticated, session.token, session.user?.id, onboardingRefreshKey)
     ) {
+        val userId = session.user?.id
         value =
-            if (session.isAuthenticated) learnerProfileRepository.isOnboardingComplete()
-            else false
+            if (session.isAuthenticated && !userId.isNullOrBlank()) {
+                learnerProfileRepository.isOnboardingComplete(userId)
+            } else {
+                false
+            }
     }
 
     if (session.isAuthenticated && onboardingComplete == null) {

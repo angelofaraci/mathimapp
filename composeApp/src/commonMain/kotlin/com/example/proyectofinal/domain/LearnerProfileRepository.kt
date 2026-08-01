@@ -8,9 +8,9 @@ data class LearnerProfile(
 )
 
 interface LearnerProfileRepository {
-    suspend fun getProfile(): LearnerProfile?
+    suspend fun getProfile(userId: String): LearnerProfile?
 
-    suspend fun isOnboardingComplete(): Boolean
+    suspend fun isOnboardingComplete(userId: String): Boolean
 
-    suspend fun upsertProfile(profile: LearnerProfile)
+    suspend fun upsertProfile(userId: String, profile: LearnerProfile)
 }

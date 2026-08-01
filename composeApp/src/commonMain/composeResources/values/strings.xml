@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Completa tu perfil</string>
+    <string name="onboarding_action_logout">Cerrar sesión</string>
+    <string name="onboarding_action_continue">Continuar</string>
+    <string name="onboarding_action_back">Volver</string>
+    <string name="onboarding_action_saving">Guardando perfil...</string>
+    <string name="onboarding_action_continue_to_courses">Continuar a los cursos</string>
+    <string name="onboarding_summary_province">Provincia: %1$s</string>
+    <string name="onboarding_summary_school_year">Año escolar: %1$s</string>
+    <string name="onboarding_summary_category">Categoría: %1$s</string>
+    <string name="onboarding_step1_title">1. Elige tu provincia</string>
+    <string name="onboarding_step1_description">Tu provincia determina los años escolares válidos.</string>
+    <string name="onboarding_step2_title">2. Elige tu año escolar</string>
+    <string name="onboarding_step2_description">Los años disponibles ya reflejan la estructura de la provincia seleccionada.</string>
+    <string name="onboarding_step3_title">3. Elige tu categoría</string>
+    <string name="onboarding_step3_description">Se muestran las cuatro categorías. Solo se habilitan las válidas para el año elegido.</string>
+    <string name="onboarding_step4_title">4. Confirma tu perfil</string>
+    <string name="onboarding_step4_description">Revisa la provincia, el año escolar y la categoría antes de continuar a los cursos.</string>
+    <string name="onboarding_track_unavailable">No disponible para el año escolar seleccionado</string>
+
+    <string name="track_primary">Primaria</string>
+    <string name="track_secondary">Secundaria</string>
+    <string name="track_technical_secondary">Secundaria técnica</string>
+    <string name="track_self_directed">Autodidacta</string>
+
+    <string name="lesson_map_action_retry">Reintentar</string>
+    <string name="lesson_map_action_go_home">Ir al inicio</string>
+    <string name="lesson_map_header_lessons_count">%1$d Lecciones</string>
+    <string name="lesson_map_action_view_theory">Ver teoría</string>
+    <string name="lesson_map_back_content_description">Volver</string>
+    <string name="lesson_map_progress_percent">%1$d% Completado</string>
+    <string name="lesson_map_progress_lessons">%1$d/%2$d Lecciones</string>
+    <string name="lesson_map_action_back_to_map">Volver al mapa de lecciones</string>
+    <string name="lesson_map_exercise_numbered">Ejercicio %1$d</string>
+    <string name="lesson_map_exercise_unnumbered">Ejercicio</string>
+    <string name="lesson_map_action_checking_answer">Verificando respuesta...</string>
+    <string name="lesson_map_action_try_again">Intentar de nuevo</string>
+    <string name="lesson_map_action_submit_answer">Enviar respuesta</string>
+    <string name="lesson_map_answer_label">Respuesta</string>
+    <string name="lesson_map_exercise_unsupported">Este tipo de ejercicio no es compatible con esta versión de la aplicación.</string>
+    <string name="lesson_map_node_completed_description">Lección completada</string>
+    <string name="lesson_map_node_current_description">Lección actual</string>
+    <string name="lesson_map_node_locked_description">Lección bloqueada</string>
+
+    <string name="theory_sheet_label">Teoría</string>
+
+    <string name="placeholder_default_message">Esta sección está en desarrollo.</string>
+
+    <string name="register_action_back">Volver</string>
+    <string name="register_step_indicator">Paso %1$d / 3</string>
+
+    <string name="home_join_course_title">Únete a un curso para desbloquear actividades</string>
+    <string name="home_join_course_description">Ingresa el código que te compartió tu docente para comenzar tu mapa de lecciones.</string>
+    <string name="home_join_course_code_label">Código del curso</string>
+    <string name="home_join_course_code_placeholder">Ejemplo: FRACTIONS-7A</string>
+    <string name="home_join_course_action_joining">Uniéndote al curso...</string>
+    <string name="home_join_course_action_join">Unirse al curso</string>
+    <string name="home_level">Nivel %1$d</string>
+    <string name="home_xp_progress">%1$d / %2$d XP</string>
+    <string name="home_continue_learning_illustration_description">Ilustración de aprendizaje pendiente</string>
+    <string name="home_greeting_wave">%1$s 👋</string>
+    <string name="home_dashboard_subtitle">¡Es hora de practicar hoy!</string>
+    <string name="home_streak_days">+%1$d días</string>
+    <string name="home_in_progress_courses_header">MIS CURSOS EN PROGRESO</string>
+    <string name="home_continue_learning_title">Continuar aprendiendo</string>
+    <string name="home_action_open_lesson_map">Abrir mapa de lecciones</string>
+    <string name="home_course_progress_percent">Progreso: %1$d%</string>
+    <string name="home_action_go">Ir</string>
+    <string name="home_continue_learning_empty_title">Todavía no tienes una actividad en curso</string>
+    <string name="home_continue_learning_empty_description">Explora el mapa de lecciones para avanzar una actividad a la vez y repasar teoría cuando lo necesites.</string>
+    <string name="home_action_go_to_map">Ir al mapa</string>
+
+    <string name="login_title">Hola de nuevo</string>
+    <string name="login_subtitle">Inicia sesión para seguir tu racha.</string>
+    <string name="login_email_label">Correo electrónico</string>
+    <string name="login_email_placeholder">correo@ejemplo.com</string>
+    <string name="login_password_label">Contraseña</string>
+    <string name="login_password_hide_description">Ocultar contraseña</string>
+    <string name="login_password_show_description">Mostrar contraseña</string>
+    <string name="login_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="login_recovery_placeholder">La recuperación de contraseña estará disponible próximamente.</string>
+    <string name="login_action_logging_in">Iniciando sesión...</string>
+    <string name="login_action_login">Iniciar sesión</string>
+    <string name="login_divider_or">o continúa con</string>
+    <string name="login_social_google">Google</string>
+    <string name="login_social_apple">Apple</string>
+    <string name="login_no_account_prompt">¿No tienes cuenta? </string>
+    <string name="login_action_register">Regístrate</string>
+
+    <string name="register_title">Crea tu cuenta</string>
+    <string name="register_subtitle">Empieza a aprender matemática a tu ritmo.</string>
+    <string name="register_action_creating">Creando cuenta...</string>
+    <string name="register_action_create">Crear cuenta</string>
+    <string name="register_action_continue">Continuar</string>
+    <string name="register_name_label">Nombre completo</string>
+    <string name="register_name_placeholder">Tu nombre</string>
+    <string name="register_email_label">Correo electrónico</string>
+    <string name="register_email_placeholder">correo@ejemplo.com</string>
+    <string name="register_password_label">Contraseña</string>
+    <string name="register_password_hide_toggle">Ocultar</string>
+    <string name="register_password_show_toggle">Mostrar</string>
+    <string name="register_password_strength_empty">Usa al menos 8 caracteres y combina tipos de caracteres.</string>
+    <string name="register_password_strength_weak">Seguridad de contraseña: baja</string>
+    <string name="register_password_strength_medium">Seguridad de contraseña: media</string>
+    <string name="register_password_strength_strong">Seguridad de contraseña: alta</string>
+    <string name="register_terms_text">Acepto los términos y condiciones de MathimApp.</string>
+
+    <string name="auth_scaffold_logo_description">Logo de MathimApp</string>
+
+    <string name="profile_nav_account_title">Cuenta</string>
+    <string name="profile_nav_account_subtitle">Nombre, correo, contraseña</string>
+    <string name="profile_nav_preferences_title">Preferencias</string>
+    <string name="profile_nav_preferences_subtitle">Notificaciones, sonidos, idioma</string>
+    <string name="profile_nav_help_title">Ayuda y soporte</string>
+    <string name="profile_nav_help_subtitle">FAQ, contacto, reportar un problema</string>
+    <string name="profile_nav_about_title">Acerca de</string>
+    <string name="profile_nav_about_subtitle">Términos, privacidad, versión</string>
+    <string name="profile_action_logout">Cerrar sesión</string>
+    <string name="profile_version_label">MathimApp · versión %1$s</string>
+    <string name="profile_avatar_edit_description">Editar avatar</string>
+    <string name="profile_streak_days">Racha %1$d días</string>
+    <string name="profile_back_description">Volver</string>
+    <string name="profile_account_name_label">Nombre completo</string>
+    <string name="profile_account_email_label">Correo electrónico</string>
+    <string name="profile_account_password_label">Contraseña</string>
+    <string name="profile_account_password_change_value">Cambiar</string>
+    <string name="profile_account_role_notice">Tu rol actual es %1$s. Los cambios de cuenta requerirán confirmación por correo.</string>
+    <string name="profile_account_delete_action">Eliminar cuenta</string>
+    <string name="profile_account_delete_warning">Esta acción es permanente y borra todo tu progreso.</string>
+    <string name="profile_preferences_notifications_label">Notificaciones</string>
+    <string name="profile_preferences_sounds_label">Sonidos</string>
+    <string name="profile_preferences_dark_mode_label">Modo oscuro</string>
+    <string name="profile_preferences_language_label">Idioma</string>
+    <string name="profile_preferences_language_value">Español</string>
+    <string name="profile_help_faq_label">Preguntas frecuentes</string>
+    <string name="profile_help_contact_label">Contactar soporte</string>
+    <string name="profile_help_report_label">Reportar un problema</string>
+    <string name="profile_about_terms_label">Términos de uso</string>
+    <string name="profile_about_privacy_label">Política de privacidad</string>
+    <string name="profile_about_version_label">Versión</string>
+    <string name="profile_role_admin">Administrador</string>
+    <string name="profile_role_teacher">Docente</string>
+    <string name="profile_role_student">Estudiante</string>
+    <string name="profile_school_year">Año %1$d • %2$s</string>
+
+    <string name="nav_tab_home">Inicio</string>
+    <string name="nav_tab_activities">Actividades</string>
+    <string name="nav_tab_progress">Progreso</string>
+    <string name="nav_tab_profile">Perfil</string>
+</resources>

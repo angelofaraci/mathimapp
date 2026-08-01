@@ -40,15 +40,15 @@ class AuthRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Hola de nuevo").assertExists()
-        composeTestRule.onNodeWithText("¿Olvidaste tu contraseña?").assertExists()
-        composeTestRule.onNodeWithText("Iniciar sesión").assertExists()
-        composeTestRule.onNodeWithText("o continuá con").assertExists()
+        composeTestRule.onNodeWithText("Welcome back").assertExists()
+        composeTestRule.onNodeWithText("Forgot your password?").assertExists()
+        composeTestRule.onNodeWithText("Log in").assertExists()
+        composeTestRule.onNodeWithText("or continue with").assertExists()
         composeTestRule.onNodeWithText("Google").assertExists()
         composeTestRule.onNodeWithText("Apple").assertExists()
-        composeTestRule.onNodeWithText("¿No tenés cuenta?", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Don't have an account?", substring = true).assertExists()
 
-        composeTestRule.onNodeWithText("Registrate").assertExists().performClick()
+        composeTestRule.onNodeWithText("Sign up").assertExists().performClick()
 
         assertEquals(1, registerTaps)
     }
@@ -63,15 +63,15 @@ class AuthRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Paso 1 / 3").assertExists()
+        composeTestRule.onNodeWithText("Step 1 / 3").assertExists()
 
         composeTestRule.runOnIdle {
             viewModel.onNameChange("Ana")
             viewModel.continueStep()
         }
 
-        composeTestRule.onNodeWithText("Paso 1 / 3").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Paso 2 / 3").assertExists()
+        composeTestRule.onNodeWithText("Step 1 / 3").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Step 2 / 3").assertExists()
     }
 
     @Test
@@ -90,7 +90,7 @@ class AuthRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Paso 3 / 3").assertExists()
+        composeTestRule.onNodeWithText("Step 3 / 3").assertExists()
         // The toggleable row merges its descendants; the tagged box only exists in the unmerged tree.
         composeTestRule.onNodeWithTag("termsCheckboxBox", useUnmergedTree = true)
             .assertWidthIsEqualTo(22.dp)

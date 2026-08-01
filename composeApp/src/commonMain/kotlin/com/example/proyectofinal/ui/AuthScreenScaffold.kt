@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.auth_scaffold_logo_description
 import proyectofinal.composeapp.generated.resources.mathimapp_logo
 
 @Composable
@@ -99,7 +101,7 @@ private fun AuthBrand() {
         ) {
             Image(
                 painter = painterResource(Res.drawable.mathimapp_logo),
-                contentDescription = "MathimApp logo",
+                contentDescription = stringResource(Res.string.auth_scaffold_logo_description),
                 modifier = Modifier.size(40.dp)
             )
         }

@@ -1,11 +1,16 @@
 package com.example.proyectofinal.ui
 
+import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
+import com.example.proyectofinal.models.User
+import com.example.proyectofinal.models.UserRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -36,7 +41,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `selecting a province stays on the step until Continue advances and loads province options`() = runTest(dispatcher) {
-        val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), FakeLearnerProfileRepository())
 
         viewModel.selectProvince("Buenos Aires")
 
@@ -52,7 +57,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `Continue requires a valid selection at every onboarding step`() = runTest(dispatcher) {
-        val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), FakeLearnerProfileRepository())
 
         viewModel.nextStep()
 
@@ -79,7 +84,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `category step keeps four track options while only enabling valid ones`() = runTest(dispatcher) {
-        val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), FakeLearnerProfileRepository())
 
         viewModel.selectProvince("Buenos Aires")
         viewModel.nextStep()
@@ -98,7 +103,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `province boundary rules shift secondary start and technical extra year`() = runTest(dispatcher) {
-        val viewModel = OnboardingViewModel(FakeLearnerProfileRepository())
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), FakeLearnerProfileRepository())
 
         viewModel.selectProvince("CABA")
         viewModel.nextStep()
@@ -126,7 +131,7 @@ class OnboardingViewModelTest {
     @Test
     fun `completing onboarding persists the selected learner profile`() = runTest(dispatcher) {
         val repository = FakeLearnerProfileRepository()
-        val viewModel = OnboardingViewModel(repository)
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository)
 
         viewModel.selectProvince("Buenos Aires")
         viewModel.nextStep()
@@ -154,7 +159,7 @@ class OnboardingViewModelTest {
     @Test
     fun `completing onboarding without all required selections shows an error and does not persist`() = runTest(dispatcher) {
         val repository = FakeLearnerProfileRepository()
-        val viewModel = OnboardingViewModel(repository)
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository)
 
         viewModel.selectProvince("Buenos Aires")
         viewModel.completeOnboarding()
@@ -172,7 +177,7 @@ class OnboardingViewModelTest {
     @Test
     fun `selecting a disabled category is rejected and does not persist`() = runTest(dispatcher) {
         val repository = FakeLearnerProfileRepository()
-        val viewModel = OnboardingViewModel(repository)
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository)
 
         viewModel.selectProvince("Buenos Aires")
         viewModel.nextStep()
@@ -194,18 +199,80 @@ class OnboardingViewModelTest {
             }
         )
     }
+
+    @Test
+    fun `completing onboarding upserts the profile under the session user id`() = runTest(dispatcher) {
+        val repository = FakeLearnerProfileRepository()
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(testUser), repository)
+
+        viewModel.selectProvince("Buenos Aires")
+        viewModel.nextStep()
+        viewModel.selectSchoolYear(7)
+        viewModel.nextStep()
+        viewModel.selectTrack(StudentTrack.SECONDARY)
+        viewModel.nextStep()
+        viewModel.completeOnboarding()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isCompleted)
+        assertEquals(
+            LearnerProfile(
+                province = "Buenos Aires",
+                schoolYear = 7,
+                studentTrack = StudentTrack.SECONDARY,
+                onboardingComplete = true
+            ),
+            repository.profilesByUserId[testUser.id]
+        )
+    }
+
+    @Test
+    fun `completing onboarding with a null session user sets an error and does not persist`() = runTest(dispatcher) {
+        val repository = FakeLearnerProfileRepository()
+        val viewModel = OnboardingViewModel(OnboardingFakeAuthRepository(user = null), repository)
+
+        viewModel.selectProvince("Buenos Aires")
+        viewModel.nextStep()
+        viewModel.selectSchoolYear(7)
+        viewModel.nextStep()
+        viewModel.selectTrack(StudentTrack.SECONDARY)
+        viewModel.nextStep()
+        viewModel.completeOnboarding()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isCompleted)
+        assertFalse(viewModel.uiState.value.isSaving)
+        assertNotNull(viewModel.uiState.value.errorMessage)
+        assertTrue(repository.profilesByUserId.isEmpty())
+    }
+}
+
+private val testUser = User(
+    id = "user-1",
+    name = "Test Student",
+    email = "student@example.com",
+    role = UserRole.STUDENT
+)
+
+private class OnboardingFakeAuthRepository(user: User?) : AuthRepository {
+    private val state = MutableStateFlow(AuthSession(token = "token-123", user = user))
+    override val session: StateFlow<AuthSession> = state
+    override suspend fun login(email: String, password: String): Result<User> = Result.success(requireNotNull(state.value.user))
+    override suspend fun register(name: String, email: String, password: String): Result<User> = Result.success(requireNotNull(state.value.user))
+    override fun logout() = Unit
 }
 
 private class FakeLearnerProfileRepository : LearnerProfileRepository {
-    private val storedProfile = MutableStateFlow<LearnerProfile?>(null)
+    val profilesByUserId = mutableMapOf<String, LearnerProfile>()
     var savedProfile: LearnerProfile? = null
 
-    override suspend fun getProfile(): LearnerProfile? = storedProfile.value
+    override suspend fun getProfile(userId: String): LearnerProfile? = profilesByUserId[userId]
 
-    override suspend fun isOnboardingComplete(): Boolean = storedProfile.value?.onboardingComplete == true
+    override suspend fun isOnboardingComplete(userId: String): Boolean =
+        profilesByUserId[userId]?.onboardingComplete == true
 
-    override suspend fun upsertProfile(profile: LearnerProfile) {
+    override suspend fun upsertProfile(userId: String, profile: LearnerProfile) {
         savedProfile = profile
-        storedProfile.value = profile
+        profilesByUserId[userId] = profile
     }
 }

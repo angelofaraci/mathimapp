@@ -34,12 +34,29 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MTextField
 import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.apple_logo
 import proyectofinal.composeapp.generated.resources.google_logo
+import proyectofinal.composeapp.generated.resources.login_action_login
+import proyectofinal.composeapp.generated.resources.login_action_logging_in
+import proyectofinal.composeapp.generated.resources.login_action_register
+import proyectofinal.composeapp.generated.resources.login_divider_or
+import proyectofinal.composeapp.generated.resources.login_email_label
+import proyectofinal.composeapp.generated.resources.login_email_placeholder
+import proyectofinal.composeapp.generated.resources.login_forgot_password
+import proyectofinal.composeapp.generated.resources.login_no_account_prompt
+import proyectofinal.composeapp.generated.resources.login_password_hide_description
+import proyectofinal.composeapp.generated.resources.login_password_label
+import proyectofinal.composeapp.generated.resources.login_password_show_description
+import proyectofinal.composeapp.generated.resources.login_recovery_placeholder
+import proyectofinal.composeapp.generated.resources.login_social_apple
+import proyectofinal.composeapp.generated.resources.login_social_google
+import proyectofinal.composeapp.generated.resources.login_subtitle
+import proyectofinal.composeapp.generated.resources.login_title
 
 @Composable
 fun LoginScreen(
@@ -68,15 +85,15 @@ private fun LoginContent(
 ) {
     var showRecoveryPlaceholder by remember { mutableStateOf(false) }
     AuthScreenScaffold(
-        formTitle = "Hola de nuevo",
-        formSubtitle = "Iniciá sesión para seguir tu racha."
+        formTitle = stringResource(Res.string.login_title),
+        formSubtitle = stringResource(Res.string.login_subtitle)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MTextField(
                 value = state.email,
                 onValueChange = onEmailChange,
-                label = { Text("Correo electrónico") },
-                placeholder = { Text("correo@ejemplo.com") },
+                label = { Text(stringResource(Res.string.login_email_label)) },
+                placeholder = { Text(stringResource(Res.string.login_email_placeholder)) },
                 singleLine = true,
                 isError = state.emailError != null,
                 supportingText = state.emailError?.let { error -> { Text(error) } },
@@ -84,7 +101,7 @@ private fun LoginContent(
                     AuthFieldIcon(
                         type = AuthFieldIconType.Email,
                         tint = if (state.emailError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        description = "Correo electrónico"
+                        description = stringResource(Res.string.login_email_label)
                     )
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -95,13 +112,13 @@ private fun LoginContent(
             MTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
-                label = { Text("Contraseña") },
+                label = { Text(stringResource(Res.string.login_password_label)) },
                 singleLine = true,
                 leadingIcon = {
                     AuthFieldIcon(
                         type = AuthFieldIconType.Lock,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        description = "Contraseña"
+                        description = stringResource(Res.string.login_password_label)
                     )
                 },
                 trailingIcon = {
@@ -109,7 +126,11 @@ private fun LoginContent(
                         AuthFieldIcon(
                             type = if (state.isPasswordVisible) AuthFieldIconType.VisibilityOff else AuthFieldIconType.Visibility,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            description = if (state.isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                            description = if (state.isPasswordVisible) {
+                                stringResource(Res.string.login_password_hide_description)
+                            } else {
+                                stringResource(Res.string.login_password_show_description)
+                            }
                         )
                     }
                 },
@@ -123,7 +144,7 @@ private fun LoginContent(
             )
 
             Text(
-                text = "¿Olvidaste tu contraseña?",
+                text = stringResource(Res.string.login_forgot_password),
                 modifier = Modifier
                     .align(Alignment.End)
                     .clickable { showRecoveryPlaceholder = true },
@@ -133,7 +154,7 @@ private fun LoginContent(
 
             if (showRecoveryPlaceholder) {
                 Text(
-                    text = "La recuperación de contraseña estará disponible próximamente.",
+                    text = stringResource(Res.string.login_recovery_placeholder),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -152,7 +173,13 @@ private fun LoginContent(
                 enabled = !state.isLoading && state.emailError == null,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (state.isLoading) "Iniciando sesión..." else "Iniciar sesión")
+                Text(
+                    if (state.isLoading) {
+                        stringResource(Res.string.login_action_logging_in)
+                    } else {
+                        stringResource(Res.string.login_action_login)
+                    }
+                )
             }
 
             Row(
@@ -162,7 +189,7 @@ private fun LoginContent(
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f))
                 Text(
-                    text = "o continuá con",
+                    text = stringResource(Res.string.login_divider_or),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -174,12 +201,12 @@ private fun LoginContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SocialButton(
-                    text = "Google",
+                    text = stringResource(Res.string.login_social_google),
                     logo = { androidx.compose.foundation.Image(painterResource(Res.drawable.google_logo), null, Modifier.size(18.dp)) },
                     modifier = Modifier.weight(1f)
                 )
                 SocialButton(
-                    text = "Apple",
+                    text = stringResource(Res.string.login_social_apple),
                     logo = { androidx.compose.foundation.Image(painterResource(Res.drawable.apple_logo), null, Modifier.size(18.dp)) },
                     modifier = Modifier.weight(1f)
                 )
@@ -193,12 +220,12 @@ private fun LoginContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "¿No tenés cuenta? ",
+                    text = stringResource(Res.string.login_no_account_prompt),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Registrate",
+                    text = stringResource(Res.string.login_action_register),
                     modifier = Modifier.clickable(enabled = !state.isLoading, onClick = onSwitchToRegister),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleMedium

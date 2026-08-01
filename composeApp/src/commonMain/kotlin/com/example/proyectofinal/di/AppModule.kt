@@ -34,6 +34,7 @@ import com.example.proyectofinal.ui.MainRouterViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
 import com.example.proyectofinal.ui.RegisterViewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -60,7 +61,7 @@ val appModule = module {
     viewModelOf(::LessonMapViewModel)
     viewModelOf(::HomeDashboardViewModel)
     viewModelOf(::LoginViewModel)
-    viewModelOf(::MainRouterViewModel)
+    viewModel { MainRouterViewModel() }
     viewModelOf(::OnboardingViewModel)
     viewModelOf(::ProfileViewModel)
     viewModelOf(::RegisterViewModel)

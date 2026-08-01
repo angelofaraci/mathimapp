@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.proyectofinal.data.ProvinceSchoolCatalog
 import com.example.proyectofinal.data.SchoolYearOption
+import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfile
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
@@ -40,6 +41,7 @@ data class OnboardingUiState(
 )
 
 class OnboardingViewModel(
+    private val authRepository: AuthRepository,
     private val learnerProfileRepository: LearnerProfileRepository
 ) : ViewModel() {
 
@@ -191,11 +193,20 @@ class OnboardingViewModel(
             return
         }
 
+        val userId = authRepository.session.value.user?.id
+        if (userId.isNullOrBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Your session could not be restored. Please sign in again."
+            )
+            return
+        }
+
         _uiState.value = state.copy(isSaving = true, errorMessage = null)
 
         viewModelScope.launch {
             runCatching {
                 learnerProfileRepository.upsertProfile(
+                    userId,
                     LearnerProfile(
                         province = province,
                         schoolYear = schoolYear,

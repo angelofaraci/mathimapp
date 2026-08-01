@@ -31,6 +31,27 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MTextField
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
+import org.jetbrains.compose.resources.stringResource
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.register_action_back
+import proyectofinal.composeapp.generated.resources.register_action_continue
+import proyectofinal.composeapp.generated.resources.register_action_create
+import proyectofinal.composeapp.generated.resources.register_action_creating
+import proyectofinal.composeapp.generated.resources.register_email_label
+import proyectofinal.composeapp.generated.resources.register_email_placeholder
+import proyectofinal.composeapp.generated.resources.register_name_label
+import proyectofinal.composeapp.generated.resources.register_name_placeholder
+import proyectofinal.composeapp.generated.resources.register_password_hide_toggle
+import proyectofinal.composeapp.generated.resources.register_password_label
+import proyectofinal.composeapp.generated.resources.register_password_show_toggle
+import proyectofinal.composeapp.generated.resources.register_password_strength_empty
+import proyectofinal.composeapp.generated.resources.register_password_strength_medium
+import proyectofinal.composeapp.generated.resources.register_password_strength_strong
+import proyectofinal.composeapp.generated.resources.register_password_strength_weak
+import proyectofinal.composeapp.generated.resources.register_step_indicator
+import proyectofinal.composeapp.generated.resources.register_subtitle
+import proyectofinal.composeapp.generated.resources.register_terms_text
+import proyectofinal.composeapp.generated.resources.register_title
 
 @Composable
 fun RegisterScreen(
@@ -61,8 +82,8 @@ private fun RegisterContent(
     onBack: () -> Unit
 ) {
     AuthScreenScaffold(
-        formTitle = "Creá tu cuenta",
-        formSubtitle = "Empezá a aprender matemática a tu ritmo."
+        formTitle = stringResource(Res.string.register_title),
+        formSubtitle = stringResource(Res.string.register_subtitle)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             WizardStepIndicator(currentStep = state.step)
@@ -88,9 +109,9 @@ private fun RegisterContent(
             ) {
                 Text(
                     when {
-                        state.isLoading -> "Creando cuenta..."
-                        state.step == 3 -> "Crear cuenta"
-                        else -> "Continuar"
+                        state.isLoading -> stringResource(Res.string.register_action_creating)
+                        state.step == 3 -> stringResource(Res.string.register_action_create)
+                        else -> stringResource(Res.string.register_action_continue)
                     }
                 )
             }
@@ -102,7 +123,7 @@ private fun RegisterContent(
                     modifier = Modifier.fillMaxWidth(),
                     style = com.example.proyectofinal.ui.primitives.MButtonStyle.Outline
                 ) {
-                    Text("Back")
+                    Text(stringResource(Res.string.register_action_back))
                 }
             }
 
@@ -130,7 +151,7 @@ private fun WizardStepIndicator(currentStep: Int) {
         }
     }
     Text(
-        text = "Paso $currentStep / 3",
+        text = stringResource(Res.string.register_step_indicator, currentStep),
         style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -141,8 +162,8 @@ private fun NameStep(state: RegisterUiState, onNameChange: (String) -> Unit) {
     MTextField(
         value = state.name,
         onValueChange = onNameChange,
-        label = { Text("Nombre completo") },
-        placeholder = { Text("Tu nombre") },
+        label = { Text(stringResource(Res.string.register_name_label)) },
+        placeholder = { Text(stringResource(Res.string.register_name_placeholder)) },
         singleLine = true,
         isError = state.fieldErrors[RegisterField.Name] != null,
         supportingText = state.fieldErrors[RegisterField.Name]?.let { error -> { Text(error) } },
@@ -161,8 +182,8 @@ private fun CredentialsStep(
     MTextField(
         value = state.email,
         onValueChange = onEmailChange,
-        label = { Text("Correo electrónico") },
-        placeholder = { Text("correo@ejemplo.com") },
+        label = { Text(stringResource(Res.string.register_email_label)) },
+        placeholder = { Text(stringResource(Res.string.register_email_placeholder)) },
         singleLine = true,
         isError = state.fieldErrors[RegisterField.Email] != null,
         supportingText = state.fieldErrors[RegisterField.Email]?.let { error -> { Text(error) } },
@@ -174,7 +195,7 @@ private fun CredentialsStep(
     MTextField(
         value = state.password,
         onValueChange = onPasswordChange,
-        label = { Text("Contraseña") },
+        label = { Text(stringResource(Res.string.register_password_label)) },
         singleLine = true,
         isError = state.fieldErrors[RegisterField.Password] != null,
         supportingText = state.fieldErrors[RegisterField.Password]?.let { error -> { Text(error) } },
@@ -186,7 +207,11 @@ private fun CredentialsStep(
         trailingIcon = {
             IconButton(onClick = onTogglePasswordVisibility) {
                 Text(
-                    text = if (state.isPasswordVisible) "Ocultar" else "Mostrar",
+                    text = if (state.isPasswordVisible) {
+                        stringResource(Res.string.register_password_hide_toggle)
+                    } else {
+                        stringResource(Res.string.register_password_show_toggle)
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -208,10 +233,10 @@ private fun PasswordStrengthMeter(strength: PasswordStrength) {
         PasswordStrength.Strong -> 3
     }
     val label = when (strength) {
-        PasswordStrength.Empty -> "Usá al menos 8 caracteres y combiná tipos de caracteres."
-        PasswordStrength.Weak -> "Seguridad de contraseña: baja"
-        PasswordStrength.Medium -> "Seguridad de contraseña: media"
-        PasswordStrength.Strong -> "Seguridad de contraseña: alta"
+        PasswordStrength.Empty -> stringResource(Res.string.register_password_strength_empty)
+        PasswordStrength.Weak -> stringResource(Res.string.register_password_strength_weak)
+        PasswordStrength.Medium -> stringResource(Res.string.register_password_strength_medium)
+        PasswordStrength.Strong -> stringResource(Res.string.register_password_strength_strong)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -253,7 +278,7 @@ private fun TermsStep(state: RegisterUiState, onAcceptedTermsChange: (Boolean) -
         TermsCheckboxBox(checked = state.acceptedTerms)
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "Acepto los términos y condiciones de MathimApp.",
+            text = stringResource(Res.string.register_terms_text),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )

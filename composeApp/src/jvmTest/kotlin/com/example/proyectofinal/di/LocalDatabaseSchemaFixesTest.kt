@@ -290,4 +290,105 @@ class LocalDatabaseSchemaFixesTest {
             upgradedExercise.payload
         )
     }
+
+    @Test
+    fun `repair step rebuilds legacy learner profile table and removes the single-row check`() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE CourseEntity (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    creatorId TEXT NOT NULL,
+                    isOfficial INTEGER NOT NULL DEFAULT 0,
+                    schoolYear INTEGER NOT NULL DEFAULT 0,
+                    joinCode TEXT,
+                    topic TEXT,
+                    difficulty TEXT,
+                    durationMinutes INTEGER,
+                    xpReward INTEGER
+                )
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE LearnerProfileEntity (
+                    profileId INTEGER NOT NULL PRIMARY KEY CHECK (profileId = 1),
+                    province TEXT NOT NULL,
+                    schoolYear INTEGER NOT NULL,
+                    studentTrack TEXT NOT NULL,
+                    onboardingComplete INTEGER NOT NULL DEFAULT 0
+                )
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+        driver.execute(
+            identifier = null,
+            sql = """
+                INSERT INTO LearnerProfileEntity(profileId, province, schoolYear, studentTrack, onboardingComplete)
+                VALUES (1, 'Buenos Aires', 13, 'Técnica secundaria', 0)
+            """.trimIndent(),
+            parameters = 0,
+        ).value
+
+        driver.applyPendingLocalSchemaFixes()
+
+        val intAdapter = object : ColumnAdapter<Int, Long> {
+            override fun decode(databaseValue: Long): Int = databaseValue.toInt()
+
+            override fun encode(value: Int): Long = value.toLong()
+        }
+
+        val database = AppDatabase(
+            driver = driver,
+            CourseEntityAdapter = CourseEntity.Adapter(
+                schoolYearAdapter = intAdapter,
+                durationMinutesAdapter = intAdapter,
+                xpRewardAdapter = intAdapter,
+            ),
+            ExerciseEntityAdapter = ExerciseEntity.Adapter(
+                typeAdapter = EnumColumnAdapter(),
+            ),
+            UserProgressEntityAdapter = UserProgressEntity.Adapter(
+                totalScoreAdapter = intAdapter,
+            ),
+            UserEntityAdapter = UserEntity.Adapter(
+                roleAdapter = userRoleColumnAdapter,
+            ),
+        )
+
+        val legacyRow = database.appDatabaseQueries.selectProfile("").executeAsOne()
+        assertEquals("Buenos Aires", legacyRow.province)
+        assertEquals(13L, legacyRow.schoolYear)
+        assertEquals("Técnica secundaria", legacyRow.studentTrack)
+        assertEquals(false, legacyRow.onboardingComplete)
+
+        val onboardingComplete = database.appDatabaseQueries
+            .selectProfile("")
+            .executeAsOneOrNull()
+            ?.onboardingComplete == true
+        assertEquals(false, onboardingComplete)
+
+        database.appDatabaseQueries.upsertProfile(
+            userId = "user-a",
+            province = "Córdoba",
+            schoolYear = 6,
+            studentTrack = "Primaria",
+            onboardingComplete = true,
+        )
+        database.appDatabaseQueries.upsertProfile(
+            userId = "user-b",
+            province = "Santa Fe",
+            schoolYear = 12,
+            studentTrack = "Autodidacta",
+            onboardingComplete = false,
+        )
+
+        assertEquals("Córdoba", database.appDatabaseQueries.selectProfile("user-a").executeAsOne().province)
+        assertEquals("Santa Fe", database.appDatabaseQueries.selectProfile("user-b").executeAsOne().province)
+    }
 }

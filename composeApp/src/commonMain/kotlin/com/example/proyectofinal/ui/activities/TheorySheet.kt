@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.models.Lesson
+import org.jetbrains.compose.resources.stringResource
+import proyectofinal.composeapp.generated.resources.Res
+import proyectofinal.composeapp.generated.resources.theory_sheet_label
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +35,7 @@ fun TheorySheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Theory",
+                text = stringResource(Res.string.theory_sheet_label),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )

@@ -48,6 +48,7 @@ import com.example.proyectofinal.ui.primitives.ProfileToggleRow
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.ic_arrow_left
@@ -67,6 +68,40 @@ import proyectofinal.composeapp.generated.resources.ic_person
 import proyectofinal.composeapp.generated.resources.ic_settings
 import proyectofinal.composeapp.generated.resources.ic_shield
 import proyectofinal.composeapp.generated.resources.ic_volume
+import proyectofinal.composeapp.generated.resources.profile_about_privacy_label
+import proyectofinal.composeapp.generated.resources.profile_about_terms_label
+import proyectofinal.composeapp.generated.resources.profile_about_version_label
+import proyectofinal.composeapp.generated.resources.profile_account_delete_action
+import proyectofinal.composeapp.generated.resources.profile_account_delete_warning
+import proyectofinal.composeapp.generated.resources.profile_account_email_label
+import proyectofinal.composeapp.generated.resources.profile_account_name_label
+import proyectofinal.composeapp.generated.resources.profile_account_password_change_value
+import proyectofinal.composeapp.generated.resources.profile_account_password_label
+import proyectofinal.composeapp.generated.resources.profile_account_role_notice
+import proyectofinal.composeapp.generated.resources.profile_action_logout
+import proyectofinal.composeapp.generated.resources.profile_avatar_edit_description
+import proyectofinal.composeapp.generated.resources.profile_back_description
+import proyectofinal.composeapp.generated.resources.profile_help_contact_label
+import proyectofinal.composeapp.generated.resources.profile_help_faq_label
+import proyectofinal.composeapp.generated.resources.profile_help_report_label
+import proyectofinal.composeapp.generated.resources.profile_nav_about_subtitle
+import proyectofinal.composeapp.generated.resources.profile_nav_about_title
+import proyectofinal.composeapp.generated.resources.profile_nav_account_subtitle
+import proyectofinal.composeapp.generated.resources.profile_nav_account_title
+import proyectofinal.composeapp.generated.resources.profile_nav_help_subtitle
+import proyectofinal.composeapp.generated.resources.profile_nav_help_title
+import proyectofinal.composeapp.generated.resources.profile_nav_preferences_subtitle
+import proyectofinal.composeapp.generated.resources.profile_nav_preferences_title
+import proyectofinal.composeapp.generated.resources.profile_preferences_dark_mode_label
+import proyectofinal.composeapp.generated.resources.profile_preferences_language_label
+import proyectofinal.composeapp.generated.resources.profile_preferences_language_value
+import proyectofinal.composeapp.generated.resources.profile_preferences_notifications_label
+import proyectofinal.composeapp.generated.resources.profile_preferences_sounds_label
+import proyectofinal.composeapp.generated.resources.profile_role_admin
+import proyectofinal.composeapp.generated.resources.profile_role_student
+import proyectofinal.composeapp.generated.resources.profile_role_teacher
+import proyectofinal.composeapp.generated.resources.profile_streak_days
+import proyectofinal.composeapp.generated.resources.profile_version_label
 
 @Composable
 internal expect fun BackHandler(enabled: Boolean, onBack: () -> Unit)
@@ -141,26 +176,26 @@ private fun ProfileHub(
         )
         Spacer(Modifier.size(2.dp))
         ProfileNavigationCard(
-            title = "Cuenta",
-            subtitle = "Nombre, correo, contraseña",
+            title = stringResource(Res.string.profile_nav_account_title),
+            subtitle = stringResource(Res.string.profile_nav_account_subtitle),
             onClick = { onDestinationSelected(ProfileSubScreen.ACCOUNT) },
             icon = { ProfileNavIcon(Res.drawable.ic_person, MaterialTheme.colorScheme.primary) }
         )
         ProfileNavigationCard(
-            title = "Preferencias",
-            subtitle = "Notificaciones, sonidos, idioma",
+            title = stringResource(Res.string.profile_nav_preferences_title),
+            subtitle = stringResource(Res.string.profile_nav_preferences_subtitle),
             onClick = { onDestinationSelected(ProfileSubScreen.PREFERENCES) },
             icon = { ProfileNavIcon(Res.drawable.ic_settings, MaterialTheme.colorScheme.secondary) }
         )
         ProfileNavigationCard(
-            title = "Ayuda y soporte",
-            subtitle = "FAQ, contacto, reportar un problema",
+            title = stringResource(Res.string.profile_nav_help_title),
+            subtitle = stringResource(Res.string.profile_nav_help_subtitle),
             onClick = { onDestinationSelected(ProfileSubScreen.HELP) },
             icon = { ProfileNavIcon(Res.drawable.ic_help_circle, MaterialTheme.colorScheme.error) }
         )
         ProfileNavigationCard(
-            title = "Acerca de",
-            subtitle = "Términos, privacidad, versión",
+            title = stringResource(Res.string.profile_nav_about_title),
+            subtitle = stringResource(Res.string.profile_nav_about_subtitle),
             onClick = { onDestinationSelected(ProfileSubScreen.ABOUT) },
             icon = { ProfileNavIcon(Res.drawable.ic_info, MaterialTheme.colorScheme.onSurfaceVariant) }
         )
@@ -184,14 +219,14 @@ private fun ProfileHub(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Cerrar sesión",
+                    text = stringResource(Res.string.profile_action_logout),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
         Text(
-            text = "MathimApp · versión ${appVersionName()}",
+            text = stringResource(Res.string.profile_version_label, appVersionName()),
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -202,6 +237,7 @@ private fun ProfileHub(
 
 @Composable
 private fun ProfileIdentity(displayName: String, email: String, role: UserRole, streak: Int) {
+    val editAvatarDescription = stringResource(Res.string.profile_avatar_edit_description)
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -226,7 +262,7 @@ private fun ProfileIdentity(displayName: String, email: String, role: UserRole, 
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary)
                     .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
-                    .semantics { contentDescription = "Editar avatar" }
+                    .semantics { contentDescription = editAvatarDescription }
                     .clickable {
                         // TODO: Open an avatar picker when platform-specific support is available.
                     },
@@ -245,7 +281,7 @@ private fun ProfileIdentity(displayName: String, email: String, role: UserRole, 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ProfileChip {
                 Text(
-                    text = role.displayName(),
+                    text = role.localizedLabel(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.Bold
@@ -261,7 +297,7 @@ private fun ProfileIdentity(displayName: String, email: String, role: UserRole, 
                     )
                     Spacer(Modifier.size(4.dp))
                     Text(
-                        text = "Racha $streak días",
+                        text = stringResource(Res.string.profile_streak_days, streak),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -301,6 +337,7 @@ private fun ProfileNavIcon(resource: DrawableResource, tint: Color) {
 
 @Composable
 private fun ProfileSubScreenScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    val backDescription = stringResource(Res.string.profile_back_description)
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -308,7 +345,7 @@ private fun ProfileSubScreenScaffold(title: String, onBack: () -> Unit, content:
                     .size(38.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .semantics { contentDescription = "Volver" }
+                    .semantics { contentDescription = backDescription }
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center
             ) {
@@ -334,19 +371,34 @@ private fun ProfileSubScreenScaffold(title: String, onBack: () -> Unit, content:
 
 @Composable
 private fun AccountScreen(displayName: String, email: String, role: UserRole, onBack: () -> Unit) {
-    ProfileSubScreenScaffold(title = "Cuenta", onBack = onBack) {
+    ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_account_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileListRow(label = "Nombre completo", value = displayName, leadingIcon = Res.drawable.ic_person, onClick = {
-                // TODO: Wire account name editing in a separately scoped change.
-            })
-            ProfileListRow(label = "Correo electrónico", value = email, leadingIcon = Res.drawable.ic_mail, onClick = {
-                // TODO: Wire account email editing in a separately scoped change.
-            })
-            ProfileListRow(label = "Contraseña", value = "Cambiar", leadingIcon = Res.drawable.ic_lock, onClick = {
-                // TODO: Wire password changes in a separately scoped change.
-            })
+            ProfileListRow(
+                label = stringResource(Res.string.profile_account_name_label),
+                value = displayName,
+                leadingIcon = Res.drawable.ic_person,
+                onClick = {
+                    // TODO: Wire account name editing in a separately scoped change.
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_account_email_label),
+                value = email,
+                leadingIcon = Res.drawable.ic_mail,
+                onClick = {
+                    // TODO: Wire account email editing in a separately scoped change.
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_account_password_label),
+                value = stringResource(Res.string.profile_account_password_change_value),
+                leadingIcon = Res.drawable.ic_lock,
+                onClick = {
+                    // TODO: Wire password changes in a separately scoped change.
+                }
+            )
             Text(
-                text = "Tu rol actual es ${role.displayName()}. Los cambios de cuenta requerirán confirmación por correo.",
+                text = stringResource(Res.string.profile_account_role_notice, role.localizedLabel()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -358,10 +410,10 @@ private fun AccountScreen(displayName: String, email: String, role: UserRole, on
                 modifier = Modifier.fillMaxWidth(),
                 style = MButtonStyle.Outline
             ) {
-                Text("Eliminar cuenta")
+                Text(stringResource(Res.string.profile_account_delete_action))
             }
             Text(
-                text = "Esta acción es permanente y borra todo tu progreso.",
+                text = stringResource(Res.string.profile_account_delete_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -371,63 +423,115 @@ private fun AccountScreen(displayName: String, email: String, role: UserRole, on
 
 @Composable
 private fun PreferencesScreen(onBack: () -> Unit) {
-    ProfileSubScreenScaffold(title = "Preferencias", onBack = onBack) {
+    ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_preferences_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileToggleRow(label = "Notificaciones", checked = true, leadingIcon = Res.drawable.ic_bell, onCheckedChange = {
-                // TODO: Persist notification preferences in a separately scoped change.
+            ProfileToggleRow(
+                label = stringResource(Res.string.profile_preferences_notifications_label),
+                checked = true,
+                leadingIcon = Res.drawable.ic_bell,
+                onCheckedChange = {
+                    // TODO: Persist notification preferences in a separately scoped change.
+                }
+            )
+            ProfileToggleRow(
+                label = stringResource(Res.string.profile_preferences_sounds_label),
+                checked = true,
+                leadingIcon = Res.drawable.ic_volume,
+                onCheckedChange = {
+                    // TODO: Persist sound preferences in a separately scoped change.
             })
-            ProfileToggleRow(label = "Sonidos", checked = true, leadingIcon = Res.drawable.ic_volume, onCheckedChange = {
-                // TODO: Persist sound preferences in a separately scoped change.
-            })
-            ProfileToggleRow(label = "Modo oscuro", checked = false, leadingIcon = Res.drawable.ic_moon, onCheckedChange = {
-                // TODO: Wire dark-mode switching when the theme change is scoped; visual placeholder only (no-op per spec).
-            })
-            ProfileListRow(label = "Idioma", value = "Español", leadingIcon = Res.drawable.ic_globe, onClick = {
-                // TODO: Add language selection in a separately scoped change.
-            })
+            ProfileToggleRow(
+                label = stringResource(Res.string.profile_preferences_dark_mode_label),
+                checked = false,
+                leadingIcon = Res.drawable.ic_moon,
+                onCheckedChange = {
+                    // TODO: Wire dark-mode switching when the theme change is scoped; visual placeholder only (no-op per spec).
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_preferences_language_label),
+                value = stringResource(Res.string.profile_preferences_language_value),
+                leadingIcon = Res.drawable.ic_globe,
+                onClick = {
+                    // TODO: Add language selection in a separately scoped change.
+                }
+            )
         }
     }
 }
 
 @Composable
 private fun HelpScreen(onBack: () -> Unit) {
-    ProfileSubScreenScaffold(title = "Ayuda y soporte", onBack = onBack) {
+    ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_help_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileListRow(label = "Preguntas frecuentes", value = "", leadingIcon = Res.drawable.ic_help_circle, onClick = {
-                // TODO: Add FAQ content in a separately scoped change.
-            })
-            ProfileListRow(label = "Contactar soporte", value = "", leadingIcon = Res.drawable.ic_mail, onClick = {
-                // TODO: Add support contact behavior in a separately scoped change.
-            })
-            ProfileListRow(label = "Reportar un problema", value = "", leadingIcon = Res.drawable.ic_flag, onClick = {
-                // TODO: Add issue reporting in a separately scoped change.
-            })
+            ProfileListRow(
+                label = stringResource(Res.string.profile_help_faq_label),
+                value = "",
+                leadingIcon = Res.drawable.ic_help_circle,
+                onClick = {
+                    // TODO: Add FAQ content in a separately scoped change.
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_help_contact_label),
+                value = "",
+                leadingIcon = Res.drawable.ic_mail,
+                onClick = {
+                    // TODO: Add support contact behavior in a separately scoped change.
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_help_report_label),
+                value = "",
+                leadingIcon = Res.drawable.ic_flag,
+                onClick = {
+                    // TODO: Add issue reporting in a separately scoped change.
+                }
+            )
         }
     }
 }
 
 @Composable
 private fun AboutScreen(onBack: () -> Unit) {
-    ProfileSubScreenScaffold(title = "Acerca de", onBack = onBack) {
+    ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_about_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProfileListRow(label = "Términos de uso", value = "", leadingIcon = Res.drawable.ic_file_text, onClick = {
-                // TODO: Add terms content in a separately scoped change.
-            })
-            ProfileListRow(label = "Política de privacidad", value = "", leadingIcon = Res.drawable.ic_shield, onClick = {
-                // TODO: Add privacy content in a separately scoped change.
-            })
-            ProfileListRow(label = "Versión", value = appVersionName(), leadingIcon = Res.drawable.ic_info, onClick = {
-                // TODO: Resolve the app version from a cross-platform source in a separately scoped change.
-            })
+            ProfileListRow(
+                label = stringResource(Res.string.profile_about_terms_label),
+                value = "",
+                leadingIcon = Res.drawable.ic_file_text,
+                onClick = {
+                    // TODO: Add terms content in a separately scoped change.
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_about_privacy_label),
+                value = "",
+                leadingIcon = Res.drawable.ic_shield,
+                onClick = {
+                    // TODO: Add privacy content in a separately scoped change.
+                }
+            )
+            ProfileListRow(
+                label = stringResource(Res.string.profile_about_version_label),
+                value = appVersionName(),
+                leadingIcon = Res.drawable.ic_info,
+                onClick = {
+                    // TODO: Resolve the app version from a cross-platform source in a separately scoped change.
+                }
+            )
         }
     }
 }
 
-private fun UserRole.displayName(): String = when (this) {
-    UserRole.ADMIN -> "Administrador"
-    UserRole.TEACHER -> "Docente"
-    UserRole.STUDENT -> "Estudiante"
-}
+@Composable
+private fun UserRole.localizedLabel(): String = stringResource(
+    when (this) {
+        UserRole.ADMIN -> Res.string.profile_role_admin
+        UserRole.TEACHER -> Res.string.profile_role_teacher
+        UserRole.STUDENT -> Res.string.profile_role_student
+    }
+)
 
 private fun String.toInitials(): String = trim().split(" ").filter { it.isNotBlank() }
     .take(2)

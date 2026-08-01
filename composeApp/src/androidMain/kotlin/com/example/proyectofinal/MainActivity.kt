@@ -10,6 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.proyectofinal.di.DatabaseDriverFactory
 import com.example.proyectofinal.di.initializeKoin
+import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.ui.home.HomeDashboardContent
 import com.example.proyectofinal.ui.home.HomeDashboardUiState
 import org.koin.dsl.module
@@ -39,9 +40,9 @@ fun AppAndroidPreview() {
             uiState = HomeDashboardUiState(
                 isLoading = false,
                 greeting = "Buenos días, María",
-                schoolYearLabel = "Year 7 • Secondary",
+                schoolYear = 7,
+                studentTrack = StudentTrack.SECONDARY,
                 level = 2,
-                activityCount = 5,
                 completedLessons = 5,
                 hasEnrolledCourse = true
             ),

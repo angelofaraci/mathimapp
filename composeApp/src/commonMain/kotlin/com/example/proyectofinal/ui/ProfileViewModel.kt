@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
+import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserProgress
 import com.example.proyectofinal.models.UserRole
@@ -25,7 +26,8 @@ data class ProfileUiState(
     val displayName: String = "",
     val email: String = "",
     val role: UserRole = UserRole.STUDENT,
-    val schoolYearLabel: String? = null,
+    val schoolYear: Int? = null,
+    val studentTrack: StudentTrack? = null,
     val level: Int = 0,
     val currentXp: Int = 0,
     val xpForNextLevel: Int = XpPerLevel,
@@ -54,13 +56,14 @@ class ProfileViewModel(
         _uiState.value = try {
             val user = sessionUser ?: error("Authenticated user not available")
             val progress = userRepository.getUserProgress(user.id)
-            val profile = learnerProfileRepository.getProfile()
+            val profile = learnerProfileRepository.getProfile(user.id)
             ProfileUiState(
                 isLoading = false,
                 displayName = user.name,
                 email = user.email,
                 role = user.role,
-                schoolYearLabel = profile?.let { "Year ${it.schoolYear} • ${it.studentTrack.displayName}" },
+                schoolYear = profile?.schoolYear,
+                studentTrack = profile?.studentTrack,
                 level = progress.totalScore / XpPerLevel,
                 currentXp = progress.totalScore % XpPerLevel,
                 xpForNextLevel = XpPerLevel,

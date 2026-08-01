@@ -37,9 +37,9 @@ class ProfileRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Estudiante").assertExists()
+        composeTestRule.onNodeWithText("Student").assertExists()
         composeTestRule.onNodeWithTag("streakChip").assertExists()
-        composeTestRule.onNodeWithText("Racha 5 días").assertExists()
+        composeTestRule.onNodeWithText("5-day streak").assertExists()
 
         // Cards merge descendants when clickable; the tagged boxes only exist in the unmerged tree.
         val iconBoxes = composeTestRule.onAllNodesWithTag("navIconBox", useUnmergedTree = true)
@@ -48,8 +48,8 @@ class ProfileRedesignRenderTest {
             .assertWidthIsEqualTo(42.dp)
             .assertHeightIsEqualTo(42.dp)
 
-        composeTestRule.onNodeWithText("Cerrar sesión").assertExists()
-        composeTestRule.onNodeWithText("MathimApp · versión 1.0").assertExists()
+        composeTestRule.onNodeWithText("Log out").assertExists()
+        composeTestRule.onNodeWithText("MathimApp · version 1.0").assertExists()
     }
 
     @Test
@@ -61,8 +61,8 @@ class ProfileRedesignRenderTest {
         }
 
         composeTestRule.onNodeWithTag("streakChip").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Racha 0 días").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Estudiante").assertExists()
+        composeTestRule.onNodeWithText("0-day streak").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Student").assertExists()
     }
 
     @Test
@@ -73,14 +73,14 @@ class ProfileRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Cuenta").performClick()
+        composeTestRule.onNodeWithText("Account").performClick()
 
-        composeTestRule.onNodeWithContentDescription("Volver").assertExists()
-        composeTestRule.onNodeWithText("Cuenta").assertExists()
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        composeTestRule.onNodeWithText("Account").assertExists()
         composeTestRule.onAllNodesWithTag("rowLeadingIcon", useUnmergedTree = true).assertCountEquals(3)
-        composeTestRule.onNodeWithText("Nombre completo").assertExists()
-        composeTestRule.onNodeWithText("Correo electrónico").assertExists()
-        composeTestRule.onNodeWithText("Contraseña").assertExists()
+        composeTestRule.onNodeWithText("Full name").assertExists()
+        composeTestRule.onNodeWithText("Email").assertExists()
+        composeTestRule.onNodeWithText("Password").assertExists()
     }
 
     @Test
@@ -91,9 +91,9 @@ class ProfileRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Preferencias").performClick()
+        composeTestRule.onNodeWithText("Preferences").performClick()
 
-        composeTestRule.onNodeWithText("Modo oscuro").assertExists()
+        composeTestRule.onNodeWithText("Dark mode").assertExists()
         composeTestRule.onAllNodesWithTag("rowLeadingIcon", useUnmergedTree = true).assertCountEquals(4)
 
         val switches = composeTestRule.onAllNodes(
@@ -112,17 +112,17 @@ class ProfileRedesignRenderTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Ayuda y soporte").performClick()
-        composeTestRule.onNodeWithContentDescription("Volver").assertExists()
-        composeTestRule.onNodeWithText("Ayuda y soporte").assertExists()
+        composeTestRule.onNodeWithText("Help & support").performClick()
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        composeTestRule.onNodeWithText("Help & support").assertExists()
         composeTestRule.onAllNodesWithTag("rowLeadingIcon", useUnmergedTree = true).assertCountEquals(3)
 
-        composeTestRule.onNodeWithContentDescription("Volver").performClick()
-        composeTestRule.onNodeWithText("Acerca de").performClick()
-        composeTestRule.onNodeWithContentDescription("Volver").assertExists()
-        composeTestRule.onNodeWithText("Acerca de").assertExists()
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        composeTestRule.onNodeWithText("About").performClick()
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        composeTestRule.onNodeWithText("About").assertExists()
         composeTestRule.onAllNodesWithTag("rowLeadingIcon", useUnmergedTree = true).assertCountEquals(3)
-        composeTestRule.onNodeWithText("Versión").assertExists()
+        composeTestRule.onNodeWithText("Version").assertExists()
     }
 
     private fun redesignUiState(displayName: String = "Alice Student", streak: Int = 5) = ProfileUiState(

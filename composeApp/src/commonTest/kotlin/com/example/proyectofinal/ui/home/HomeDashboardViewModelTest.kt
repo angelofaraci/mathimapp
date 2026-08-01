@@ -61,7 +61,8 @@ class HomeDashboardViewModelTest {
         with(viewModel.uiState.value) {
             assertFalse(isLoading)
             assertTrue(greeting in setOf("Buenos días", "Buenas tardes", "Buenas noches"))
-            assertEquals("Year 7 • Secondary", schoolYearLabel)
+            assertEquals(7, schoolYear)
+            assertEquals(StudentTrack.SECONDARY, studentTrack)
         }
     }
 
@@ -357,7 +358,7 @@ private class FakeHomeDashboardUserRepository(
 }
 
 private class HomeDashboardFakeLearnerProfileRepository : LearnerProfileRepository {
-    override suspend fun getProfile(): LearnerProfile = LearnerProfile("Buenos Aires", 7, StudentTrack.SECONDARY, true)
-    override suspend fun isOnboardingComplete(): Boolean = true
-    override suspend fun upsertProfile(profile: LearnerProfile) = Unit
+    override suspend fun getProfile(userId: String): LearnerProfile = LearnerProfile("Buenos Aires", 7, StudentTrack.SECONDARY, true)
+    override suspend fun isOnboardingComplete(userId: String): Boolean = true
+    override suspend fun upsertProfile(userId: String, profile: LearnerProfile) = Unit
 }

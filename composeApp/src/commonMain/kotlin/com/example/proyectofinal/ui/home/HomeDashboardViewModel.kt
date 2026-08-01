@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
+import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.User
 import com.example.proyectofinal.ui.ActivityStreakCap
@@ -28,7 +29,8 @@ data class HomeCourseProgress(
 data class HomeDashboardUiState(
     val isLoading: Boolean = true,
     val greeting: String = "",
-    val schoolYearLabel: String? = null,
+    val schoolYear: Int? = null,
+    val studentTrack: StudentTrack? = null,
     val level: Int = 0,
     val streak: Int = 0,
     val currentXp: Int = 0,
@@ -120,12 +122,13 @@ class HomeDashboardViewModel(
 
     private suspend fun buildDashboardState(user: User): HomeDashboardUiState {
         val progress = userRepository.getUserProgress(user.id)
-        val profile = learnerProfileRepository.getProfile()
+        val profile = learnerProfileRepository.getProfile(user.id)
         val completedLessons = progress.completedLessonIds.size
         return HomeDashboardUiState(
             isLoading = false,
             greeting = greetingFor(user.name),
-            schoolYearLabel = profile?.let { "Year ${it.schoolYear} • ${it.studentTrack.displayName}" },
+            schoolYear = profile?.schoolYear,
+            studentTrack = profile?.studentTrack,
             level = progress.totalScore / XpPerLevel,
             streak = min(completedLessons, ActivityStreakCap),
             currentXp = progress.totalScore % XpPerLevel,
