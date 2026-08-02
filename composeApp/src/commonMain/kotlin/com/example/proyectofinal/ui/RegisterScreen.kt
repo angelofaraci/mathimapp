@@ -28,6 +28,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import com.example.proyectofinal.ui.primitives.AuthFieldIcon
+import com.example.proyectofinal.ui.primitives.AuthFieldIconType
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MTextField
 import com.example.proyectofinal.ui.theme.AppThemeDefaults
@@ -206,14 +208,14 @@ private fun CredentialsStep(
         },
         trailingIcon = {
             IconButton(onClick = onTogglePasswordVisibility) {
-                Text(
-                    text = if (state.isPasswordVisible) {
+                AuthFieldIcon(
+                    type = if (state.isPasswordVisible) AuthFieldIconType.VisibilityOff else AuthFieldIconType.Visibility,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    description = if (state.isPasswordVisible) {
                         stringResource(Res.string.register_password_hide_toggle)
                     } else {
                         stringResource(Res.string.register_password_show_toggle)
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    }
                 )
             }
         },
