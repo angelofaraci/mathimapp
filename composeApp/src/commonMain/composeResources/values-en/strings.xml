@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="onboarding_title">Complete your onboarding</string>
-    <string name="onboarding_action_logout">Logout</string>
     <string name="onboarding_action_continue">Continue</string>
     <string name="onboarding_action_back">Back</string>
     <string name="onboarding_action_saving">Saving profile...</string>

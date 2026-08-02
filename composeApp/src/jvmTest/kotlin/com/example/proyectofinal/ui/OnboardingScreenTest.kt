@@ -36,8 +36,7 @@ class OnboardingScreenTest {
                         onTrackSelected = {},
                         onContinue = { continueCalls++ },
                         onBack = {},
-                        onComplete = {},
-                        onLogout = {}
+                        onComplete = {}
                     )
                 }
             }
@@ -70,8 +69,7 @@ class OnboardingScreenTest {
                         onTrackSelected = {},
                         onContinue = {},
                         onBack = {},
-                        onComplete = { completeCalls++ },
-                        onLogout = {}
+                        onComplete = { completeCalls++ }
                     )
                 }
             }

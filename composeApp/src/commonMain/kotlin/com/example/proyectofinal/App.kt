@@ -84,8 +84,7 @@ private fun AuthGate() {
 
         AuthView.ONBOARDING -> OnboardingScreen(
             viewModel = koinViewModel<OnboardingViewModel>(),
-            onCompleted = { onboardingRefreshKey += 1 },
-            onLogout = authRepository::logout
+            onCompleted = { onboardingRefreshKey += 1 }
         )
     }
 }

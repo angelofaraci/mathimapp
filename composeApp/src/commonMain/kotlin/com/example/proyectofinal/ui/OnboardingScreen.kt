@@ -35,7 +35,6 @@ import proyectofinal.composeapp.generated.resources.Res
 import proyectofinal.composeapp.generated.resources.onboarding_action_back
 import proyectofinal.composeapp.generated.resources.onboarding_action_continue
 import proyectofinal.composeapp.generated.resources.onboarding_action_continue_to_courses
-import proyectofinal.composeapp.generated.resources.onboarding_action_logout
 import proyectofinal.composeapp.generated.resources.onboarding_action_saving
 import proyectofinal.composeapp.generated.resources.onboarding_step1_description
 import proyectofinal.composeapp.generated.resources.onboarding_step1_title
@@ -54,8 +53,7 @@ import proyectofinal.composeapp.generated.resources.onboarding_track_unavailable
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel,
-    onCompleted: () -> Unit,
-    onLogout: () -> Unit
+    onCompleted: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -72,8 +70,7 @@ fun OnboardingScreen(
         onTrackSelected = viewModel::selectTrack,
         onContinue = viewModel::nextStep,
         onBack = viewModel::goBack,
-        onComplete = viewModel::completeOnboarding,
-        onLogout = onLogout
+        onComplete = viewModel::completeOnboarding
     )
 }
 
@@ -85,8 +82,7 @@ internal fun OnboardingContent(
     onTrackSelected: (StudentTrack) -> Unit,
     onContinue: () -> Unit,
     onBack: () -> Unit,
-    onComplete: () -> Unit,
-    onLogout: () -> Unit
+    onComplete: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -94,23 +90,10 @@ internal fun OnboardingContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(Res.string.onboarding_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-            MButton(
-                onClick = onLogout,
-                enabled = !state.isSaving,
-                style = MButtonStyle.Outline
-            ) {
-                Text(stringResource(Res.string.onboarding_action_logout))
-            }
-        }
+        Text(
+            text = stringResource(Res.string.onboarding_title),
+            style = MaterialTheme.typography.headlineSmall
+        )
 
         StepSummary(state)
 
