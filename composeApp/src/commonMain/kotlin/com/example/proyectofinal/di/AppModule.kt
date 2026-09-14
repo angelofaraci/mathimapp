@@ -33,6 +33,7 @@ import com.example.proyectofinal.ui.LoginViewModel
 import com.example.proyectofinal.ui.MainRouterViewModel
 import com.example.proyectofinal.ui.OnboardingViewModel
 import com.example.proyectofinal.ui.ProfileViewModel
+import com.example.proyectofinal.ui.localization.AppLocaleController
 import com.example.proyectofinal.ui.RegisterViewModel
 import com.example.proyectofinal.ui.teacher.TeacherDashboardViewModel
 import org.koin.core.module.dsl.viewModel
@@ -56,6 +57,7 @@ val appModule = module {
     single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
     single<UserRepository> { KtorUserRepository(get(), get(), get(), get()) }
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
+    single { AppLocaleController() }
 
     viewModelOf(::CourseViewModel)
     viewModelOf(::AuthGateViewModel)

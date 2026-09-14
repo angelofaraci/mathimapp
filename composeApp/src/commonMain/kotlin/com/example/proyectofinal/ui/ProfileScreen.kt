@@ -19,9 +19,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,12 +38,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.models.AvatarId
+import com.example.proyectofinal.models.ProfilePreferences
+import com.example.proyectofinal.models.SupportedLanguage
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
 import com.example.proyectofinal.ui.primitives.MProgressIndicator
+import com.example.proyectofinal.ui.primitives.MTextField
 import com.example.proyectofinal.ui.primitives.ProfileListRow
 import com.example.proyectofinal.ui.primitives.ProfileNavigationCard
 import com.example.proyectofinal.ui.primitives.ProfileToggleRow
@@ -117,11 +124,27 @@ private enum class ProfileSubScreen {
 @Composable
 fun ProfileScreen(onLogout: () -> Unit, viewModel: ProfileViewModel = koinViewModel<ProfileViewModel>()) {
     val uiState by viewModel.uiState.collectAsState()
-    ProfileContent(uiState, onLogout)
+    ProfileContent(
+        uiState = uiState,
+        onLogout = onLogout,
+        onIdentityUpdated = viewModel::updateIdentity,
+        onPasswordChanged = viewModel::changePassword,
+        onPreferencesUpdated = viewModel::updatePreferences,
+        onAvatarUpdated = viewModel::updateAvatar,
+        onDeleteAccount = viewModel::deleteAccount
+    )
 }
 
 @Composable
-internal fun ProfileContent(uiState: ProfileUiState, onLogout: () -> Unit) {
+internal fun ProfileContent(
+    uiState: ProfileUiState,
+    onLogout: () -> Unit,
+    onIdentityUpdated: (String, String) -> Unit = { _, _ -> },
+    onPasswordChanged: (String, String) -> Unit = { _, _ -> },
+    onPreferencesUpdated: (ProfilePreferences) -> Unit = {},
+    onAvatarUpdated: (AvatarId) -> Unit = {},
+    onDeleteAccount: (String) -> Unit = {}
+) {
     when {
         uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { MProgressIndicator() }
         uiState.errorMessage != null -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -139,17 +162,25 @@ internal fun ProfileContent(uiState: ProfileUiState, onLogout: () -> Unit) {
                     ProfileSubScreen.HUB -> ProfileHub(
                         uiState = uiState,
                         onDestinationSelected = { destination = it },
-                        onLogout = onLogout
+                        onLogout = onLogout,
+                        onAvatarUpdated = onAvatarUpdated
                     )
 
                     ProfileSubScreen.ACCOUNT -> AccountScreen(
                         displayName = uiState.displayName,
                         email = uiState.email,
                         role = uiState.role,
-                        onBack = { destination = ProfileSubScreen.HUB }
+                        onBack = { destination = ProfileSubScreen.HUB },
+                        onIdentityUpdated = onIdentityUpdated,
+                        onPasswordChanged = onPasswordChanged,
+                        onDeleteAccount = onDeleteAccount
                     )
 
-                    ProfileSubScreen.PREFERENCES -> PreferencesScreen(onBack = { destination = ProfileSubScreen.HUB })
+                    ProfileSubScreen.PREFERENCES -> PreferencesScreen(
+                        preferences = uiState.preferences,
+                        onPreferencesUpdated = onPreferencesUpdated,
+                        onBack = { destination = ProfileSubScreen.HUB }
+                    )
                     ProfileSubScreen.HELP -> HelpScreen(onBack = { destination = ProfileSubScreen.HUB })
                     ProfileSubScreen.ABOUT -> AboutScreen(onBack = { destination = ProfileSubScreen.HUB })
                 }
@@ -162,7 +193,8 @@ internal fun ProfileContent(uiState: ProfileUiState, onLogout: () -> Unit) {
 private fun ProfileHub(
     uiState: ProfileUiState,
     onDestinationSelected: (ProfileSubScreen) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onAvatarUpdated: (AvatarId) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -172,7 +204,9 @@ private fun ProfileHub(
             displayName = uiState.displayName,
             email = uiState.email,
             role = uiState.role,
-            streak = uiState.streak
+            streak = uiState.streak,
+            avatarId = uiState.preferences.avatarId,
+            onAvatarUpdated = onAvatarUpdated
         )
         Spacer(Modifier.size(2.dp))
         ProfileNavigationCard(
@@ -236,7 +270,14 @@ private fun ProfileHub(
 }
 
 @Composable
-private fun ProfileIdentity(displayName: String, email: String, role: UserRole, streak: Int) {
+private fun ProfileIdentity(
+    displayName: String,
+    email: String,
+    role: UserRole,
+    streak: Int,
+    avatarId: AvatarId?,
+    onAvatarUpdated: (AvatarId) -> Unit
+) {
     val editAvatarDescription = stringResource(Res.string.profile_avatar_edit_description)
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -264,7 +305,7 @@ private fun ProfileIdentity(displayName: String, email: String, role: UserRole, 
                     .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
                     .semantics { contentDescription = editAvatarDescription }
                     .clickable {
-                        // TODO: Open an avatar picker when platform-specific support is available.
+                        onAvatarUpdated(avatarId.nextAvatar())
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -306,6 +347,11 @@ private fun ProfileIdentity(displayName: String, email: String, role: UserRole, 
             }
         }
     }
+}
+
+private fun AvatarId?.nextAvatar(): AvatarId {
+    val current = this ?: AvatarId.AVATAR_1
+    return AvatarId.entries[(current.ordinal + 1) % AvatarId.entries.size]
 }
 
 @Composable
@@ -370,32 +416,35 @@ private fun ProfileSubScreenScaffold(title: String, onBack: () -> Unit, content:
 }
 
 @Composable
-private fun AccountScreen(displayName: String, email: String, role: UserRole, onBack: () -> Unit) {
+private fun AccountScreen(
+    displayName: String,
+    email: String,
+    role: UserRole,
+    onBack: () -> Unit,
+    onIdentityUpdated: (String, String) -> Unit,
+    onPasswordChanged: (String, String) -> Unit,
+    onDeleteAccount: (String) -> Unit
+) {
+    var editor by remember { mutableStateOf<AccountEditor?>(null) }
     ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_account_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileListRow(
                 label = stringResource(Res.string.profile_account_name_label),
                 value = displayName,
                 leadingIcon = Res.drawable.ic_person,
-                onClick = {
-                    // TODO: Wire account name editing in a separately scoped change.
-                }
+                onClick = { editor = AccountEditor.IDENTITY }
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_account_email_label),
                 value = email,
                 leadingIcon = Res.drawable.ic_mail,
-                onClick = {
-                    // TODO: Wire account email editing in a separately scoped change.
-                }
+                onClick = { editor = AccountEditor.IDENTITY }
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_account_password_label),
                 value = stringResource(Res.string.profile_account_password_change_value),
                 leadingIcon = Res.drawable.ic_lock,
-                onClick = {
-                    // TODO: Wire password changes in a separately scoped change.
-                }
+                onClick = { editor = AccountEditor.PASSWORD }
             )
             Text(
                 text = stringResource(Res.string.profile_account_role_notice, role.localizedLabel()),
@@ -405,7 +454,7 @@ private fun AccountScreen(displayName: String, email: String, role: UserRole, on
             Spacer(Modifier.size(8.dp))
             MButton(
                 onClick = {
-                    // TODO: Add the destructive account deletion flow in a separately scoped change.
+                    editor = AccountEditor.DELETE
                 },
                 modifier = Modifier.fillMaxWidth(),
                 style = MButtonStyle.Outline
@@ -419,27 +468,94 @@ private fun AccountScreen(displayName: String, email: String, role: UserRole, on
             )
         }
     }
+    when (editor) {
+        AccountEditor.IDENTITY -> IdentityEditor(displayName, email, onDismiss = { editor = null }, onSave = onIdentityUpdated)
+        AccountEditor.PASSWORD -> PasswordEditor(onDismiss = { editor = null }, onSave = onPasswordChanged)
+        AccountEditor.DELETE -> DeleteAccountConfirmation(onDismiss = { editor = null }, onConfirm = onDeleteAccount)
+        null -> Unit
+    }
+}
+
+private enum class AccountEditor { IDENTITY, PASSWORD, DELETE }
+
+@Composable
+private fun IdentityEditor(
+    displayName: String,
+    email: String,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var name by remember { mutableStateOf(displayName) }
+    var address by remember { mutableStateOf(email) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit account") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MTextField(name, { name = it }, singleLine = true, label = { Text("Name") })
+                MTextField(address, { address = it }, singleLine = true, label = { Text("Email") })
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(name.trim(), address.trim()); onDismiss() }, enabled = name.isNotBlank() && address.contains('@')) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
-private fun PreferencesScreen(onBack: () -> Unit) {
+private fun PasswordEditor(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change password") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MTextField(currentPassword, { currentPassword = it }, singleLine = true, visualTransformation = PasswordVisualTransformation(), label = { Text("Current password") })
+                MTextField(newPassword, { newPassword = it }, singleLine = true, visualTransformation = PasswordVisualTransformation(), label = { Text("New password (8 characters minimum)") })
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(currentPassword, newPassword); onDismiss() }, enabled = currentPassword.isNotBlank() && newPassword.length >= 8) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun DeleteAccountConfirmation(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var currentPassword by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete account permanently?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("This action is irreversible. Enter your current password to permanently delete your account.")
+                MTextField(currentPassword, { currentPassword = it }, singleLine = true, visualTransformation = PasswordVisualTransformation(), label = { Text("Current password") })
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(currentPassword); onDismiss() }, enabled = currentPassword.isNotBlank()) { Text("Delete permanently") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun PreferencesScreen(
+    preferences: ProfilePreferences,
+    onPreferencesUpdated: (ProfilePreferences) -> Unit,
+    onBack: () -> Unit
+) {
     ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_preferences_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileToggleRow(
                 label = stringResource(Res.string.profile_preferences_notifications_label),
-                checked = true,
+                checked = preferences.notificationsEnabled,
                 leadingIcon = Res.drawable.ic_bell,
-                onCheckedChange = {
-                    // TODO: Persist notification preferences in a separately scoped change.
-                }
+                onCheckedChange = { onPreferencesUpdated(preferences.copy(notificationsEnabled = it)) }
             )
             ProfileToggleRow(
                 label = stringResource(Res.string.profile_preferences_sounds_label),
-                checked = true,
+                checked = preferences.soundsEnabled,
                 leadingIcon = Res.drawable.ic_volume,
-                onCheckedChange = {
-                    // TODO: Persist sound preferences in a separately scoped change.
-            })
+                onCheckedChange = { onPreferencesUpdated(preferences.copy(soundsEnabled = it)) }
+            )
             ProfileToggleRow(
                 label = stringResource(Res.string.profile_preferences_dark_mode_label),
                 checked = false,
@@ -450,10 +566,14 @@ private fun PreferencesScreen(onBack: () -> Unit) {
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_preferences_language_label),
-                value = stringResource(Res.string.profile_preferences_language_value),
+                value = when (preferences.language ?: SupportedLanguage.SPANISH) {
+                    SupportedLanguage.SPANISH -> "Español"
+                    SupportedLanguage.ENGLISH -> "English"
+                },
                 leadingIcon = Res.drawable.ic_globe,
                 onClick = {
-                    // TODO: Add language selection in a separately scoped change.
+                    val next = if (preferences.language == SupportedLanguage.ENGLISH) SupportedLanguage.SPANISH else SupportedLanguage.ENGLISH
+                    onPreferencesUpdated(preferences.copy(language = next))
                 }
             )
         }
@@ -462,33 +582,38 @@ private fun PreferencesScreen(onBack: () -> Unit) {
 
 @Composable
 private fun HelpScreen(onBack: () -> Unit) {
+    var showFaq by remember { mutableStateOf(false) }
     ProfileSubScreenScaffold(title = stringResource(Res.string.profile_nav_help_title), onBack = onBack) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileListRow(
                 label = stringResource(Res.string.profile_help_faq_label),
-                value = "",
+                value = "How to learn and track progress",
                 leadingIcon = Res.drawable.ic_help_circle,
-                onClick = {
-                    // TODO: Add FAQ content in a separately scoped change.
-                }
+                onClick = { showFaq = true }
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_help_contact_label),
-                value = "",
+                value = "No support channel configured",
                 leadingIcon = Res.drawable.ic_mail,
-                onClick = {
-                    // TODO: Add support contact behavior in a separately scoped change.
-                }
+                enabled = false,
+                onClick = {}
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_help_report_label),
-                value = "",
+                value = "No reporting destination configured",
                 leadingIcon = Res.drawable.ic_flag,
-                onClick = {
-                    // TODO: Add issue reporting in a separately scoped change.
-                }
+                enabled = false,
+                onClick = {}
             )
         }
+    }
+    if (showFaq) {
+        AlertDialog(
+            onDismissRequest = { showFaq = false },
+            title = { Text("Frequently asked questions") },
+            text = { Text("Complete lessons and exercises to earn progress. Your profile displays your current learning activity and preferences.") },
+            confirmButton = { TextButton(onClick = { showFaq = false }) { Text("Close") } }
+        )
     }
 }
 
@@ -498,19 +623,17 @@ private fun AboutScreen(onBack: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileListRow(
                 label = stringResource(Res.string.profile_about_terms_label),
-                value = "",
+                value = "Not available offline",
                 leadingIcon = Res.drawable.ic_file_text,
-                onClick = {
-                    // TODO: Add terms content in a separately scoped change.
-                }
+                enabled = false,
+                onClick = {}
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_about_privacy_label),
-                value = "",
+                value = "Not available offline",
                 leadingIcon = Res.drawable.ic_shield,
-                onClick = {
-                    // TODO: Add privacy content in a separately scoped change.
-                }
+                enabled = false,
+                onClick = {}
             )
             ProfileListRow(
                 label = stringResource(Res.string.profile_about_version_label),
