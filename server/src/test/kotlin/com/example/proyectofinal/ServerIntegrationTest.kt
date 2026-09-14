@@ -32,6 +32,7 @@ import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.RegisterRequest
 import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.AvatarId
 import com.example.proyectofinal.models.ProfileError
 import com.example.proyectofinal.models.ProfileErrorCode
@@ -267,6 +268,44 @@ class ServerIntegrationTest {
         }
         assertEquals(HttpStatusCode.Unauthorized, login(oldPassword).status)
         assertEquals(HttpStatusCode.OK, login(newPassword).status)
+    }
+
+    @Test
+    fun `account deletion requires password and rejects teachers who own courses`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+        val password = "CurrentPassword123!"
+        transaction {
+            listOf("student" to UserRole.STUDENT, "teacher" to UserRole.TEACHER).forEach { (id, role) ->
+                Users.insert {
+                    it[Users.id] = id; it[name] = id; it[email] = "$id@example.com"
+                    it[passwordHash] = BCrypt.withDefaults().hashToString(12, password.toCharArray()); it[Users.role] = role.name
+                }
+            }
+            Courses.insert {
+                it[id] = "teacher-course"; it[title] = "Teacher course"; it[description] = "Owned"
+                it[creatorId] = "teacher"; it[isOfficial] = false; it[schoolYear] = 0
+            }
+        }
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        suspend fun deleteAs(id: String, role: UserRole, request: DeleteAccountRequest) = api.delete("/me") {
+            bearerAuth(Security.generateToken(id, role.name))
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(request)
+        }
+
+        val wrong = deleteAs("student", UserRole.STUDENT, DeleteAccountRequest("wrong"))
+        assertEquals(HttpStatusCode.BadRequest, wrong.status)
+        assertEquals(ProfileErrorCode.INVALID_PASSWORD, wrong.body<ProfileError>().code)
+        assertTrue(transaction { Users.selectAll().where { Users.id eq "student" }.any() })
+
+        val ownership = deleteAs("teacher", UserRole.TEACHER, DeleteAccountRequest(password))
+        assertEquals(HttpStatusCode.Conflict, ownership.status)
+        assertEquals(ProfileErrorCode.COURSE_OWNERSHIP, ownership.body<ProfileError>().code)
+        assertTrue(transaction { Users.selectAll().where { Users.id eq "teacher" }.any() })
+
+        assertEquals(HttpStatusCode.NoContent, deleteAs("student", UserRole.STUDENT, DeleteAccountRequest(password)).status)
+        assertTrue(transaction { Users.selectAll().where { Users.id eq "student" }.empty() })
     }
 
     @Test

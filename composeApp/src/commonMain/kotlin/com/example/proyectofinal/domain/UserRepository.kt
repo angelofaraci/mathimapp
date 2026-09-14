@@ -1,6 +1,7 @@
 package com.example.proyectofinal.domain
 
 import com.example.proyectofinal.models.ExerciseAttemptResponse
+import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.ProfilePreferences
@@ -29,6 +30,8 @@ interface UserRepository {
     suspend fun updateIdentity(request: UpdateIdentityRequest): User
 
     suspend fun changePassword(request: ChangePasswordRequest)
+
+    suspend fun deleteAccount(request: DeleteAccountRequest)
 
     suspend fun getProfilePreferences(): ProfilePreferences
 
