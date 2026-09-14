@@ -429,6 +429,7 @@ private class FakeLessonMapUserRepository(
     override suspend fun updateUser(user: User) = Unit
     override suspend fun updateIdentity(request: UpdateIdentityRequest): User = error("Not used")
     override suspend fun changePassword(request: ChangePasswordRequest) = error("Not used")
+    override suspend fun deleteAccount(request: com.example.proyectofinal.models.DeleteAccountRequest) = error("Not used")
     override suspend fun getProfilePreferences(): ProfilePreferences = error("Not used")
     override suspend fun updateProfilePreferences(preferences: ProfilePreferences): ProfilePreferences = error("Not used")
     override suspend fun updateAvatar(request: UpdateAvatarRequest): ProfilePreferences = error("Not used")

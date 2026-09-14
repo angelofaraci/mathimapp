@@ -1,6 +1,7 @@
 package com.example.proyectofinal.routes
 
 import com.example.proyectofinal.models.CompleteLessonRequest
+import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.ProfilePreferences
 import com.example.proyectofinal.models.ExerciseAttemptRequest
@@ -14,6 +15,7 @@ import com.example.proyectofinal.plugins.currentRole
 import com.example.proyectofinal.plugins.currentUserId
 import com.example.proyectofinal.plugins.requireSelfOrAdmin
 import com.example.proyectofinal.service.ExerciseAttemptResult
+import com.example.proyectofinal.service.AccountDeletionResult
 import com.example.proyectofinal.service.IdentityUpdateResult
 import com.example.proyectofinal.service.PasswordChangeResult
 import com.example.proyectofinal.service.UserService
@@ -56,6 +58,19 @@ fun Application.userRoutes(service: UserService) {
                     PasswordChangeResult.InvalidValue -> call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_VALUE))
                     PasswordChangeResult.InvalidPassword -> call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_PASSWORD))
                     PasswordChangeResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
+            }
+
+            delete("/me") {
+                val userId = call.currentUserId() ?: return@delete call.respond(HttpStatusCode.Unauthorized)
+                val request = try { call.receive<DeleteAccountRequest>() } catch (_: Exception) {
+                    return@delete call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_VALUE))
+                }
+                when (service.deleteAccount(userId, request)) {
+                    AccountDeletionResult.Success -> call.respond(HttpStatusCode.NoContent)
+                    AccountDeletionResult.InvalidPassword -> call.respond(HttpStatusCode.BadRequest, profileError(ProfileErrorCode.INVALID_PASSWORD))
+                    AccountDeletionResult.CourseOwnership -> call.respond(HttpStatusCode.Conflict, profileError(ProfileErrorCode.COURSE_OWNERSHIP))
+                    AccountDeletionResult.NotFound -> call.respond(HttpStatusCode.NotFound)
                 }
             }
 

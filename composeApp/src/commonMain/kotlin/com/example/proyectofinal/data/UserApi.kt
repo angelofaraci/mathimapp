@@ -3,6 +3,7 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.domain.ProfileRequestException
 import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.ExerciseAttemptRequest
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
@@ -50,6 +51,13 @@ class UserApi(
 
     suspend fun changePassword(request: ChangePasswordRequest) {
         client.put("$baseUrl/me/password") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.ensureProfileSuccess()
+    }
+
+    suspend fun deleteAccount(request: DeleteAccountRequest) {
+        client.delete("$baseUrl/me") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.ensureProfileSuccess()

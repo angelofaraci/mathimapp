@@ -18,6 +18,7 @@ import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseCompletionResponse
 import com.example.proyectofinal.models.PageResponse
 import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.AvatarId
 import com.example.proyectofinal.models.ProfilePreferences
 import com.example.proyectofinal.models.SupportedLanguage
@@ -33,6 +34,7 @@ import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -49,6 +51,13 @@ sealed interface IdentityUpdateResult {
     data object InvalidValue : IdentityUpdateResult
     data object EmailConflict : IdentityUpdateResult
     data object NotFound : IdentityUpdateResult
+}
+
+sealed interface AccountDeletionResult {
+    data object Success : AccountDeletionResult
+    data object InvalidPassword : AccountDeletionResult
+    data object CourseOwnership : AccountDeletionResult
+    data object NotFound : AccountDeletionResult
 }
 
 sealed interface PasswordChangeResult {
@@ -161,6 +170,19 @@ class UserService {
             }
         }
         return if (updated == 1) PasswordChangeResult.Success else PasswordChangeResult.InvalidPassword
+    }
+
+    fun deleteAccount(userId: String, request: DeleteAccountRequest): AccountDeletionResult = dbQuery {
+        val user = Users.selectAll().where { Users.id eq userId }.firstOrNull()
+            ?: return@dbQuery AccountDeletionResult.NotFound
+        if (!BCrypt.verifyer().verify(request.currentPassword.toCharArray(), user[Users.passwordHash]).verified) {
+            return@dbQuery AccountDeletionResult.InvalidPassword
+        }
+        if (Courses.selectAll().where { Courses.creatorId eq userId }.any()) {
+            return@dbQuery AccountDeletionResult.CourseOwnership
+        }
+        Users.deleteWhere { Users.id eq userId }
+        AccountDeletionResult.Success
     }
 
     fun getProfilePreferences(userId: String): ProfilePreferences? = dbQuery {

@@ -5,6 +5,7 @@ import com.example.proyectofinal.di.TokenStore
 import com.example.proyectofinal.domain.AuthRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ChangePasswordRequest
+import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.ExerciseAttemptResponse
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.User
@@ -71,6 +72,11 @@ class KtorUserRepository(
 
     override suspend fun changePassword(request: ChangePasswordRequest) = withContext(Dispatchers.IO) {
         api.changePassword(request)
+    }
+
+    override suspend fun deleteAccount(request: DeleteAccountRequest) = withContext(Dispatchers.IO) {
+        api.deleteAccount(request)
+        authRepository.logout()
     }
 
     override suspend fun getProfilePreferences(): ProfilePreferences = withContext(Dispatchers.IO) {
