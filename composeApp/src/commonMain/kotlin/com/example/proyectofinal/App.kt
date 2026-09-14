@@ -39,7 +39,7 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun App() {
-    val localeController = remember { AppLocaleController() }
+    val localeController = koinInject<AppLocaleController>()
     AppLocaleHost(localeController) {
         AppTheme {
             Surface(
