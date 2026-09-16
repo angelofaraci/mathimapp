@@ -10,7 +10,9 @@
 3. ✅ `lesson-read-access-control` — completed and archived.
 4. ✅ `onboarding-school-year` — completed and archived.
 5. ✅ Functional exercise practice is delivered: answer, submit, immediate feedback, and retry use `POST /exercises/{id}/attempt`; direct `POST /exercises/{id}/complete` remains `410 Gone`.
-6. Complete `ui-redesign-sync` Slice 6 and the outstanding manual visual acceptance for Slices 1–5, or switch product focus to `teacher-course-ownership`.
+6. ✅ `ui-redesign-sync` is complete, including Slice 6 and visual acceptance.
+7. ✅ `gamification-rewards` delivers a persisted daily streak and completion feedback.
+8. Continue with `learning-paths`, or switch product focus to `teacher-course-ownership`.
 
 ## Completed Slices
 
@@ -25,28 +27,14 @@
 | `lesson-read-access-control` | OpenSpec archived | Canonical lesson-read visibility and answer-masking reconciliation; theory read-access spec synced to existing backend behavior | 42 tests, 0 failures — `:server:test` |
 | `onboarding-school-year` | OpenSpec archived | Province-aware learner onboarding, school-year capture, onboarding gate routing, and course filtering foundations | `:composeApp:jvmTest` + `:composeApp:assembleDebug` |
 | `exercise-practice-ui` | Implemented functional flow | Type-specific answers, submit, immediate feedback, wrong-answer retry, and completion through `/attempt`; `/complete` returns `410 Gone` | Exercise player/ViewModel and repository contract tests |
+| `ui-redesign-sync` | OpenSpec archived | Six UI redesign slices and manual visual acceptance | 43 tasks, 94 scenarios; archived verification passed with warnings |
+| `gamification-rewards` | Implemented functional flow | Server-authoritative daily streak, local sync, Profile/Home display, and completion feedback | `:server:test` and focused Profile/Home/LessonMap JVM tests |
 
 ## Next Slices (Ordered)
 
 ### Phase 1 — Learner Experience
 
-#### 1. `ui-redesign-sync` — Slice 6 and visual acceptance
-- **Scope**: Redesign the existing exercise player, enrich `TheorySheet`, align onboarding and empty/loading states, and complete manual visual acceptance for Slices 1–5.
-- **Rationale**: The functional practice flow is already delivered; the remaining learner gap is visual/UX consistency and documented acceptance against the references.
-- **Dependencies**: Functional `exercise-practice-ui` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year` (delivered).
-- **Affected modules**: `composeApp`.
-- **Expected verification**: Focused exercise/player/state tests, `:composeApp:jvmTest`, and manual visual comparison for Slices 1–6.
-- **Review-size risk**: **Medium-High** (~370 lines per current design). Keep this as the final `ui-redesign-sync` slice.
-
-#### 2. `gamification-rewards`
-- **Scope**: Streaks and reward feedback after exercise completion; derive from cumulative progress already synced.
-- **Rationale**: Gamified practice from the umbrella `learning` spec; depends on stable progress tracking.
-- **Dependencies**: Functional `exercise-practice-ui` (delivered), `ui-redesign-sync` Slice 6, `progress-sync` (delivered).
-- **Affected modules**: `composeApp`.
-- **Expected verification**: `:composeApp:jvmTest`.
-- **Review-size risk**: **Medium** (~200–300 lines).
-
-#### 3. `learning-paths`
+#### 1. `learning-paths`
 - **Scope**: Introduce platform-curated learning paths as the default learner experience, organized primarily by school year and built from ordered lessons.
 - **Reference brief**: `openspec/learning-paths-brief.md`
 - **Rationale**: Gives product a guided progression layer above standalone lesson access while keeping progress compatible with the existing lesson/exercise model.
@@ -60,7 +48,7 @@
   - Lessons may appear in multiple paths; completed lessons reuse progress across paths with no special migration.
   - Each path needs `name`, `description`, `visible objective`, and a structured objective label; v1 supports only `grade-level`.
   - Entering a path shows a path summary first; the primary CTA opens the path view positioned on the first incomplete lesson rather than deep-linking into a lesson.
-  - Completion rewards after 100% path progress belong to `gamification-rewards`, not `learning-paths` v1.
+  - Completion rewards after 100% path progress are deferred from `learning-paths` v1.
 - **Dependencies**: Functional `exercise-practice-ui` (delivered), `lesson-progress-tracking` (delivered), `onboarding-school-year` (delivered).
 - **Affected modules**: `shared`, `server`, `composeApp`.
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`; manual onboarding, path switching, and progress-reuse validation.
@@ -68,7 +56,7 @@
 
 ### Phase 2 — Teacher & Classroom
 
-#### 4. `teacher-course-ownership`
+#### 2. `teacher-course-ownership`
 - **Scope**: Teacher-owned courses with Google Classroom-style behavior; teachers view student progress only for courses they own.
 - **Rationale**: First classroom slice now that lesson-read visibility is archived and no longer blocks ownership rules.
 - **Dependencies**: `backend-auth-security` (delivered), `lesson-read-access-control` (delivered).
@@ -76,7 +64,7 @@
 - **Expected verification**: `:server:test`, `:composeApp:jvmTest`.
 - **Review-size risk**: **Medium** (~250–350 lines). Consider chained PRs: PR 1 = backend ownership model + routes, PR 2 = client UI.
 
-#### 5. `classroom-join-codes`
+#### 3. `classroom-join-codes`
 - **Status**: **Partially delivered** — the backend join-by-code path and learner enrollment flow exist; teacher-owned class creation and join-code generation/product UI remain.
 - **Scope**: Complete the teacher side: create a class, generate/manage its join code, and expose the corresponding product UI without duplicating the delivered learner join flow.
 - **Rationale**: Finishes the remaining half of the umbrella `classroom` join-code capability.
@@ -87,7 +75,7 @@
 
 ### Phase 3 — Content Authoring
 
-#### 6. `teacher-content-assignment`
+#### 4. `teacher-content-assignment`
 - **Scope**: Teachers assign default platform theory/exercises or create custom content for a class/unit.
 - **Rationale**: Core content-authoring feature from the umbrella `content-authoring` spec.
 - **Dependencies**: `classroom-join-codes`, `theory-management` (delivered).
@@ -97,9 +85,9 @@
 
 ## Recommended Next Slice
 
-**`ui-redesign-sync` Slice 6 + manual visual acceptance**
-- The exercise interaction flow is functional; the smallest learner-track continuation is its pending visual/UX redesign plus acceptance of the already implemented redesign slices.
-- Completing it gives `gamification-rewards` a stable player surface without reopening backend ownership rules.
+**`learning-paths`**
+- The learner experience now has a stable exercise player, visual system, and daily streak feedback; curated paths are the next progression layer.
+- Start from the existing `openspec/learning-paths-brief.md` decisions and plan the high-risk cross-module work as chained PRs.
 - Alternative: `teacher-course-ownership` if product wants to switch immediately to the classroom-management track.
 
 ## Deferred / Non-Goals
@@ -113,7 +101,7 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 | Regional/provincial content subdivision | MVP covers Argentina nationally; province split deferred. |
 | Rich math formula rendering | Markdown-only for MVP; LaTeX/MathML later if needed. |
 | Progressive hints, photo submissions | Backlog item; not required for core loop. |
-| Full badges/achievements system | `gamification-rewards` covers streaks; badges are follow-up. |
+| Full badges/achievements system | Daily streaks and completion feedback are delivered; badges remain a follow-up. |
 | Rich learning-path authoring and analytics | `learning-paths` should start with curated path delivery first; advanced authoring/analytics remain follow-up work. |
 | Topic-scoped chatbot | High complexity; requires AI backend integration. Not in MVP. |
 | Teacher theory overrides for official topics | Teacher can create custom content in own courses; overriding official content deferred. |
@@ -140,7 +128,7 @@ These are explicitly out of scope for the current roadmap cycle. Revisit after P
 
 ```
 lesson-read-access-control (archived) ──► teacher-course-ownership ──► classroom-join-codes (partial) ──► teacher-content-assignment
-functional exercise practice (delivered) ──► ui-redesign-sync Slice 6 ──► gamification-rewards ──► learning-paths
+functional exercise practice (delivered) ──► ui-redesign-sync (delivered) ──► gamification-rewards (delivered) ──► learning-paths
 ```
 
 ## Maintenance
