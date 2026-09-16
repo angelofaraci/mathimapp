@@ -8,10 +8,8 @@ import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.StudentTrack
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.User
-import com.example.proyectofinal.ui.ActivityStreakCap
 import com.example.proyectofinal.ui.XpPerLevel
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.math.min
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -130,7 +128,7 @@ class HomeDashboardViewModel(
             schoolYear = profile?.schoolYear,
             studentTrack = profile?.studentTrack,
             level = progress.totalScore / XpPerLevel,
-            streak = activityStreak(completedLessons),
+            streak = progress.activityStreak,
             currentXp = progress.totalScore % XpPerLevel,
             xpForNextLevel = XpPerLevel,
             completedLessons = completedLessons,
@@ -157,8 +155,6 @@ class HomeDashboardViewModel(
         emptyList()
     }
 }
-
-internal fun activityStreak(completedLessons: Int): Int = min(completedLessons, 7)
 
 internal fun salutation(hour: Int = currentLocalHour()): String = when (hour) {
     in MorningHours -> "Buenos días"

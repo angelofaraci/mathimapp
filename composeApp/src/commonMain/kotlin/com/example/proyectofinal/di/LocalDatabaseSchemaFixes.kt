@@ -16,7 +16,31 @@ internal fun SqlDriver.applyPendingLocalSchemaFixes(): SqlDriver {
     ensureLessonEntityShape()
     ensureExerciseEntityShape()
     ensureLearnerProfileEntityShape()
+    ensureUserProgressEntityShape()
     return this
+}
+
+private fun SqlDriver.ensureUserProgressEntityShape() {
+    val columns = executeQuery(
+        identifier = null,
+        sql = "PRAGMA table_info(UserProgressEntity)",
+        mapper = { cursor ->
+            val names = mutableSetOf<String>()
+            while (cursor.next().value) {
+                cursor.getString(1)?.let(names::add)
+            }
+            QueryResult.Value(names)
+        },
+        parameters = 0,
+    ).value
+
+    if (columns.isNotEmpty() && "activityStreak" !in columns) {
+        execute(
+            identifier = null,
+            sql = "ALTER TABLE UserProgressEntity ADD COLUMN activityStreak INTEGER NOT NULL DEFAULT 0",
+            parameters = 0,
+        ).value
+    }
 }
 
 private fun SqlDriver.ensureCourseDiscoveryColumns() {

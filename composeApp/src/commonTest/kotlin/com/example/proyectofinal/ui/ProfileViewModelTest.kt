@@ -51,7 +51,8 @@ class ProfileViewModelTest {
                 progress = UserProgress(
                     userId = testUser.id,
                     completedLessonIds = (1..12).map { "lesson-$it" }.toSet(),
-                    totalScore = 350
+                    totalScore = 350,
+                    activityStreak = 7
                 )
             ),
             learnerProfileRepository = ProfileFakeLearnerProfileRepository(),
@@ -77,14 +78,15 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `view model keeps below-cap streak and locked achievements when thresholds are not met`() = runTest(dispatcher) {
+    fun `view model exposes the server daily streak and locked achievements when thresholds are not met`() = runTest(dispatcher) {
         val viewModel = ProfileViewModel(
             authRepository = ProfileFakeAuthRepository(testUser),
             userRepository = FakeUserRepository(
                 progress = UserProgress(
                     userId = testUser.id,
                     completedLessonIds = setOf("lesson-1", "lesson-2", "lesson-3"),
-                    totalScore = 0
+                    totalScore = 0,
+                    activityStreak = 3
                 )
             ),
             learnerProfileRepository = ProfileFakeLearnerProfileRepository(),

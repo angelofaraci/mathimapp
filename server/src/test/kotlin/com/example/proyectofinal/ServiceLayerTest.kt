@@ -49,6 +49,9 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import java.sql.DriverManager
 import java.util.UUID
 import kotlin.test.BeforeTest
@@ -1170,6 +1173,36 @@ class UserServiceTest {
             )
         }
     }
+
+    @Test
+    fun `correct exercises update a daily streak once per day and reset after a gap`() {
+        insertUser(id = "admin-1", role = UserRole.ADMIN)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
+        insertCourse(id = "official-course", creatorId = "admin-1", isOfficial = true)
+        insertLesson(id = "lesson-1", courseId = "official-course")
+        (1..4).forEach { index ->
+            insertExercise(id = "exercise-$index", lessonId = "lesson-1")
+        }
+
+        fun attempt(service: UserService, exerciseId: String) = assertIs<ExerciseAttemptResult.Success>(
+            service.attemptExercise(
+                userId = "learner-1",
+                role = UserRole.STUDENT,
+                request = ExerciseAttemptRequest(
+                    exerciseId = exerciseId,
+                    submission = MultipleChoiceSubmission(selectedOptionId = "a"),
+                    score = 10
+                )
+            )
+        ).response.progress.activityStreak
+
+        assertEquals(1, attempt(UserService(fixedClock("2026-09-14T12:00:00Z")), "exercise-1"))
+        assertEquals(1, attempt(UserService(fixedClock("2026-09-14T18:00:00Z")), "exercise-2"))
+        assertEquals(2, attempt(UserService(fixedClock("2026-09-15T12:00:00Z")), "exercise-3"))
+        assertEquals(1, attempt(UserService(fixedClock("2026-09-17T12:00:00Z")), "exercise-4"))
+    }
+
+    private fun fixedClock(instant: String): Clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)
 
     @Test
     fun `attempt exercise rejects private exercise access for unenrolled learner`() {

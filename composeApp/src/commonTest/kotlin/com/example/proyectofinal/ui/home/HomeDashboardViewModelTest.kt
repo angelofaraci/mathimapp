@@ -50,12 +50,6 @@ class HomeDashboardViewModelTest {
     }
 
     @Test
-    fun `streak preserves activity count below the seven-day cap`() {
-        assertEquals(3, activityStreak(3))
-        assertEquals(7, activityStreak(12))
-    }
-
-    @Test
     fun `view model falls back to a generic greeting when display name is blank`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser.copy(name = "   ")),
@@ -77,7 +71,7 @@ class HomeDashboardViewModelTest {
     }
 
     @Test
-    fun `view model derives level math and caps streak at seven`() = runTest(dispatcher) {
+    fun `view model derives level math and uses the server daily streak`() = runTest(dispatcher) {
         val viewModel = HomeDashboardViewModel(
             authRepository = HomeDashboardFakeAuthRepository(testUser),
             courseRepository = FakeHomeDashboardCourseRepository(),
@@ -85,7 +79,8 @@ class HomeDashboardViewModelTest {
                 progress = UserProgress(
                     userId = testUser.id,
                     completedLessonIds = (1..12).map { "lesson-$it" }.toSet(),
-                    totalScore = 350
+                    totalScore = 350,
+                    activityStreak = 12
                 )
             ),
             learnerProfileRepository = HomeDashboardFakeLearnerProfileRepository()
@@ -96,7 +91,7 @@ class HomeDashboardViewModelTest {
         with(viewModel.uiState.value) {
             assertTrue(greeting.endsWith("Alice Student"))
             assertEquals(3, level)
-            assertEquals(7, streak)
+            assertEquals(12, streak)
             assertEquals(50, currentXp)
             assertEquals(100, xpForNextLevel)
             assertEquals(12, completedLessons)

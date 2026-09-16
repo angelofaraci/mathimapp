@@ -64,6 +64,8 @@ object Exercises : Table("exercises") {
 object UserProgress : Table("user_progress") {
     val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
     val totalScore = integer("total_score").default(0)
+    val activityStreak = integer("activity_streak").default(0)
+    val lastActivityDate = varchar("last_activity_date", 10).nullable()
 
     override val primaryKey = PrimaryKey(userId)
 }

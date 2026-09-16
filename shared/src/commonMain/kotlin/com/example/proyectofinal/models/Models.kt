@@ -200,6 +200,7 @@ data class UserProgress(
     val completedLessonIds: Set<String> = emptySet(),
     val completedExerciseIds: Set<String> = emptySet(),
     val totalScore: Int = 0,
+    val activityStreak: Int = 0,
     val enrolledCourseIds: Set<String> = emptySet()
 )
 

@@ -203,7 +203,7 @@ class LessonMapViewModelTest {
             ),
             userRepository.attemptCalls
         )
-        assertEquals("Exercise completed. Keep going.", viewModel.uiState.value.exerciseFeedbackMessage)
+        assertEquals("Exercise completed. Your daily streak starts today!", viewModel.uiState.value.exerciseFeedbackMessage)
         assertEquals(
             listOf(
                 LessonNodeState.Completed,
@@ -266,7 +266,7 @@ class LessonMapViewModelTest {
         advanceUntilIdle()
 
         assertEquals(4, userRepository.attemptCalls.size)
-        assertEquals("Exercise completed. Keep going.", viewModel.uiState.value.exerciseFeedbackMessage)
+        assertEquals("Exercise completed. Your daily streak starts today!", viewModel.uiState.value.exerciseFeedbackMessage)
         assertEquals(LessonNodeState.Completed, viewModel.uiState.value.nodes.first().state)
     }
 
@@ -343,7 +343,7 @@ class LessonMapViewModelTest {
             ),
             userRepository.attemptCalls
         )
-        assertEquals("Exercise completed. Keep going.", viewModel.uiState.value.exerciseFeedbackMessage)
+        assertEquals("Exercise completed. Your daily streak starts today!", viewModel.uiState.value.exerciseFeedbackMessage)
     }
 
     @Test

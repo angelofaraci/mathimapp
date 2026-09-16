@@ -126,7 +126,8 @@ class KtorUserRepository(
     private fun syncUserProgressToLocal(progress: UserProgress) {
         database.appDatabaseQueries.insertProgress(
             userId = progress.userId,
-            totalScore = progress.totalScore
+            totalScore = progress.totalScore,
+            activityStreak = progress.activityStreak.toLong()
         )
         progress.completedLessonIds.forEach { lessonId ->
             database.appDatabaseQueries.insertCompletedLesson(
@@ -168,6 +169,7 @@ class KtorUserRepository(
             completedLessonIds = completedLessonIds,
             completedExerciseIds = completedExerciseIds,
             totalScore = progress?.totalScore ?: 0,
+            activityStreak = progress?.activityStreak?.toInt() ?: 0,
             enrolledCourseIds = enrolledCourseIds
         )
     }

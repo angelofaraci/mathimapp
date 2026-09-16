@@ -38,6 +38,9 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneId
 
 sealed interface ExerciseAttemptResult {
     data class Success(val response: ExerciseAttemptResponse) : ExerciseAttemptResult
@@ -67,7 +70,9 @@ sealed interface PasswordChangeResult {
     data object NotFound : PasswordChangeResult
 }
 
-class UserService {
+class UserService(
+    private val clock: Clock = Clock.system(ZoneId.of("America/Argentina/Buenos_Aires"))
+) {
     fun getUserById(id: String): User? = dbQuery {
         Users.selectAll()
             .where { Users.id eq id }
@@ -319,11 +324,20 @@ class UserService {
                 UserProgressTable.insert {
                     it[UserProgressTable.userId] = userId
                     it[UserProgressTable.totalScore] = score
+                    it[UserProgressTable.activityStreak] = 1
+                    it[UserProgressTable.lastActivityDate] = LocalDate.now(clock).toString()
                 }
             } else {
                 val currentScore = existingProgress[UserProgressTable.totalScore]
+                val today = LocalDate.now(clock)
                 UserProgressTable.update({ UserProgressTable.userId eq userId }) { row ->
                     row[UserProgressTable.totalScore] = currentScore + score
+                    row[UserProgressTable.activityStreak] = nextActivityStreak(
+                        currentStreak = existingProgress[UserProgressTable.activityStreak],
+                        lastActivityDate = existingProgress[UserProgressTable.lastActivityDate],
+                        today = today
+                    )
+                    row[UserProgressTable.lastActivityDate] = today.toString()
                 }
             }
         }
@@ -379,6 +393,7 @@ class UserService {
         return UserProgress(
             userId = userId,
             totalScore = progressRow?.get(UserProgressTable.totalScore) ?: 0,
+            activityStreak = progressRow?.get(UserProgressTable.activityStreak) ?: 0,
             completedLessonIds = completedLessons,
             completedExerciseIds = completedExercises,
             enrolledCourseIds = enrolledCourses
@@ -395,17 +410,41 @@ class UserService {
                 UserProgressTable.insert {
                     it[UserProgressTable.userId] = request.userId
                     it[UserProgressTable.totalScore] = request.score
+                    it[UserProgressTable.activityStreak] = 1
+                    it[UserProgressTable.lastActivityDate] = LocalDate.now(clock).toString()
                 }
             } else {
                 val currentScore = existingProgress[UserProgressTable.totalScore]
+                val today = LocalDate.now(clock)
                 UserProgressTable.update({ UserProgressTable.userId eq request.userId }) { row ->
                     row[UserProgressTable.totalScore] = currentScore + request.score
+                    row[UserProgressTable.activityStreak] = nextActivityStreak(
+                        currentStreak = existingProgress[UserProgressTable.activityStreak],
+                        lastActivityDate = existingProgress[UserProgressTable.lastActivityDate],
+                        today = today
+                    )
+                    row[UserProgressTable.lastActivityDate] = today.toString()
                 }
             }
             CompletedLessons.insert {
                 it[CompletedLessons.userId] = request.userId
                 it[CompletedLessons.lessonId] = request.lessonId
             }
+        }
+    }
+
+    private fun nextActivityStreak(
+        currentStreak: Int,
+        lastActivityDate: String?,
+        today: LocalDate
+    ): Int {
+        val lastDate = lastActivityDate?.let { date -> runCatching { LocalDate.parse(date) }.getOrNull() }
+            ?: return 1
+
+        return when (lastDate) {
+            today -> currentStreak.coerceAtLeast(1)
+            today.minusDays(1) -> currentStreak.coerceAtLeast(1) + 1
+            else -> 1
         }
     }
     private fun resolveLessonContentAccess(

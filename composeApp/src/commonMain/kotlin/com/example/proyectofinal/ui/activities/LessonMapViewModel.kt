@@ -186,7 +186,7 @@ class LessonMapViewModel(
                 lessonMap = lessonMap,
                 completedExerciseIds = completedExerciseIds,
                 exerciseFeedback = ExerciseFeedbackUiState(
-                    message = "Exercise completed. Keep going.",
+                    message = dailyStreakRewardMessage(attempt.progress.activityStreak),
                     tone = ExerciseFeedbackTone.Success
                 )
             )
@@ -291,6 +291,11 @@ class LessonMapViewModel(
             .takeIf(List<String>::isNotEmpty)
             ?.let(::MultiSelectSubmission)
     }
+}
+
+internal fun dailyStreakRewardMessage(streak: Int): String = when (streak.coerceAtLeast(1)) {
+    1 -> "Exercise completed. Your daily streak starts today!"
+    else -> "Exercise completed. Daily streak: $streak days!"
 }
 
 internal fun buildLessonMapNodes(

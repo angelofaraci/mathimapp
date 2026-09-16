@@ -58,6 +58,7 @@ CREATE TABLE ExerciseEntity (
 CREATE TABLE UserProgressEntity (
     userId TEXT NOT NULL PRIMARY KEY,
     totalScore INTEGER AS Int NOT NULL DEFAULT 0,
+    activityStreak INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(userId) REFERENCES UserEntity(id) ON DELETE CASCADE
 );
 
@@ -147,8 +148,8 @@ selectProgressByUserId:
 SELECT * FROM UserProgressEntity WHERE userId = ?;
 
 insertProgress:
-INSERT OR REPLACE INTO UserProgressEntity(userId, totalScore)
-VALUES (?, ?);
+INSERT OR REPLACE INTO UserProgressEntity(userId, totalScore, activityStreak)
+VALUES (?, ?, ?);
 
 selectProfile:
 SELECT province, schoolYear, studentTrack, onboardingComplete

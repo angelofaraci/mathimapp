@@ -16,14 +16,12 @@ import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.localization.AppLanguage
 import com.example.proyectofinal.ui.localization.AppLocaleController
-import kotlin.math.min
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 internal const val XpPerLevel = 100
-internal const val ActivityStreakCap = 7
 private const val FirstLessonThreshold = 1
 private const val Score100Threshold = 100
 private const val Lessons5Threshold = 5
@@ -122,7 +120,7 @@ class ProfileViewModel(
                 level = progress.totalScore / XpPerLevel,
                 currentXp = progress.totalScore % XpPerLevel,
                 xpForNextLevel = XpPerLevel,
-                streak = min(progress.completedLessonIds.size, ActivityStreakCap),
+                streak = progress.activityStreak,
                 completedLessons = progress.completedLessonIds.size,
                 achievements = progress.toAchievements(),
                 preferences = preferences
