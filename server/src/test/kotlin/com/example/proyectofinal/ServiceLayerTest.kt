@@ -8,6 +8,9 @@ import com.example.proyectofinal.database.DatabaseFactory
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.LearningPathDefaultGradeLevels
+import com.example.proyectofinal.database.LearningPathLessons
+import com.example.proyectofinal.database.LearningPaths
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.models.ChoiceOption
@@ -41,6 +44,7 @@ import com.example.proyectofinal.service.FieldPatch
 import com.example.proyectofinal.service.LessonListReadResult
 import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
+import com.example.proyectofinal.service.LearningPathService
 import com.example.proyectofinal.service.TheoryUpdateResult
 import com.example.proyectofinal.service.UserService
 import org.flywaydb.core.Flyway
@@ -102,6 +106,23 @@ class CourseServiceTest {
         assertNotNull(course)
         assertEquals(listOf("lesson-1", "lesson-2"), course.lessons.map { it.id })
         assertEquals("teacher-1", service.getCreatorId("teacher-course"))
+    }
+
+    @Test
+    fun `enrolled courses are ordered by last valid activity with inactive courses last`() {
+        insertUser(id = "teacher-1", role = UserRole.TEACHER)
+        insertUser(id = "student-1", role = UserRole.STUDENT)
+        insertCourse(id = "course-inactive", creatorId = "teacher-1")
+        insertCourse(id = "course-older", creatorId = "teacher-1")
+        insertCourse(id = "course-recent", creatorId = "teacher-1")
+        enrollUser(userId = "student-1", courseId = "course-inactive")
+        enrollUser(userId = "student-1", courseId = "course-older", lastActivityAtEpochMillis = 100L)
+        enrollUser(userId = "student-1", courseId = "course-recent", lastActivityAtEpochMillis = 200L)
+
+        assertEquals(
+            listOf("course-recent", "course-older", "course-inactive"),
+            CourseService().getEnrolledCourses("student-1").map { it.id }
+        )
     }
 
     @Test
@@ -1175,6 +1196,35 @@ class UserServiceTest {
     }
 
     @Test
+    fun `valid exercise attempts update enrolled course activity including incorrect attempts`() {
+        insertUser(id = "teacher-1", role = UserRole.TEACHER)
+        insertUser(id = "learner-1", role = UserRole.STUDENT)
+        insertCourse(id = "private-course", creatorId = "teacher-1", isOfficial = false)
+        insertLesson(id = "lesson-1", courseId = "private-course")
+        insertExercise(id = "exercise-1", lessonId = "lesson-1", correctAnswer = "b")
+        enrollUser(userId = "learner-1", courseId = "private-course")
+
+        val result = UserService(fixedClock("2026-09-14T12:00:00Z")).attemptExercise(
+            userId = "learner-1",
+            role = UserRole.STUDENT,
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise-1",
+                submission = MultipleChoiceSubmission(selectedOptionId = "a")
+            )
+        )
+
+        assertEquals(false, assertIs<ExerciseAttemptResult.Success>(result).response.isCorrect)
+        transaction {
+            assertEquals(
+                Instant.parse("2026-09-14T12:00:00Z").toEpochMilli(),
+                EnrolledCourses.selectAll()
+                    .where { (EnrolledCourses.userId eq "learner-1") and (EnrolledCourses.courseId eq "private-course") }
+                    .single()[EnrolledCourses.lastActivityAtEpochMillis]
+            )
+        }
+    }
+
+    @Test
     fun `correct exercises update a daily streak once per day and reset after a gap`() {
         insertUser(id = "admin-1", role = UserRole.ADMIN)
         insertUser(id = "learner-1", role = UserRole.STUDENT)
@@ -1522,6 +1572,87 @@ class SeedDataTest {
     }
 }
 
+class LearningPathServiceTest {
+    @BeforeTest
+    fun setUp() {
+        initServiceTestDatabase()
+    }
+
+    @Test
+    fun `curated paths resolve ordered official lessons and reuse completed lesson progress`() {
+        insertUser(id = "admin", role = UserRole.ADMIN)
+        insertUser(id = "student", role = UserRole.STUDENT)
+        insertCourse(id = "official-course", creatorId = "admin", isOfficial = true)
+        insertLesson(id = "lesson-two", courseId = "official-course", orderIndex = 5, title = "Second")
+        insertLesson(id = "lesson-one", courseId = "official-course", orderIndex = 1, title = "First")
+        insertCuratedPath(id = "grade-3", gradeLevel = 3, defaultForGrade = true)
+        linkPathLesson(pathId = "grade-3", lessonId = "lesson-two", orderIndex = 1)
+        linkPathLesson(pathId = "grade-3", lessonId = "lesson-one", orderIndex = 0)
+        transaction {
+            CompletedLessons.insert {
+                it[userId] = "student"
+                it[lessonId] = "lesson-one"
+            }
+        }
+
+        val service = LearningPathService()
+        val path = service.getPathForUser("grade-3", "student")
+        val summaries = service.listPathsForUser("student")
+
+        assertNotNull(path)
+        assertEquals(listOf("lesson-one", "lesson-two"), path.lessons.map { it.lessonId })
+        assertEquals(listOf(true, false), path.lessons.map { it.completed })
+        assertEquals("grade-3", service.resolveDefaultPathForUser(3, "student")?.id)
+        with(summaries.single()) {
+            assertEquals(2, lessonCount)
+            assertEquals(1, completedLessonCount)
+            assertEquals(50, progressPercentage)
+            assertTrue(isDefaultForObjective)
+        }
+    }
+
+    @Test
+    fun `paths with private course lessons are not readable or selectable`() {
+        insertUser(id = "teacher", role = UserRole.TEACHER)
+        insertUser(id = "student", role = UserRole.STUDENT)
+        insertCourse(id = "private-course", creatorId = "teacher", isOfficial = false)
+        insertLesson(id = "private-lesson", courseId = "private-course")
+        insertCuratedPath(id = "unsafe-path", gradeLevel = 4)
+        linkPathLesson(pathId = "unsafe-path", lessonId = "private-lesson", orderIndex = 0)
+
+        val service = LearningPathService()
+
+        assertNull(service.getPathForUser("unsafe-path", "student"))
+        assertTrue(service.listPathsForUser("student").isEmpty())
+        assertFalse(service.selectPath("student", "unsafe-path"))
+        assertFalse(service.recordPathOpened("student", "unsafe-path"))
+    }
+
+    @Test
+    fun `selected and last opened paths persist independently in server state`() {
+        insertUser(id = "admin", role = UserRole.ADMIN)
+        insertUser(id = "student", role = UserRole.STUDENT)
+        insertCourse(id = "official-course", creatorId = "admin", isOfficial = true)
+        insertLesson(id = "official-lesson", courseId = "official-course")
+        insertCuratedPath(id = "grade-3", gradeLevel = 3, defaultForGrade = true)
+        insertCuratedPath(id = "grade-4", gradeLevel = 4)
+        linkPathLesson(pathId = "grade-3", lessonId = "official-lesson", orderIndex = 0)
+        linkPathLesson(pathId = "grade-4", lessonId = "official-lesson", orderIndex = 0)
+
+        val service = LearningPathService()
+
+        assertTrue(service.selectPath("student", "grade-4"))
+        assertTrue(service.recordPathOpened("student", "grade-3"))
+        assertEquals(
+            "grade-3",
+            service.getState("student", recommendedGradeLevel = 3).recommendedPathId
+        )
+        assertEquals("grade-4", service.getState("student").selectedPathId)
+        assertEquals("grade-3", service.getState("student").lastOpenedPathId)
+        assertFalse(service.selectPath("missing-student", "grade-3"))
+    }
+}
+
 private fun initServiceTestDatabase() {
     DatabaseFactory.init(
         url = "jdbc:h2:mem:${UUID.randomUUID()};MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
@@ -1591,6 +1722,40 @@ private fun insertLesson(
     }
 }
 
+private fun insertCuratedPath(
+    id: String,
+    gradeLevel: Int,
+    defaultForGrade: Boolean = false,
+    name: String = id
+) {
+    transaction {
+        LearningPaths.insert {
+            it[LearningPaths.id] = id
+            it[LearningPaths.name] = name
+            it[LearningPaths.description] = "Description for $name"
+            it[LearningPaths.visibleObjective] = "Grade $gradeLevel"
+            it[LearningPaths.objectiveType] = "GRADE_LEVEL"
+            it[LearningPaths.objectiveGradeLevel] = gradeLevel
+        }
+        if (defaultForGrade) {
+            LearningPathDefaultGradeLevels.insert {
+                it[LearningPathDefaultGradeLevels.gradeLevel] = gradeLevel
+                it[LearningPathDefaultGradeLevels.pathId] = id
+            }
+        }
+    }
+}
+
+private fun linkPathLesson(pathId: String, lessonId: String, orderIndex: Int) {
+    transaction {
+        LearningPathLessons.insert {
+            it[LearningPathLessons.pathId] = pathId
+            it[LearningPathLessons.lessonId] = lessonId
+            it[LearningPathLessons.orderIndex] = orderIndex
+        }
+    }
+}
+
 private fun insertExercise(
     id: String,
     lessonId: String,
@@ -1616,11 +1781,14 @@ private fun insertExercise(
     }
 }
 
-private fun enrollUser(userId: String, courseId: String) {
+private fun enrollUser(userId: String, courseId: String, lastActivityAtEpochMillis: Long? = null) {
     transaction {
         EnrolledCourses.insert {
             it[EnrolledCourses.userId] = userId
             it[EnrolledCourses.courseId] = courseId
+            lastActivityAtEpochMillis?.let { timestamp ->
+                it[EnrolledCourses.lastActivityAtEpochMillis] = timestamp
+            }
         }
     }
 }

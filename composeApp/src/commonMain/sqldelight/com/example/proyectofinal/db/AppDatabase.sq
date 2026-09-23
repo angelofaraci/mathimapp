@@ -183,3 +183,74 @@ SELECT courseId FROM EnrolledCourse WHERE userId = ?;
 insertEnrolledCourse:
 INSERT OR REPLACE INTO EnrolledCourse(userId, courseId)
 VALUES (?, ?);
+
+-- Learning path catalog is read-only cache of platform-curated paths.
+CREATE TABLE LearningPathEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    visibleObjective TEXT NOT NULL,
+    objectiveType TEXT NOT NULL,
+    objectiveGradeLevel INTEGER NOT NULL,
+    lessonCount INTEGER NOT NULL,
+    completedLessonCount INTEGER NOT NULL,
+    progressPercentage INTEGER NOT NULL,
+    isDefaultForObjective INTEGER AS Boolean NOT NULL DEFAULT 0
+);
+
+CREATE TABLE LearningPathLessonEntity (
+    pathId TEXT NOT NULL,
+    lessonId TEXT NOT NULL,
+    title TEXT NOT NULL,
+    orderIndex INTEGER NOT NULL,
+    completed INTEGER AS Boolean NOT NULL DEFAULT 0,
+    PRIMARY KEY(pathId, lessonId),
+    FOREIGN KEY(pathId) REFERENCES LearningPathEntity(id) ON DELETE CASCADE
+);
+
+-- State remains server-authoritative and is cached per authenticated account only.
+CREATE TABLE LearningPathStateEntity (
+    userId TEXT NOT NULL PRIMARY KEY,
+    recommendedPathId TEXT,
+    selectedPathId TEXT,
+    lastOpenedPathId TEXT
+);
+
+selectLearningPathById:
+SELECT * FROM LearningPathEntity WHERE id = ?;
+
+selectLearningPathsByGradeLevel:
+SELECT * FROM LearningPathEntity
+WHERE objectiveGradeLevel = ?
+ORDER BY name;
+
+selectLearningPathLessons:
+SELECT * FROM LearningPathLessonEntity
+WHERE pathId = ?
+ORDER BY orderIndex;
+
+selectLearningPathState:
+SELECT * FROM LearningPathStateEntity WHERE userId = ?;
+
+insertLearningPath:
+INSERT OR REPLACE INTO LearningPathEntity(
+    id, name, description, visibleObjective, objectiveType, objectiveGradeLevel,
+    lessonCount, completedLessonCount, progressPercentage, isDefaultForObjective
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertLearningPathLesson:
+INSERT OR REPLACE INTO LearningPathLessonEntity(pathId, lessonId, title, orderIndex, completed)
+VALUES (?, ?, ?, ?, ?);
+
+insertLearningPathState:
+INSERT OR REPLACE INTO LearningPathStateEntity(userId, recommendedPathId, selectedPathId, lastOpenedPathId)
+VALUES (?, ?, ?, ?);
+
+deleteAllLearningPaths:
+DELETE FROM LearningPathEntity;
+
+deleteLearningPathsByGradeLevel:
+DELETE FROM LearningPathEntity WHERE objectiveGradeLevel = ?;
+
+deleteLearningPathLessons:
+DELETE FROM LearningPathLessonEntity WHERE pathId = ?;

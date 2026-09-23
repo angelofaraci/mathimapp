@@ -2,6 +2,7 @@ package com.example.proyectofinal.ui.activities
 
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.Course
 
 sealed interface ExerciseAnswerDraft {
     data class MultipleChoice(val selectedOptionId: String? = null) : ExerciseAnswerDraft
@@ -50,6 +51,8 @@ data class LessonMapNodeUiModel(
 
 data class LessonMapUiState(
     val isLoading: Boolean = true,
+    val enrolledCourses: List<Course> = emptyList(),
+    val selectedCourseId: String? = null,
     val lessonMap: LessonMapLesson? = null,
     val nodes: List<LessonMapNodeUiModel> = emptyList(),
     val selectedExerciseId: String? = null,
@@ -61,6 +64,8 @@ data class LessonMapUiState(
     val selectedTheoryLesson: Lesson? = null,
     val errorMessage: String? = null
 ) {
+    val selectedCourse: Course?
+        get() = enrolledCourses.firstOrNull { it.id == selectedCourseId }
     val activeNode: LessonMapNodeUiModel?
         get() = nodes.firstOrNull { it.exercise.id == selectedExerciseId }
             ?: nodes.firstOrNull { it.state == LessonNodeState.Unlocked || it.state == LessonNodeState.Current }

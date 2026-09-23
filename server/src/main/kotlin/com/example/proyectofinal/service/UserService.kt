@@ -269,6 +269,10 @@ class UserService(
             return@dbQuery ExerciseAttemptResult.InvalidRequest(exception.message ?: "Invalid exercise submission")
         }
 
+        (lessonAccess as? LessonContentAccess.CourseLinked)?.let { access ->
+            recordCourseActivity(userId, access.courseAccess.courseId)
+        }
+
         if (!evaluation.isCorrect) {
             return@dbQuery ExerciseAttemptResult.Success(
                 ExerciseAttemptResponse(
@@ -372,6 +376,14 @@ class UserService(
             lessonCompleted = lessonCompleted,
             progress = readUserProgress(userId)
         )
+    }
+
+    private fun recordCourseActivity(userId: String, courseId: String) {
+        EnrolledCourses.update({
+            (EnrolledCourses.userId eq userId) and (EnrolledCourses.courseId eq courseId)
+        }) { row ->
+            row[EnrolledCourses.lastActivityAtEpochMillis] = clock.millis()
+        }
     }
 
     private fun readUserProgress(userId: String): UserProgress {

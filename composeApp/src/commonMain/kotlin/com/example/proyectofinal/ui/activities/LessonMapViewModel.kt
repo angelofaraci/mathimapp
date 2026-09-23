@@ -3,10 +3,12 @@ package com.example.proyectofinal.ui.activities
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.ExercisePayload
 import com.example.proyectofinal.models.ExerciseSubmission
 import com.example.proyectofinal.models.InputValuePayload
@@ -25,7 +27,8 @@ class LessonMapViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val lessonRepository: LessonRepository,
-    private val exerciseRepository: ExerciseRepository
+    private val exerciseRepository: ExerciseRepository,
+    private val courseRepository: CourseRepository? = null
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LessonMapUiState())
     val uiState: StateFlow<LessonMapUiState> = _uiState.asStateFlow()
@@ -37,22 +40,53 @@ class LessonMapViewModel(
     }
 
     fun refresh() = viewModelScope.launch {
-        _uiState.value = LessonMapUiState(isLoading = true)
+        val previouslySelectedCourseId = _uiState.value.selectedCourseId
+        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
         _uiState.value = try {
             val user = authRepository.session.value.user
                 ?: userRepository.getCurrentUser()
                 ?: error("Unable to restore the authenticated user")
             val progress = userRepository.getUserProgress(user.id)
-            val lessonMap = loadLessonMap(progress.enrolledCourseIds)
+            val enrolledCourses = courseRepository?.getEnrolledCourses(user.id)
+                ?: progress.enrolledCourseIds.sorted().map(::legacyCourse)
+            val selectedCourseId = previouslySelectedCourseId
+                ?.takeIf { selectedId -> enrolledCourses.any { it.id == selectedId } }
+                ?: enrolledCourses.firstOrNull()?.id
+                ?: error("Activities are unavailable until you join a course.")
+            val lessonMap = loadLessonMap(selectedCourseId)
             completedExerciseIds = progress.completedExerciseIds
 
-            createLoadedState(lessonMap = lessonMap, completedExerciseIds = completedExerciseIds)
+            createLoadedState(
+                enrolledCourses = enrolledCourses,
+                selectedCourseId = selectedCourseId,
+                lessonMap = lessonMap,
+                completedExerciseIds = completedExerciseIds
+            )
         } catch (error: Exception) {
             LessonMapUiState(
                 isLoading = false,
                 errorMessage = error.message ?: "Unknown error"
             )
+        }
+    }
+
+    fun selectCourse(courseId: String) = viewModelScope.launch {
+        val currentState = _uiState.value
+        if (courseId == currentState.selectedCourseId || currentState.enrolledCourses.none { it.id == courseId }) {
+            return@launch
+        }
+
+        _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
+        _uiState.value = try {
+            createLoadedState(
+                enrolledCourses = currentState.enrolledCourses,
+                selectedCourseId = courseId,
+                lessonMap = loadLessonMap(courseId),
+                completedExerciseIds = completedExerciseIds
+            )
+        } catch (error: Exception) {
+            currentState.copy(isLoading = false, errorMessage = error.message ?: "Unknown error")
         }
     }
 
@@ -183,6 +217,8 @@ class LessonMapViewModel(
 
             completedExerciseIds = attempt.progress.completedExerciseIds
             _uiState.value = createLoadedState(
+                enrolledCourses = currentState.enrolledCourses,
+                selectedCourseId = currentState.selectedCourseId ?: return@launch,
                 lessonMap = lessonMap,
                 completedExerciseIds = completedExerciseIds,
                 exerciseFeedback = ExerciseFeedbackUiState(
@@ -223,9 +259,7 @@ class LessonMapViewModel(
         _uiState.update { it.copy(selectedTheoryLesson = null) }
     }
 
-    private suspend fun loadLessonMap(enrolledCourseIds: Set<String>): LessonMapLesson {
-        val courseId = enrolledCourseIds.sorted().firstOrNull()
-            ?: error("Activities are unavailable until you join a course.")
+    private suspend fun loadLessonMap(courseId: String): LessonMapLesson {
         val lesson = lessonRepository.getLessonsByCourse(courseId).firstOrNull()
             ?: error("No lessons are available for your current course yet.")
         val exercises = lesson.exercises.ifEmpty {
@@ -243,12 +277,16 @@ class LessonMapViewModel(
     }
 
     private fun createLoadedState(
+        enrolledCourses: List<Course>,
+        selectedCourseId: String,
         lessonMap: LessonMapLesson,
         completedExerciseIds: Set<String>,
         exerciseFeedback: ExerciseFeedbackUiState? = null
     ): LessonMapUiState {
         return LessonMapUiState(
             isLoading = false,
+            enrolledCourses = enrolledCourses,
+            selectedCourseId = selectedCourseId,
             lessonMap = lessonMap,
             nodes = buildLessonMapNodes(
                 exercises = lessonMap.exercises,
@@ -257,6 +295,13 @@ class LessonMapViewModel(
             exerciseFeedback = exerciseFeedback
         )
     }
+
+    private fun legacyCourse(id: String) = Course(
+        id = id,
+        title = id,
+        description = "",
+        creatorId = ""
+    )
 
     private fun createDraft(payload: ExercisePayload): ExerciseAnswerDraft = when (payload) {
         is MultipleChoicePayload -> ExerciseAnswerDraft.MultipleChoice()

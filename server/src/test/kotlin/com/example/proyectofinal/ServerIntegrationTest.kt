@@ -10,6 +10,9 @@ import com.example.proyectofinal.database.DatabaseFactory
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.LearningPathDefaultGradeLevels
+import com.example.proyectofinal.database.LearningPathLessons
+import com.example.proyectofinal.database.LearningPaths
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.database.UserProfilePreferences
@@ -26,11 +29,16 @@ import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.InputValueSubmission
 import com.example.proyectofinal.models.LoginRequest
+import com.example.proyectofinal.models.LearningPath
+import com.example.proyectofinal.models.LearningPathIdRequest
+import com.example.proyectofinal.models.LearningPathState
+import com.example.proyectofinal.models.LearningPathSummary
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.MultiSelectSubmission
 import com.example.proyectofinal.models.MultipleChoicePayload
 import com.example.proyectofinal.models.MultipleChoiceSubmission
 import com.example.proyectofinal.models.RegisterRequest
+import com.example.proyectofinal.seed.SeedData
 import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.DeleteAccountRequest
 import com.example.proyectofinal.models.AvatarId
@@ -64,6 +72,7 @@ import io.ktor.server.testing.testApplication
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -127,6 +136,13 @@ class ServerIntegrationTest {
             assertTrue(passwordHash != adminPassword)
             assertTrue(passwordHash.startsWith("\$2"))
             assertTrue(BCrypt.verifyer().verify(adminPassword.toCharArray(), passwordHash).verified)
+            assertEquals(1L, LearningPaths.selectAll().where { LearningPaths.id eq "path-grade-3-arithmetic" }.count())
+            assertEquals(4L, LearningPathLessons.selectAll().where { LearningPathLessons.pathId eq "path-grade-3-arithmetic" }.count())
+        }
+        SeedData.seedLearningPaths()
+        transaction {
+            assertEquals(1L, LearningPaths.selectAll().where { LearningPaths.id eq "path-grade-3-arithmetic" }.count())
+            assertEquals(4L, LearningPathLessons.selectAll().where { LearningPathLessons.pathId eq "path-grade-3-arithmetic" }.count())
         }
 
         assertTrue(output.contains("Seeding official courses..."))
@@ -1450,6 +1466,61 @@ class ServerIntegrationTest {
         }
     }
 
+    @Test
+    fun `learning path API exposes only curated official content and persists learner state`() = testApplication {
+        setupTestDatabase()
+        application { module(initDatabase = false, seedData = false) }
+        transaction {
+            Users.insert { it[id] = "path-admin"; it[name] = "Admin"; it[email] = "path-admin@example.com"; it[passwordHash] = "hash"; it[role] = "ADMIN" }
+            Users.insert { it[id] = "path-student"; it[name] = "Student"; it[email] = "path-student@example.com"; it[passwordHash] = "hash"; it[role] = "STUDENT" }
+            Courses.insert {
+                it[id] = "path-official-course"; it[title] = "Official"; it[description] = "Official"
+                it[creatorId] = "path-admin"; it[isOfficial] = true; it[schoolYear] = 3
+            }
+            Courses.insert {
+                it[id] = "path-private-course"; it[title] = "Private"; it[description] = "Private"
+                it[creatorId] = "path-admin"; it[isOfficial] = false; it[schoolYear] = 3
+            }
+            Lessons.insert { it[id] = "path-official-lesson"; it[courseId] = "path-official-course"; it[title] = "Official lesson"; it[theoryContent] = "Theory"; it[orderIndex] = 0 }
+            Lessons.insert { it[id] = "path-private-lesson"; it[courseId] = "path-private-course"; it[title] = "Private lesson"; it[theoryContent] = "Private"; it[orderIndex] = 0 }
+            LearningPaths.insert {
+                it[id] = "safe-path"; it[name] = "Safe"; it[description] = "Safe path"; it[visibleObjective] = "Year 3"
+                it[objectiveType] = "GRADE_LEVEL"; it[objectiveGradeLevel] = 3
+            }
+            LearningPaths.insert {
+                it[id] = "unsafe-path"; it[name] = "Unsafe"; it[description] = "Unsafe path"; it[visibleObjective] = "Year 3"
+                it[objectiveType] = "GRADE_LEVEL"; it[objectiveGradeLevel] = 3
+            }
+            LearningPathDefaultGradeLevels.insert { it[gradeLevel] = 3; it[pathId] = "safe-path" }
+            LearningPathLessons.insert { it[pathId] = "safe-path"; it[lessonId] = "path-official-lesson"; it[orderIndex] = 0 }
+            LearningPathLessons.insert { it[pathId] = "unsafe-path"; it[lessonId] = "path-private-lesson"; it[orderIndex] = 0 }
+        }
+        val api = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val token = Security.generateToken("path-student", UserRole.STUDENT.name)
+
+        assertEquals(HttpStatusCode.Unauthorized, api.get("/learning-paths?gradeLevel=3").status)
+        val summaries = api.get("/learning-paths?gradeLevel=3") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.OK, summaries.status)
+        assertEquals(listOf("safe-path"), Json.decodeFromString<List<LearningPathSummary>>(summaries.bodyAsText()).map { it.id })
+
+        val recommended = api.get("/learning-paths/recommended?gradeLevel=3") { bearerAuth(token) }
+        assertEquals("safe-path", Json.decodeFromString<LearningPath>(recommended.bodyAsText()).id)
+        assertEquals(HttpStatusCode.NotFound, api.get("/learning-paths/unsafe-path") { bearerAuth(token) }.status)
+
+        val selected = api.put("/learning-paths/selection") {
+            bearerAuth(token); header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(LearningPathIdRequest("safe-path"))
+        }
+        assertEquals(HttpStatusCode.OK, selected.status)
+        assertEquals("safe-path", Json.decodeFromString<LearningPathState>(selected.bodyAsText()).selectedPathId)
+        val opened = api.post("/learning-paths/safe-path/opened") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.OK, opened.status)
+        assertEquals("safe-path", Json.decodeFromString<LearningPathState>(opened.bodyAsText()).lastOpenedPathId)
+        assertEquals(HttpStatusCode.NotFound, api.put("/learning-paths/selection") {
+            bearerAuth(token); header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(LearningPathIdRequest("unsafe-path"))
+        }.status)
+    }
     private suspend fun registerUserAndGetToken(
         client: io.ktor.client.HttpClient,
         email: String

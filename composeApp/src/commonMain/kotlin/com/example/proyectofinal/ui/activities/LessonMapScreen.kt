@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.models.ChoiceOption
+import com.example.proyectofinal.models.Course
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExercisePayload
 import com.example.proyectofinal.models.InputValuePayload
@@ -100,6 +101,7 @@ fun LessonMapScreen(
         uiState = uiState,
         onRetry = viewModel::refresh,
         onShowHome = onShowHome,
+        onCourseSelected = viewModel::selectCourse,
         onExerciseSelected = viewModel::selectExercise,
         onDismissActiveExercise = viewModel::dismissActiveExercise,
         onMultipleChoiceAnswerSelected = viewModel::selectMultipleChoiceAnswer,
@@ -128,6 +130,7 @@ internal fun LessonMapContent(
     onDismissTheory: () -> Unit,
     onHintRequested: () -> Unit = {},
     onExercisePlayerActiveChanged: (Boolean) -> Unit = {},
+    onCourseSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(uiState.activeExerciseId) {
@@ -203,6 +206,14 @@ internal fun LessonMapContent(
                             onBack = onShowHome,
                             onOpenTheory = onOpenTheory
                         )
+                        if (uiState.enrolledCourses.size > 1) {
+                            Spacer(Modifier.height(12.dp))
+                            CourseSelector(
+                                courses = uiState.enrolledCourses,
+                                selectedCourseId = uiState.selectedCourseId,
+                                onCourseSelected = onCourseSelected
+                            )
+                        }
                         Spacer(Modifier.height(20.dp))
                         LessonMapProgress(nodes = uiState.nodes)
                         uiState.exerciseFeedback?.let { feedback ->
@@ -613,6 +624,33 @@ private fun LessonMapHeader(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimary
             )
+        }
+    }
+}
+
+@Composable
+private fun CourseSelector(
+    courses: List<Course>,
+    selectedCourseId: String?,
+    onCourseSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("activityCourseSelector"),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        courses.forEach { course ->
+            val selected = course.id == selectedCourseId
+            MButton(
+                onClick = { onCourseSelected(course.id) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("activityCourse-${course.id}"),
+                style = if (selected) MButtonStyle.Filled else MButtonStyle.Outline
+            ) {
+                Text(course.title)
+            }
         }
     }
 }

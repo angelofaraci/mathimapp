@@ -118,16 +118,25 @@ class CourseService {
     }
 
     fun getEnrolledCourses(userId: String): List<Course> = dbQuery {
-        val courseIds = EnrolledCourses.selectAll()
+        val enrollments = EnrolledCourses.selectAll()
             .where { EnrolledCourses.userId eq userId }
-            .map { it[EnrolledCourses.courseId] }
+            .map { enrollment ->
+                enrollment[EnrolledCourses.courseId] to enrollment[EnrolledCourses.lastActivityAtEpochMillis]
+            }
 
-        if (courseIds.isEmpty()) {
+        if (enrollments.isEmpty()) {
             emptyList()
         } else {
-            Courses.selectAll()
-                .where { Courses.id inList courseIds }
-                .map { it.toCourse() }
+            val coursesById = Courses.selectAll()
+                .where { Courses.id inList enrollments.map { it.first } }
+                .associate { row -> row[Courses.id] to row.toCourse() }
+
+            enrollments
+                .sortedWith(
+                    compareByDescending<Pair<String, Long?>> { it.second }
+                        .thenBy { it.first }
+                )
+                .mapNotNull { (courseId, _) -> coursesById[courseId] }
         }
     }
 

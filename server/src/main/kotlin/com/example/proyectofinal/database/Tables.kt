@@ -88,6 +88,45 @@ object CompletedExercises : Table("completed_exercises") {
 object EnrolledCourses : Table("enrolled_courses") {
     val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
     val courseId = reference("course_id", Courses.id, onDelete = ReferenceOption.CASCADE)
+    val lastActivityAtEpochMillis = long("last_activity_at_epoch_millis").nullable()
 
     override val primaryKey = PrimaryKey(userId, courseId)
+}
+
+object LearningPaths : Table("learning_paths") {
+    val id = varchar("id", 50)
+    val name = varchar("name", 200)
+    val description = varchar("description", 1000)
+    val visibleObjective = varchar("visible_objective", 255)
+    val objectiveType = varchar("objective_type", 50)
+    val objectiveGradeLevel = integer("objective_grade_level")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object LearningPathDefaultGradeLevels : Table("learning_path_default_grade_levels") {
+    val gradeLevel = integer("grade_level")
+    val pathId = reference("path_id", LearningPaths.id, onDelete = ReferenceOption.CASCADE).uniqueIndex()
+
+    override val primaryKey = PrimaryKey(gradeLevel)
+}
+
+object LearningPathLessons : Table("learning_path_lessons") {
+    val pathId = reference("path_id", LearningPaths.id, onDelete = ReferenceOption.CASCADE)
+    val lessonId = reference("lesson_id", Lessons.id, onDelete = ReferenceOption.CASCADE)
+    val orderIndex = integer("order_index")
+
+    override val primaryKey = PrimaryKey(pathId, lessonId)
+
+    init {
+        uniqueIndex(pathId, orderIndex)
+    }
+}
+
+object UserLearningPathState : Table("user_learning_path_state") {
+    val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
+    val selectedPathId = reference("selected_path_id", LearningPaths.id, onDelete = ReferenceOption.SET_NULL).nullable()
+    val lastOpenedPathId = reference("last_opened_path_id", LearningPaths.id, onDelete = ReferenceOption.SET_NULL).nullable()
+
+    override val primaryKey = PrimaryKey(userId)
 }

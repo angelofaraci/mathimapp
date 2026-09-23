@@ -9,6 +9,8 @@ import com.example.proyectofinal.data.KtorCourseRepository
 import com.example.proyectofinal.data.KtorAuthRepository
 import com.example.proyectofinal.data.KtorExerciseRepository
 import com.example.proyectofinal.data.KtorLessonRepository
+import com.example.proyectofinal.data.KtorLearningPathRepository
+import com.example.proyectofinal.data.LearningPathApi
 import com.example.proyectofinal.data.KtorUserRepository
 import com.example.proyectofinal.data.LessonApi
 import com.example.proyectofinal.data.SqlDelightLearnerProfileRepository
@@ -23,6 +25,7 @@ import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LearnerProfileRepository
 import com.example.proyectofinal.domain.LessonRepository
+import com.example.proyectofinal.domain.LearningPathRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.UserRole
 import com.example.proyectofinal.ui.AuthGateViewModel
@@ -47,6 +50,7 @@ val appModule = module {
 
     single { CourseApi(get(), get()) }
     single { LessonApi(get(), get()) }
+    single { LearningPathApi(get(), get()) }
     single { ExerciseApi(get(), get()) }
     single { UserApi(get(), get()) }
     single { AuthApi(get(), get()) }
@@ -54,6 +58,7 @@ val appModule = module {
     single<CourseRepository> { KtorCourseRepository(get(), get()) }
     single<AuthRepository> { KtorAuthRepository(get(), get()) }
     single<LessonRepository> { KtorLessonRepository(get(), get()) }
+    single<LearningPathRepository> { KtorLearningPathRepository(get(), get()) }
     single<ExerciseRepository> { KtorExerciseRepository(get(), get()) }
     single<UserRepository> { KtorUserRepository(get(), get(), get(), get()) }
     single<LearnerProfileRepository> { SqlDelightLearnerProfileRepository(get()) }
@@ -70,7 +75,6 @@ val appModule = module {
     viewModelOf(::RegisterViewModel)
     viewModel { (teacherId: String) -> TeacherDashboardViewModel(get(), teacherId) }
 }
-
 internal val userRoleColumnAdapter = object : ColumnAdapter<UserRole, String> {
     override fun decode(databaseValue: String): UserRole =
         UserRole.parse(databaseValue)

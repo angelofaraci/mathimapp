@@ -1,11 +1,14 @@
 package com.example.proyectofinal.ui.activities
 
 import com.example.proyectofinal.domain.AuthRepository
+import com.example.proyectofinal.domain.CourseRepository
 import com.example.proyectofinal.domain.AuthSession
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.domain.UserRepository
 import com.example.proyectofinal.models.ChoiceOption
+import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.CourseStudentsProgressResponse
 import com.example.proyectofinal.models.ChangePasswordRequest
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.ExerciseAttemptResponse
@@ -75,6 +78,49 @@ class LessonMapViewModelTest {
             viewModel.uiState.value.nodes.map(LessonMapNodeUiModel::state)
         )
         assertEquals("exercise-fractions-1", viewModel.uiState.value.activeNode?.exercise?.id)
+    }
+
+    @Test
+    fun `initial load selects the first server ordered enrolled course`() = runTest(dispatcher) {
+        val recentCourse = Course("course-recent", "Recent course", "", "teacher")
+        val olderCourse = Course("course-older", "Older course", "", "teacher")
+        val viewModel = LessonMapViewModel(
+            authRepository = FakeLessonMapAuthRepository(testUser),
+            userRepository = FakeLessonMapUserRepository(progress = testProgress()),
+            lessonRepository = FakeLessonRepository(),
+            exerciseRepository = FakeExerciseRepository(),
+            courseRepository = FakeLessonMapCourseRepository(listOf(recentCourse, olderCourse))
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(listOf("course-recent", "course-older"), viewModel.uiState.value.enrolledCourses.map(Course::id))
+        assertEquals("course-recent", viewModel.uiState.value.selectedCourseId)
+    }
+
+    @Test
+    fun `selecting another enrolled course changes the active course and survives refresh`() = runTest(dispatcher) {
+        val viewModel = LessonMapViewModel(
+            authRepository = FakeLessonMapAuthRepository(testUser),
+            userRepository = FakeLessonMapUserRepository(progress = testProgress()),
+            lessonRepository = FakeLessonRepository(),
+            exerciseRepository = FakeExerciseRepository(),
+            courseRepository = FakeLessonMapCourseRepository(
+                listOf(
+                    Course("course-recent", "Recent course", "", "teacher"),
+                    Course("course-older", "Older course", "", "teacher")
+                )
+            )
+        )
+
+        advanceUntilIdle()
+        viewModel.selectCourse("course-older")
+        advanceUntilIdle()
+        assertEquals("course-older", viewModel.uiState.value.selectedCourseId)
+
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertEquals("course-older", viewModel.uiState.value.selectedCourseId)
     }
 
     @Test
@@ -444,6 +490,20 @@ private class FakeLessonMapUserRepository(
         attemptCalls += submission
         return queuedAttemptResponses.removeFirstOrNull() ?: error("Attempt response not configured")
     }
+}
+
+private class FakeLessonMapCourseRepository(
+    private val enrolledCourses: List<Course>
+) : CourseRepository {
+    override suspend fun getOfficialCourses(schoolYear: Int?): List<Course> = emptyList()
+    override suspend fun getCourseById(id: String): Course? = enrolledCourses.firstOrNull { it.id == id }
+    override suspend fun getMyCreatedCourses(creatorId: String): List<Course> = emptyList()
+    override suspend fun getEnrolledCourses(userId: String): List<Course> = enrolledCourses
+    override suspend fun getStudentsProgress(courseId: String): CourseStudentsProgressResponse = error("Not used")
+    override suspend fun createCourse(course: Course): Course = error("Not used")
+    override suspend fun updateCourse(course: Course): Course = error("Not used")
+    override suspend fun deleteCourse(id: String) = Unit
+    override suspend fun joinCourseByCode(userId: String, code: String): Course? = error("Not used")
 }
 
 private class FakeLessonRepository : LessonRepository {

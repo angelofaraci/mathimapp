@@ -12,6 +12,7 @@ import com.example.proyectofinal.service.ExercisePayloadSupport
 import org.jetbrains.exposed.v1.core.statements.InsertStatement
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 
 object SeedData {
@@ -134,6 +135,57 @@ object SeedData {
         }
     }
 
+    /**
+     * Seeds the first platform-curated path from existing official arithmetic content.
+     * It deliberately links only official lessons and is safe to call on every startup.
+     */
+    fun seedLearningPaths() {
+        transaction {
+            val pathId = "path-grade-3-arithmetic"
+            if (LearningPaths.selectAll().where { LearningPaths.id eq pathId }.empty()) {
+                LearningPaths.insert {
+                    it[LearningPaths.id] = pathId
+                    it[LearningPaths.name] = "Arithmetic foundations"
+                    it[LearningPaths.description] = "Build confidence with the four basic arithmetic operations."
+                    it[LearningPaths.visibleObjective] = "Year 3 arithmetic foundations"
+                    it[LearningPaths.objectiveType] = "GRADE_LEVEL"
+                    it[LearningPaths.objectiveGradeLevel] = 3
+                }
+            }
+            if (LearningPathDefaultGradeLevels.selectAll()
+                    .where { LearningPathDefaultGradeLevels.gradeLevel eq 3 }
+                    .empty()
+            ) {
+                LearningPathDefaultGradeLevels.insert {
+                    it[LearningPathDefaultGradeLevels.gradeLevel] = 3
+                    it[LearningPathDefaultGradeLevels.pathId] = pathId
+                }
+            }
+
+            listOf(
+                "lesson-addition",
+                "lesson-subtraction",
+                "lesson-multiplication",
+                "lesson-division"
+            ).forEachIndexed { orderIndex, lessonId ->
+                val isOfficialLesson = Lessons
+                    .innerJoin(Courses)
+                    .selectAll()
+                    .where { (Lessons.id eq lessonId) and (Courses.isOfficial eq true) }
+                    .any()
+                if (isOfficialLesson && LearningPathLessons.selectAll()
+                        .where { (LearningPathLessons.pathId eq pathId) and (LearningPathLessons.lessonId eq lessonId) }
+                        .empty()
+                ) {
+                    LearningPathLessons.insert {
+                        it[LearningPathLessons.pathId] = pathId
+                        it[LearningPathLessons.lessonId] = lessonId
+                        it[LearningPathLessons.orderIndex] = orderIndex
+                    }
+                }
+            }
+        }
+    }
     private fun seedBasicArithmetic(adminId: String) {
         val basicArithmeticId = "course-basic-arithmetic"
         ensureCourse(basicArithmeticId) {
