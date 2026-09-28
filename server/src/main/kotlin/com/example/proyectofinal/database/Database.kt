@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 object DatabaseFactory {
     fun init() {
         init(
-            url = env("DB_URL", "jdbc:postgresql://localhost:5432/MathimApp"),
+            url = env("DB_URL", "jdbc:postgresql://localhost:5433/MathimApp"),
             driver = env("DB_DRIVER", "org.postgresql.Driver"),
             user = env("DB_USER", "postgres"),
             password = env("DB_PASSWORD", "mathimapp")
