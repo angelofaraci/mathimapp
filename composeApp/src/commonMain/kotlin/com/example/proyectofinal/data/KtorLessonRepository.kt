@@ -3,6 +3,7 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.domain.LessonRepository
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.LessonTheoryResponse
 import com.example.proyectofinal.models.TheoryUpdateRequest
 
 class KtorLessonRepository(
@@ -48,6 +49,8 @@ class KtorLessonRepository(
         cacheLesson(updated)
         return updated
     }
+
+    override suspend fun getTheory(lessonId: String): LessonTheoryResponse = api.fetchTheory(lessonId)
 
     override suspend fun deleteLesson(id: String) {
         api.deleteLesson(id)

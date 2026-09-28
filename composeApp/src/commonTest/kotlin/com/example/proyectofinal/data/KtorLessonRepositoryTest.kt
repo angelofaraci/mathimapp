@@ -7,6 +7,9 @@ import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.di.userRoleColumnAdapter
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.TheoryUpdateRequest
+import com.example.proyectofinal.models.LessonTheoryResponse
+import com.example.proyectofinal.models.TheorySection
+import com.example.proyectofinal.models.TheorySectionType
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
@@ -151,6 +154,33 @@ class KtorLessonRepositoryTest {
         val dbLesson = database.appDatabaseQueries.selectLessonById("lesson-1").executeAsOneOrNull()
         assertEquals("Single Lesson", dbLesson?.title)
         assertEquals("Theory content here", dbLesson?.theoryContent)
+    }
+
+    @Test
+    fun `getTheory fetches ordered server sections`() = runTest {
+        val response = LessonTheoryResponse(
+            lessonId = "lesson-1",
+            sections = listOf(
+                TheorySection("concept", TheorySectionType.CONCEPT, "Concept", "Content", 0)
+            )
+        )
+        val mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/lessons/lesson-1/theory" -> respond(
+                    content = json.encodeToString(response),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json")
+                )
+                else -> error("Unexpected request: ${request.url.encodedPath}")
+            }
+        }
+
+        val client = HttpClient(mockEngine) {
+            install(ContentNegotiation) { json(json) }
+        }
+        val repository = KtorLessonRepository(LessonApi(client, apiConfig), database)
+
+        assertEquals(response, repository.getTheory("lesson-1"))
     }
 
     @Test

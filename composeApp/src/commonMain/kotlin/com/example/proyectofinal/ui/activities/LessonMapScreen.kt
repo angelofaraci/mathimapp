@@ -183,6 +183,8 @@ internal fun LessonMapContent(
                     draft = uiState.activeExerciseDraft,
                     phase = uiState.activeExercisePhase,
                     feedback = uiState.exerciseFeedback,
+                    isLoadingHint = uiState.isLoadingHint,
+                    areHintsExhausted = uiState.areHintsExhausted,
                     onBack = onDismissActiveExercise,
                     onMultipleChoiceAnswerSelected = onMultipleChoiceAnswerSelected,
                     onInputValueChanged = onInputValueChanged,
@@ -247,6 +249,8 @@ internal fun LessonMapContent(
             uiState.selectedTheoryLesson?.let { lesson ->
                 TheorySheet(
                     lesson = lesson,
+                    sections = uiState.theorySections,
+                    isLoading = uiState.isLoadingTheory,
                     onDismiss = onDismissTheory
                 )
             }
@@ -264,6 +268,8 @@ private fun ExercisePlayerContent(
     draft: ExerciseAnswerDraft?,
     phase: ActiveExercisePhase,
     feedback: ExerciseFeedbackUiState?,
+    isLoadingHint: Boolean,
+    areHintsExhausted: Boolean,
     onBack: () -> Unit,
     onMultipleChoiceAnswerSelected: (String) -> Unit,
     onInputValueChanged: (String) -> Unit,
@@ -334,10 +340,15 @@ private fun ExercisePlayerContent(
                 onMultiSelectAnswerToggled = onMultiSelectAnswerToggled
             )
             Text(
-                text = "💡 ${stringResource(Res.string.lesson_map_action_hint)}",
+                text = when {
+                    isLoadingHint -> "💡 Loading hint…"
+                    areHintsExhausted -> "💡 No more hints"
+                    else -> "💡 ${stringResource(Res.string.lesson_map_action_hint)}"
+                },
                 modifier = Modifier
                     .testTag("exerciseHint")
-                    .clickable(onClick = onHintRequested),
+                    .alpha(if (isLoadingHint || areHintsExhausted) 0.5f else 1f)
+                    .clickable(enabled = !isLoadingHint && !areHintsExhausted, onClick = onHintRequested),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )

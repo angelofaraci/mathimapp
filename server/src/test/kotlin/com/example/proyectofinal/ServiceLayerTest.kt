@@ -11,6 +11,8 @@ import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.LearningPathDefaultGradeLevels
 import com.example.proyectofinal.database.LearningPathLessons
 import com.example.proyectofinal.database.LearningPaths
+import com.example.proyectofinal.database.LessonTheorySections
+import com.example.proyectofinal.database.ExerciseHints
 import com.example.proyectofinal.database.Users
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.models.ChoiceOption
@@ -45,6 +47,9 @@ import com.example.proyectofinal.service.LessonListReadResult
 import com.example.proyectofinal.service.LessonReadResult
 import com.example.proyectofinal.service.LessonService
 import com.example.proyectofinal.service.LearningPathService
+import com.example.proyectofinal.service.NextHintResult
+import com.example.proyectofinal.service.PedagogicalContentService
+import com.example.proyectofinal.service.TheoryReadResult
 import com.example.proyectofinal.service.TheoryUpdateResult
 import com.example.proyectofinal.service.UserService
 import org.flywaydb.core.Flyway
@@ -1650,6 +1655,91 @@ class LearningPathServiceTest {
         assertEquals("grade-4", service.getState("student").selectedPathId)
         assertEquals("grade-3", service.getState("student").lastOpenedPathId)
         assertFalse(service.selectPath("missing-student", "grade-3"))
+    }
+}
+
+class PedagogicalContentServiceTest {
+    @BeforeTest
+    fun setUp() {
+        initServiceTestDatabase()
+    }
+
+    @Test
+    fun `theory is ordered and hints are progressively unlocked by valid attempts`() {
+        insertUser(id = "admin", role = UserRole.ADMIN)
+        insertUser(id = "student", role = UserRole.STUDENT)
+        insertUser(id = "other-student", role = UserRole.STUDENT)
+        insertCourse(id = "official-course", creatorId = "admin", isOfficial = true)
+        insertLesson(id = "lesson", courseId = "official-course", theoryContent = "Legacy theory")
+        insertCourse(id = "private-course", creatorId = "admin")
+        insertLesson(id = "private-lesson", courseId = "private-course")
+        insertExercise(id = "exercise", lessonId = "lesson", correctAnswer = "a")
+        enrollUser(userId = "student", courseId = "official-course")
+        transaction {
+            LessonTheorySections.insert {
+                it[id] = "theory-second"
+                it[lessonId] = "lesson"
+                it[position] = 1
+                it[type] = "EXAMPLE"
+                it[content] = "Second"
+            }
+            LessonTheorySections.insert {
+                it[id] = "theory-first"
+                it[lessonId] = "lesson"
+                it[position] = 0
+                it[type] = "CONCEPT"
+                it[content] = "First"
+            }
+            ExerciseHints.insert {
+                it[id] = "hint-first"
+                it[exerciseId] = "exercise"
+                it[position] = 0
+                it[unlockAfterAttempts] = 0
+                it[content] = "Start here"
+            }
+            ExerciseHints.insert {
+                it[id] = "hint-second"
+                it[exerciseId] = "exercise"
+                it[position] = 1
+                it[unlockAfterAttempts] = 1
+                it[content] = "Try again"
+            }
+        }
+
+        val contentService = PedagogicalContentService()
+        val theory = assertIs<TheoryReadResult.Success>(
+            contentService.getTheory("lesson", "student", UserRole.STUDENT)
+        )
+        assertEquals(listOf("theory-first", "theory-second"), theory.response.sections.map { it.id })
+
+        val firstHint = assertIs<NextHintResult.Success>(
+            contentService.revealNextHint("exercise", "student", UserRole.STUDENT)
+        )
+        assertEquals("hint-first", firstHint.response.hint?.id)
+        assertNull(
+            assertIs<NextHintResult.Success>(
+                contentService.revealNextHint("exercise", "student", UserRole.STUDENT)
+            ).response.hint
+        )
+
+        val attempt = UserService().attemptExercise(
+            userId = "student",
+            role = UserRole.STUDENT,
+            request = ExerciseAttemptRequest(
+                exerciseId = "exercise",
+                submission = MultipleChoiceSubmission("b")
+            )
+        )
+        assertFalse(assertIs<ExerciseAttemptResult.Success>(attempt).response.isCorrect)
+        val secondHint = assertIs<NextHintResult.Success>(
+            contentService.revealNextHint("exercise", "student", UserRole.STUDENT)
+        )
+        assertEquals("hint-second", secondHint.response.hint?.id)
+
+        assertEquals(
+            TheoryReadResult.Forbidden,
+            contentService.getTheory("private-lesson", "other-student", UserRole.STUDENT)
+        )
     }
 }
 

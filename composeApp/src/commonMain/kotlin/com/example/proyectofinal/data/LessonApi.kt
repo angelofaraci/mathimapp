@@ -2,6 +2,7 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.LessonTheoryResponse
 import com.example.proyectofinal.models.TheoryUpdateRequest
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -21,6 +22,10 @@ class LessonApi(
 
     suspend fun fetchLesson(lessonId: String): Lesson {
         return client.get("$baseUrl/lessons/$lessonId").body()
+    }
+
+    suspend fun fetchTheory(lessonId: String): LessonTheoryResponse {
+        return client.get("$baseUrl/lessons/$lessonId/theory").body()
     }
 
     suspend fun createLesson(lesson: Lesson): Lesson {

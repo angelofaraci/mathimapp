@@ -16,6 +16,8 @@ import com.example.proyectofinal.models.ExerciseType
 import com.example.proyectofinal.models.InputValuePayload
 import com.example.proyectofinal.models.MultiSelectPayload
 import com.example.proyectofinal.models.MultipleChoicePayload
+import com.example.proyectofinal.models.ExerciseHint
+import com.example.proyectofinal.models.NextExerciseHintResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -115,6 +117,27 @@ class KtorExerciseRepositoryTest {
         assertEquals("What is Kotlin?", dbExercises[0].title)
         assertEquals(mockExercises[0].payload, ExercisePayloadJson.decode(dbExercises[0].payload))
         assertEquals(mockExercises[1].payload, ExercisePayloadJson.decode(dbExercises[1].payload))
+    }
+
+    @Test
+    fun `revealNextHint posts to server and returns only its response`() = runTest {
+        val response = NextExerciseHintResponse(
+            hint = ExerciseHint("hint-1", "Start by identifying the known values.", 0),
+            remainingHints = 1
+        )
+        val mockEngine = MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/exercises/ex-1/hints/next" -> respond(
+                    content = json.encodeToString(response),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json")
+                )
+                else -> error("Unexpected request: ${request.url.encodedPath}")
+            }
+        }
+        val repository = KtorExerciseRepository(ExerciseApi(httpClient(mockEngine), apiConfig), database)
+
+        assertEquals(response, repository.revealNextHint("ex-1"))
     }
 
     @Test

@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.TheorySection
+import com.example.proyectofinal.models.TheorySectionType
 import com.example.proyectofinal.ui.primitives.MCard
 import com.example.proyectofinal.ui.primitives.MButton
 import com.example.proyectofinal.ui.primitives.MButtonStyle
@@ -32,15 +34,22 @@ import proyectofinal.composeapp.generated.resources.theory_sheet_label
 @Composable
 fun TheorySheet(
     lesson: Lesson,
+    sections: List<TheorySection> = emptyList(),
+    isLoading: Boolean = false,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        TheorySheetContent(lesson)
+        TheorySheetContent(lesson, sections, isLoading)
     }
 }
 
 @Composable
-internal fun TheorySheetContent(lesson: Lesson, modifier: Modifier = Modifier) {
+internal fun TheorySheetContent(
+    lesson: Lesson,
+    sections: List<TheorySection> = emptyList(),
+    isLoading: Boolean = false,
+    modifier: Modifier = Modifier
+) {
     Column(
             modifier = modifier
                 .fillMaxWidth()
@@ -64,25 +73,27 @@ internal fun TheorySheetContent(lesson: Lesson, modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            TheorySection("Concepto clave", "theorySheetConcept", lesson.theoryContent)
-            TheorySteps()
-            TheorySection(
-                "Ejemplo práctico",
-                "theorySheetExample",
-                "Usa este ejemplo como guía antes de continuar con la actividad."
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MButton(
-                    onClick = {},
-                    enabled = false,
-                    style = MButtonStyle.Outline,
-                    modifier = Modifier.weight(1f).testTag("theorySheetPrevious")
-                ) { Text("← Anterior") }
-                MButton(
-                    onClick = {},
-                    enabled = false,
-                    modifier = Modifier.weight(1f).testTag("theorySheetNext")
-                ) { Text("Siguiente →") }
+            if (isLoading) {
+                Text("Cargando teoría…", modifier = Modifier.testTag("theorySheetLoading"))
+            } else {
+                val content = sections.ifEmpty {
+                    listOf(
+                        TheorySection(
+                            id = "legacy-${lesson.id}",
+                            type = TheorySectionType.CONCEPT,
+                            title = "Concepto clave",
+                            content = lesson.theoryContent,
+                            position = 0
+                        )
+                    )
+                }
+                content.sortedBy { it.position }.forEach { section ->
+                    TheorySection(
+                        title = section.title ?: section.type.displayTitle(),
+                        tag = "theorySheetSection-${section.id}",
+                        content = section.content
+                    )
+                }
             }
     }
 }
@@ -102,33 +113,10 @@ private fun TheorySection(title: String, tag: String, content: String) {
     }
 }
 
-@Composable
-private fun TheorySteps() {
-    Column(
-        modifier = Modifier.testTag("theorySheetSteps"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text("Cómo resolverlo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        listOf(
-            "Encuentra los datos importantes.",
-            "Aplica el concepto paso a paso.",
-            "Comprueba el resultado."
-        ).forEachIndexed { index, text ->
-            Row(
-                modifier = Modifier.testTag("theorySheetStep${index + 1}"),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraLarge),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("${index + 1}", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelMedium)
-                }
-                Text(text, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
+private fun TheorySectionType.displayTitle(): String = when (this) {
+    TheorySectionType.CONCEPT -> "Concepto clave"
+    TheorySectionType.EXPLANATION -> "Explicación"
+    TheorySectionType.STEPS -> "Cómo resolverlo"
+    TheorySectionType.EXAMPLE -> "Ejemplo práctico"
+    TheorySectionType.WARNING -> "Tené en cuenta"
 }

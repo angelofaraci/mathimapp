@@ -9,6 +9,7 @@ import com.example.proyectofinal.routes.courseRoutes
 import com.example.proyectofinal.routes.exerciseRoutes
 import com.example.proyectofinal.routes.lessonRoutes
 import com.example.proyectofinal.routes.learningPathRoutes
+import com.example.proyectofinal.routes.pedagogicalContentRoutes
 import com.example.proyectofinal.routes.userRoutes
 import com.example.proyectofinal.seed.SeedData
 import com.example.proyectofinal.service.AuthService
@@ -16,6 +17,7 @@ import com.example.proyectofinal.service.CourseService
 import com.example.proyectofinal.service.ExerciseService
 import com.example.proyectofinal.service.LessonService
 import com.example.proyectofinal.service.LearningPathService
+import com.example.proyectofinal.service.PedagogicalContentService
 import com.example.proyectofinal.service.UserService
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -55,6 +57,7 @@ fun Application.module(
     val courseService = CourseService()
     val lessonService = LessonService()
     val learningPathService = LearningPathService()
+    val pedagogicalContentService = PedagogicalContentService()
     val exerciseService = ExerciseService()
 
     authRoutes(authService)
@@ -62,6 +65,7 @@ fun Application.module(
     courseRoutes(courseService)
     lessonRoutes(lessonService)
     learningPathRoutes(learningPathService)
+    pedagogicalContentRoutes(pedagogicalContentService)
     exerciseRoutes(exerciseService, lessonService)
     adminRoutes(userService, courseService, lessonService, exerciseService)
 

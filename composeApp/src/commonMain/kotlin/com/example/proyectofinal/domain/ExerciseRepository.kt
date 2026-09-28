@@ -1,6 +1,7 @@
 package com.example.proyectofinal.domain
 
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.NextExerciseHintResponse
 
 interface ExerciseRepository {
     /**
@@ -17,6 +18,10 @@ interface ExerciseRepository {
      * Updates an exercise.
      */
     suspend fun updateExercise(exercise: Exercise): Exercise
+
+    /** Reveals the next server-authorized hint for an exercise. */
+    suspend fun revealNextHint(exerciseId: String): NextExerciseHintResponse =
+        NextExerciseHintResponse()
 
     /**
      * Deletes an exercise.

@@ -107,6 +107,9 @@ class LessonMapViewModel(
                 activeExercisePhase = ActiveExercisePhase.Drafting,
                 remainingLives = 3,
                 exerciseFeedback = null,
+                revealedHints = emptyList(),
+                isLoadingHint = false,
+                areHintsExhausted = false,
                 nodes = buildLessonMapNodes(
                     exercises = lessonMap.exercises,
                     completedExerciseIds = completedExerciseIds,
@@ -123,7 +126,10 @@ class LessonMapViewModel(
                 activeExerciseDraft = null,
                 activeExercisePhase = ActiveExercisePhase.Drafting,
                 remainingLives = 3,
-                exerciseFeedback = null
+                exerciseFeedback = null,
+                revealedHints = emptyList(),
+                isLoadingHint = false,
+                areHintsExhausted = false
             )
         }
     }
@@ -209,7 +215,8 @@ class LessonMapViewModel(
                         exerciseFeedback = ExerciseFeedbackUiState(
                             message = attempt.message ?: "Incorrect answer. Try again.",
                             tone = ExerciseFeedbackTone.Error
-                        )
+                        ),
+                        areHintsExhausted = false
                     )
                 }
                 return@launch
@@ -241,22 +248,66 @@ class LessonMapViewModel(
 
     fun openTheory() {
         val lesson = _uiState.value.lessonMap?.lesson ?: return
-        _uiState.update { it.copy(selectedTheoryLesson = lesson) }
-    }
-
-    fun showHint() {
         _uiState.update {
             it.copy(
-                exerciseFeedback = ExerciseFeedbackUiState(
-                    message = "Hint requested.",
-                    tone = ExerciseFeedbackTone.Info
-                )
+                selectedTheoryLesson = lesson,
+                theorySections = emptyList(),
+                isLoadingTheory = true
             )
+        }
+        viewModelScope.launch {
+            try {
+                val theory = lessonRepository.getTheory(lesson.id)
+                _uiState.update { state ->
+                    if (state.selectedTheoryLesson?.id == lesson.id) {
+                        state.copy(theorySections = theory.sections.sortedBy { it.position }, isLoadingTheory = false)
+                    } else state
+                }
+            } catch (_: Exception) {
+                _uiState.update { state ->
+                    if (state.selectedTheoryLesson?.id == lesson.id) state.copy(isLoadingTheory = false) else state
+                }
+            }
+        }
+    }
+
+    fun showHint() = viewModelScope.launch {
+        val exercise = _uiState.value.activeExercise ?: return@launch
+        if (_uiState.value.isLoadingHint || _uiState.value.areHintsExhausted) return@launch
+        _uiState.update {
+            it.copy(isLoadingHint = true, exerciseFeedback = null)
+        }
+        try {
+            val response = exerciseRepository.revealNextHint(exercise.id)
+            _uiState.update { state ->
+                val hint = response.hint
+                state.copy(
+                    isLoadingHint = false,
+                    revealedHints = if (hint != null && state.revealedHints.none { it.id == hint.id }) {
+                        state.revealedHints + hint
+                    } else state.revealedHints,
+                    areHintsExhausted = hint == null,
+                    exerciseFeedback = when {
+                        hint != null -> ExerciseFeedbackUiState(hint.content, ExerciseFeedbackTone.Info)
+                        else -> ExerciseFeedbackUiState("No more hints are available yet.", ExerciseFeedbackTone.Info)
+                    }
+                )
+            }
+        } catch (error: Exception) {
+            _uiState.update {
+                it.copy(
+                    isLoadingHint = false,
+                    exerciseFeedback = ExerciseFeedbackUiState(
+                        message = error.message ?: "Unable to load a hint.",
+                        tone = ExerciseFeedbackTone.Error
+                    )
+                )
+            }
         }
     }
 
     fun dismissTheory() {
-        _uiState.update { it.copy(selectedTheoryLesson = null) }
+        _uiState.update { it.copy(selectedTheoryLesson = null, theorySections = emptyList(), isLoadingTheory = false) }
     }
 
     private suspend fun loadLessonMap(courseId: String): LessonMapLesson {

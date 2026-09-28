@@ -1,6 +1,7 @@
 package com.example.proyectofinal.domain
 
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.LessonTheoryResponse
 
 interface LessonRepository {
     /**
@@ -27,6 +28,10 @@ interface LessonRepository {
      * Updates lesson theory content without changing other lesson fields.
      */
     suspend fun updateTheory(lessonId: String, content: String): Lesson
+
+    /** Gets the ordered theory sections available to the authenticated learner. */
+    suspend fun getTheory(lessonId: String): LessonTheoryResponse =
+        LessonTheoryResponse(lessonId = lessonId, sections = emptyList())
 
     /**
      * Deletes a lesson.

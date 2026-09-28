@@ -2,6 +2,7 @@ package com.example.proyectofinal.data
 
 import com.example.proyectofinal.di.ApiConfig
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.NextExerciseHintResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -16,6 +17,10 @@ class ExerciseApi(
 
     suspend fun fetchExercisesByLesson(lessonId: String): List<Exercise> {
         return client.get("$baseUrl/lessons/$lessonId/exercises").body()
+    }
+
+    suspend fun fetchNextHint(exerciseId: String): NextExerciseHintResponse {
+        return client.post("$baseUrl/exercises/$exerciseId/hints/next").body()
     }
 
     suspend fun createExercise(exercise: Exercise): Exercise {

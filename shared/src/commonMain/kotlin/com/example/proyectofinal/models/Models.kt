@@ -268,6 +268,46 @@ data class TheoryUpdateRequest(
     val theoryContent: String
 )
 
+/** Ordered, lesson-scoped pedagogical content. Legacy [Lesson.theoryContent] remains available
+ * while clients migrate to this richer representation. */
+@Serializable
+enum class TheorySectionType {
+    CONCEPT,
+    EXPLANATION,
+    STEPS,
+    EXAMPLE,
+    WARNING
+}
+
+@Serializable
+data class TheorySection(
+    val id: String,
+    val type: TheorySectionType,
+    val title: String? = null,
+    val content: String,
+    val position: Int
+)
+
+@Serializable
+data class LessonTheoryResponse(
+    val lessonId: String,
+    val sections: List<TheorySection>
+)
+
+/** A hint is only serialized after the server has authorized and unlocked it. */
+@Serializable
+data class ExerciseHint(
+    val id: String,
+    val content: String,
+    val position: Int
+)
+
+@Serializable
+data class NextExerciseHintResponse(
+    val hint: ExerciseHint? = null,
+    val remainingHints: Int = 0
+)
+
 private fun normalizedExerciseType(type: ExerciseType): ExerciseType =
     if (type == ExerciseType.TRUE_FALSE) {
         ExerciseType.MULTIPLE_CHOICE

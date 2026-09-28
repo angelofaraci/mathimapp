@@ -3,6 +3,8 @@ package com.example.proyectofinal.ui.activities
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.Course
+import com.example.proyectofinal.models.ExerciseHint
+import com.example.proyectofinal.models.TheorySection
 
 sealed interface ExerciseAnswerDraft {
     data class MultipleChoice(val selectedOptionId: String? = null) : ExerciseAnswerDraft
@@ -62,6 +64,11 @@ data class LessonMapUiState(
     val remainingLives: Int = 3,
     val exerciseFeedback: ExerciseFeedbackUiState? = null,
     val selectedTheoryLesson: Lesson? = null,
+    val theorySections: List<TheorySection> = emptyList(),
+    val isLoadingTheory: Boolean = false,
+    val revealedHints: List<ExerciseHint> = emptyList(),
+    val isLoadingHint: Boolean = false,
+    val areHintsExhausted: Boolean = false,
     val errorMessage: String? = null
 ) {
     val selectedCourse: Course?

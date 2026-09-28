@@ -3,6 +3,7 @@ package com.example.proyectofinal.data
 import com.example.proyectofinal.domain.ExerciseRepository
 import com.example.proyectofinal.db.AppDatabase
 import com.example.proyectofinal.models.Exercise
+import com.example.proyectofinal.models.NextExerciseHintResponse
 
 class KtorExerciseRepository(
     private val api: ExerciseApi,
@@ -26,6 +27,9 @@ class KtorExerciseRepository(
         cacheExercise(updated)
         return updated
     }
+
+    override suspend fun revealNextHint(exerciseId: String): NextExerciseHintResponse =
+        api.fetchNextHint(exerciseId)
 
     override suspend fun deleteExercise(id: String) {
         api.deleteExercise(id)

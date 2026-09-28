@@ -61,6 +61,51 @@ object Exercises : Table("exercises") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object LessonTheorySections : Table("lesson_theory_sections") {
+    val id = varchar("id", 50)
+    val lessonId = reference("lesson_id", Lessons.id, onDelete = ReferenceOption.CASCADE)
+    val position = integer("position")
+    val type = varchar("type", 50)
+    val title = varchar("title", 160).nullable()
+    val content = text("content")
+
+    override val primaryKey = PrimaryKey(id)
+
+    init {
+        uniqueIndex(lessonId, position)
+    }
+}
+
+object ExerciseHints : Table("exercise_hints") {
+    val id = varchar("id", 50)
+    val exerciseId = reference("exercise_id", Exercises.id, onDelete = ReferenceOption.CASCADE)
+    val position = integer("position")
+    val unlockAfterAttempts = integer("unlock_after_attempts").default(0)
+    val content = text("content")
+
+    override val primaryKey = PrimaryKey(id)
+
+    init {
+        uniqueIndex(exerciseId, position)
+    }
+}
+
+object UserExerciseAttempts : Table("user_exercise_attempts") {
+    val id = varchar("id", 50)
+    val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
+    val exerciseId = reference("exercise_id", Exercises.id, onDelete = ReferenceOption.CASCADE)
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object UserExerciseHintReveals : Table("user_exercise_hint_reveals") {
+    val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
+    val exerciseId = reference("exercise_id", Exercises.id, onDelete = ReferenceOption.CASCADE)
+    val hintId = reference("hint_id", ExerciseHints.id, onDelete = ReferenceOption.CASCADE)
+
+    override val primaryKey = PrimaryKey(userId, exerciseId, hintId)
+}
+
 object UserProgress : Table("user_progress") {
     val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
     val totalScore = integer("total_score").default(0)

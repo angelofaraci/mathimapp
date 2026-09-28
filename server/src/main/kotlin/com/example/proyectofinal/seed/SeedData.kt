@@ -130,8 +130,44 @@ object SeedData {
 
             seedBasicArithmetic(adminId)
             seedDemoCourse(adminId)
+            seedDynamicPedagogicalContent()
 
             println("Seed data created successfully!")
+        }
+    }
+
+    private fun seedDynamicPedagogicalContent() {
+        val lessonId = "lesson-addition"
+        val sections = listOf(
+            Triple("theory-addition-concept", "CONCEPT", "Addition combines quantities."),
+            Triple("theory-addition-example", "EXAMPLE", "For example, 2 + 3 = 5.")
+        )
+        sections.forEachIndexed { position, (id, type, content) ->
+            if (LessonTheorySections.selectAll().where { LessonTheorySections.id eq id }.empty()) {
+                LessonTheorySections.insert {
+                    it[LessonTheorySections.id] = id
+                    it[LessonTheorySections.lessonId] = lessonId
+                    it[LessonTheorySections.position] = position
+                    it[LessonTheorySections.type] = type
+                    it[LessonTheorySections.title] = if (type == "CONCEPT") "Core idea" else "Worked example"
+                    it[LessonTheorySections.content] = content
+                }
+            }
+        }
+
+        listOf(
+            Triple("hint-add-1-orient", 0, "Count forward from the first number."),
+            Triple("hint-add-1-explicit", 1, "Start at 5 and count three more numbers.")
+        ).forEachIndexed { position, (id, unlockAfterAttempts, content) ->
+            if (ExerciseHints.selectAll().where { ExerciseHints.id eq id }.empty()) {
+                ExerciseHints.insert {
+                    it[ExerciseHints.id] = id
+                    it[ExerciseHints.exerciseId] = "ex-add-1"
+                    it[ExerciseHints.position] = position
+                    it[ExerciseHints.unlockAfterAttempts] = unlockAfterAttempts
+                    it[ExerciseHints.content] = content
+                }
+            }
         }
     }
 

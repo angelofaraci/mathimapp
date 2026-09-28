@@ -6,6 +6,7 @@ import com.example.proyectofinal.database.CompletedLessons
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.EnrolledCourses
 import com.example.proyectofinal.database.Exercises
+import com.example.proyectofinal.database.UserExerciseAttempts
 import com.example.proyectofinal.database.Lessons
 import com.example.proyectofinal.database.UserProgress as UserProgressTable
 import com.example.proyectofinal.database.UserProfilePreferences
@@ -41,6 +42,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
 
 sealed interface ExerciseAttemptResult {
     data class Success(val response: ExerciseAttemptResponse) : ExerciseAttemptResult
@@ -267,6 +269,12 @@ class UserService(
             ExercisePayloadSupport.evaluateAttempt(exercise, request.submission)
         } catch (exception: IllegalArgumentException) {
             return@dbQuery ExerciseAttemptResult.InvalidRequest(exception.message ?: "Invalid exercise submission")
+        }
+
+        UserExerciseAttempts.insert {
+            it[id] = UUID.randomUUID().toString()
+            it[UserExerciseAttempts.userId] = userId
+            it[UserExerciseAttempts.exerciseId] = exerciseRow[Exercises.id]
         }
 
         (lessonAccess as? LessonContentAccess.CourseLinked)?.let { access ->
