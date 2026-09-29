@@ -33,6 +33,8 @@ import com.example.proyectofinal.models.UpdateCourseRequest
 import com.example.proyectofinal.models.UpdateExerciseRequest
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserRole
+import com.example.proyectofinal.models.TheorySectionInput
+import com.example.proyectofinal.models.TheorySectionType
 import com.example.proyectofinal.seed.SeedData
 import com.example.proyectofinal.service.AdminLessonMutationResult
 import com.example.proyectofinal.service.AdminLessonPatchRequest
@@ -51,6 +53,7 @@ import com.example.proyectofinal.service.NextHintResult
 import com.example.proyectofinal.service.PedagogicalContentService
 import com.example.proyectofinal.service.TheoryReadResult
 import com.example.proyectofinal.service.TheoryUpdateResult
+import com.example.proyectofinal.service.AdminTheorySectionsResult
 import com.example.proyectofinal.service.UserService
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.and
@@ -1740,6 +1743,44 @@ class PedagogicalContentServiceTest {
             TheoryReadResult.Forbidden,
             contentService.getTheory("private-lesson", "other-student", UserRole.STUDENT)
         )
+    }
+
+    @Test
+    fun `admin replaces ordered theory sections atomically and preserves legacy content`() {
+        insertUser(id = "admin", role = UserRole.ADMIN)
+        insertCourse(id = "official-course", creatorId = "admin", isOfficial = true)
+        insertLesson(id = "lesson", courseId = "official-course", theoryContent = "Legacy theory")
+        transaction {
+            LessonTheorySections.insert {
+                it[id] = "old-section"
+                it[lessonId] = "lesson"
+                it[position] = 0
+                it[type] = "CONCEPT"
+                it[content] = "Old content"
+            }
+        }
+
+        val result = assertIs<AdminTheorySectionsResult.Success>(
+            PedagogicalContentService().replaceTheorySectionsAdmin(
+                "lesson",
+                listOf(
+                    TheorySectionInput(TheorySectionType.EXAMPLE, "Example", "2 + 2 = 4"),
+                    TheorySectionInput(TheorySectionType.WARNING, null, "Check the sign")
+                )
+            )
+        )
+
+        assertEquals(listOf("EXAMPLE", "WARNING"), result.response.sections.map { it.type.name })
+        assertEquals(listOf(0, 1), result.response.sections.map { it.position })
+        assertEquals("Legacy theory", LessonService().getLessonById("lesson", hideAnswers = false)?.theoryContent)
+        assertIs<AdminTheorySectionsResult.InvalidRequest>(
+            PedagogicalContentService().replaceTheorySectionsAdmin(
+                "lesson", listOf(TheorySectionInput(TheorySectionType.CONCEPT, null, "  "))
+            )
+        )
+        assertEquals(listOf("2 + 2 = 4", "Check the sign"), PedagogicalContentService().getTheoryAdmin("lesson").let {
+            assertIs<AdminTheorySectionsResult.Success>(it).response.sections.map { section -> section.content }
+        })
     }
 }
 

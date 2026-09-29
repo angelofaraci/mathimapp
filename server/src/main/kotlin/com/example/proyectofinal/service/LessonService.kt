@@ -3,10 +3,12 @@ package com.example.proyectofinal.service
 import com.example.proyectofinal.database.Courses
 import com.example.proyectofinal.database.Exercises
 import com.example.proyectofinal.database.Lessons
+import com.example.proyectofinal.database.LessonTheorySections
 import com.example.proyectofinal.database.dbQuery
 import com.example.proyectofinal.models.CreateAdminLessonRequest
 import com.example.proyectofinal.models.CreateLessonRequest
 import com.example.proyectofinal.models.Lesson
+import com.example.proyectofinal.models.TheorySectionInput
 import com.example.proyectofinal.models.UpdateLessonRequest
 import com.example.proyectofinal.models.UserRole
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -16,6 +18,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import java.util.UUID
 import org.jetbrains.exposed.v1.jdbc.update
 
 sealed interface TheoryUpdateResult {
@@ -174,6 +177,9 @@ class LessonService {
         if (request.title.isBlank()) {
             return AdminLessonMutationResult.InvalidRequest("title is required")
         }
+        validateTheorySections(request.theorySections)?.let {
+            return AdminLessonMutationResult.InvalidRequest(it)
+        }
 
         return dbQuery {
             if (normalizedCourseId != null && !courseExists(normalizedCourseId)) {
@@ -182,8 +188,7 @@ class LessonService {
 
             val creatorId = normalizedCreatorId ?: authenticatedUserId
 
-            AdminLessonMutationResult.Success(
-                createLessonInTransaction(
+            val lesson = createLessonInTransaction(
                     CreateLessonRequest(
                         id = request.id,
                         courseId = normalizedCourseId,
@@ -192,8 +197,28 @@ class LessonService {
                         creatorId = creatorId
                     )
                 )
-            )
+            request.theorySections.forEachIndexed { position, section ->
+                LessonTheorySections.insert {
+                    it[LessonTheorySections.id] = UUID.randomUUID().toString()
+                    it[LessonTheorySections.lessonId] = lesson.id
+                    it[LessonTheorySections.position] = position
+                    it[type] = section.type.name
+                    it[title] = section.title?.trim()?.takeIf(String::isNotEmpty)
+                    it[content] = section.content.trim()
+                }
+            }
+            AdminLessonMutationResult.Success(lesson)
         }
+    }
+
+    private fun validateTheorySections(sections: List<TheorySectionInput>): String? {
+        if (sections.size > 50) return "A lesson can have at most 50 theory sections"
+        sections.forEachIndexed { index, section ->
+            if (section.content.isBlank()) return "Section ${index + 1} content cannot be blank"
+            if (section.content.length > 20_000) return "Section ${index + 1} content is too long"
+            if ((section.title?.length ?: 0) > 160) return "Section ${index + 1} title is too long"
+        }
+        return null
     }
 
     fun updateLesson(id: String, request: UpdateLessonRequest): Lesson? {

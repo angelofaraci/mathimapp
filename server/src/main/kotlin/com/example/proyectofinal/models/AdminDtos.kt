@@ -62,7 +62,8 @@ data class CreateAdminLessonRequest(
     val courseId: String? = null,
     val creatorId: String? = null,
     val title: String,
-    val theoryContent: String
+    val theoryContent: String,
+    val theorySections: List<TheorySectionInput> = emptyList()
 )
 
 @Serializable

@@ -294,6 +294,19 @@ data class LessonTheoryResponse(
     val sections: List<TheorySection>
 )
 
+/** Administrative replacement payload. Positions are assigned by the server from list order. */
+@Serializable
+data class ReplaceLessonTheorySectionsRequest(
+    val sections: List<TheorySectionInput>
+)
+
+@Serializable
+data class TheorySectionInput(
+    val type: TheorySectionType,
+    val title: String? = null,
+    val content: String
+)
+
 /** A hint is only serialized after the server has authorized and unlocked it. */
 @Serializable
 data class ExerciseHint(

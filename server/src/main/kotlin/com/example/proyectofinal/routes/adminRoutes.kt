@@ -10,6 +10,7 @@ import com.example.proyectofinal.models.CreateAdminLessonRequest
 import com.example.proyectofinal.models.Exercise
 import com.example.proyectofinal.models.Lesson
 import com.example.proyectofinal.models.RoleUpdateRequest
+import com.example.proyectofinal.models.ReplaceLessonTheorySectionsRequest
 import com.example.proyectofinal.models.UpdateAdminCourseRequest
 import com.example.proyectofinal.models.UpdateAdminExerciseRequest
 import com.example.proyectofinal.models.UpdateUserRequest
@@ -24,6 +25,8 @@ import com.example.proyectofinal.service.CourseService
 import com.example.proyectofinal.service.ExerciseService
 import com.example.proyectofinal.service.FieldPatch
 import com.example.proyectofinal.service.LessonService
+import com.example.proyectofinal.service.PedagogicalContentService
+import com.example.proyectofinal.service.AdminTheorySectionsResult
 import com.example.proyectofinal.service.UserService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -39,7 +42,8 @@ fun Application.adminRoutes(
     userService: UserService,
     courseService: CourseService,
     lessonService: LessonService,
-    exerciseService: ExerciseService
+    exerciseService: ExerciseService,
+    pedagogicalContentService: PedagogicalContentService
 ) {
     routing {
         authenticate("auth-jwt") {
@@ -171,6 +175,31 @@ fun Application.adminRoutes(
                 }
 
                 call.respond(HttpStatusCode.NoContent)
+            }
+
+            get("/admin/lessons/{id}/theory-sections") {
+                if (!call.requireAdmin()) return@get
+                val lessonId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                when (val result = pedagogicalContentService.getTheoryAdmin(lessonId)) {
+                    is AdminTheorySectionsResult.Success -> call.respond(result.response)
+                    AdminTheorySectionsResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                    is AdminTheorySectionsResult.InvalidRequest -> call.respond(HttpStatusCode.BadRequest, result.message)
+                }
+            }
+
+            put("/admin/lessons/{id}/theory-sections") {
+                if (!call.requireAdmin()) return@put
+                val lessonId = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+                val request = try {
+                    call.receive<ReplaceLessonTheorySectionsRequest>()
+                } catch (_: Exception) {
+                    return@put call.respond(HttpStatusCode.BadRequest, "Invalid theory sections request")
+                }
+                when (val result = pedagogicalContentService.replaceTheorySectionsAdmin(lessonId, request.sections)) {
+                    is AdminTheorySectionsResult.Success -> call.respond(result.response)
+                    is AdminTheorySectionsResult.InvalidRequest -> call.respond(HttpStatusCode.BadRequest, result.message)
+                    AdminTheorySectionsResult.NotFound -> call.respond(HttpStatusCode.NotFound)
+                }
             }
 
             get("/admin/exercises") {
